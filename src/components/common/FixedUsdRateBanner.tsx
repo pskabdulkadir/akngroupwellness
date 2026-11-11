@@ -29,10 +29,10 @@ export function FixedUsdRateBanner({ rate: providedRate, loadError = false }: Fi
   const rate = isControlled ? providedRate : fetchedRate;
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl">
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50 to-teal-50 px-5 py-4 shadow-sm">
       <div>
-        <div className="text-xs font-semibold text-slate-600">Güncel Sabit Kur</div>
-        <div className="text-lg font-mono font-bold text-slate-900 tabular-nums">
+        <div className="text-xs font-bold uppercase tracking-wide text-emerald-800">Yönetici Tarafından Belirlenen Sabit Kur</div>
+        <div className="mt-1 text-xl font-mono font-bold text-slate-900 tabular-nums">
           {rate
             ? `1 USD = ${rate.usd_try_rate.toFixed(2)} TRY`
             : failed || loadError
@@ -41,10 +41,10 @@ export function FixedUsdRateBanner({ rate: providedRate, loadError = false }: Fi
         </div>
       </div>
       {rate && (
-        <div className="text-xs text-slate-500">
+        <div className="text-xs font-medium text-slate-600">
           {rate.updated_at
-            ? `Son güncelleme: ${new Date(rate.updated_at).toLocaleString('tr-TR')}`
-            : 'Henüz güncellenmedi (varsayılan kur)'}
+            ? `Son yönetici güncellemesi: ${new Date(rate.updated_at).toLocaleString('tr-TR')}`
+            : 'Yönetici tarafından henüz güncellenmedi (varsayılan kur)'}
         </div>
       )}
     </div>

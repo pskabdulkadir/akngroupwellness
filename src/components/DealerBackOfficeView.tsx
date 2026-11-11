@@ -89,6 +89,7 @@ export type DealerBackOfficeSubTab =
 interface DealerBackOfficeViewProps {
   subTab: DealerBackOfficeSubTab;
   onSubTabChange: (tab: DealerBackOfficeSubTab) => void;
+  onReturnToMenu?: () => void;
   members: MonolineMember[];
   selectedMemberId: string;
   onSelectMember: (userId: string) => void;
@@ -219,6 +220,7 @@ function generateQrMatrix(text: string): boolean[][] {
 export const DealerBackOfficeView: React.FC<DealerBackOfficeViewProps> = ({
   subTab,
   onSubTabChange: setSubTab,
+  onReturnToMenu,
   members,
   selectedMemberId,
   onSelectMember,
@@ -2573,7 +2575,7 @@ export const DealerBackOfficeView: React.FC<DealerBackOfficeViewProps> = ({
         <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 bg-gradient-to-r from-slate-900 to-slate-950 text-white rounded-2xl shadow-sm border border-slate-800 animate-in fade-in duration-150">
           <button
             type="button"
-            onClick={() => setSubTab('wallet')}
+            onClick={() => onReturnToMenu ? onReturnToMenu() : setSubTab('wallet')}
             className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold text-xs shadow-sm transition-all cursor-pointer group"
           >
             <ArrowLeft className="w-4 h-4 text-white group-hover:-translate-x-1 transition-transform" />

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { AlertTriangle, BarChart3, Camera, ChevronDown, ChevronUp, Database, RefreshCw, RotateCcw, X } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, BarChart3, Camera, ChevronDown, ChevronUp, Database, RefreshCw, RotateCcw, X } from 'lucide-react';
 import { AdminConsoleView } from './AdminConsoleView';
 import { CareerMatrixView } from './CareerMatrixView';
 import { CommissionEngineView } from './CommissionEngineView';
@@ -69,6 +69,7 @@ export const MonolineMlmPortalModal: React.FC<MonolineMlmPortalModalProps> = ({
   const [loading, setLoading] = useState<boolean>(true);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<MonolineSubTab>(safeInitialTab);
+  const [isPanelDetailOpen, setIsPanelDetailOpen] = useState(false);
   const [adminSection, setAdminSection] = useState<
     | 'params'
     | 'bonuses'
@@ -922,12 +923,13 @@ export const MonolineMlmPortalModal: React.FC<MonolineMlmPortalModalProps> = ({
 
   const innerContent = (
     <div className={`flex flex-col bg-slate-50 text-slate-900 lg:flex-row ${embedded ? 'min-h-screen' : 'h-screen min-h-0 overflow-hidden'}`}>
+      {!isPanelDetailOpen && (
       <div className="z-30 max-h-[40vh] shrink-0 overflow-y-auto border-b border-slate-200 bg-white/95 backdrop-blur-xs lg:sticky lg:top-0 lg:h-screen lg:max-h-screen lg:w-72 lg:border-b-0 lg:border-r">
         <div className="mx-auto flex w-full max-w-[1600px] flex-col items-stretch gap-4 px-4 py-4 lg:px-4">
           <div className="flex flex-col gap-2">
             <button
               type="button"
-              onClick={() => setActiveTab('backoffice')}
+              onClick={() => { setActiveTab('backoffice'); setIsPanelDetailOpen(true); }}
               className={`px-3 py-2 rounded-xl text-xs font-semibold transition-all w-full justify-start text-left whitespace-normal border cursor-pointer ${
                 activeTab === 'backoffice'
                   ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
@@ -953,7 +955,7 @@ export const MonolineMlmPortalModal: React.FC<MonolineMlmPortalModalProps> = ({
                   <button
                     key={tab}
                     type="button"
-                    onClick={() => setDealerBackOfficeTab(tab)}
+                    onClick={() => { setDealerBackOfficeTab(tab); setIsPanelDetailOpen(true); }}
                     aria-current={dealerBackOfficeTab === tab ? 'page' : undefined}
                     className={`w-full rounded-lg border px-3 py-2 text-left text-[11px] font-semibold leading-snug whitespace-normal transition-colors cursor-pointer ${
                       dealerBackOfficeTab === tab
@@ -969,7 +971,7 @@ export const MonolineMlmPortalModal: React.FC<MonolineMlmPortalModalProps> = ({
 
             <button
               type="button"
-              onClick={() => setActiveTab('packages')}
+              onClick={() => { setActiveTab('packages'); setIsPanelDetailOpen(true); }}
               className={`px-3 py-2 rounded-xl text-xs font-semibold transition-all w-full justify-start text-left whitespace-normal border cursor-pointer ${
                 activeTab === 'packages'
                   ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
@@ -981,7 +983,7 @@ export const MonolineMlmPortalModal: React.FC<MonolineMlmPortalModalProps> = ({
 
             <button
               type="button"
-              onClick={() => setActiveTab('mlm_7nefis')}
+              onClick={() => { setActiveTab('mlm_7nefis'); setIsPanelDetailOpen(true); }}
               className={`px-3 py-2 rounded-xl text-xs font-semibold transition-all w-full justify-start text-left whitespace-normal border cursor-pointer ${
                 activeTab === 'mlm_7nefis'
                   ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
@@ -993,7 +995,7 @@ export const MonolineMlmPortalModal: React.FC<MonolineMlmPortalModalProps> = ({
 
             <button
               type="button"
-              onClick={() => setActiveTab('monoline')}
+              onClick={() => { setActiveTab('monoline'); setIsPanelDetailOpen(true); }}
               className={`px-3 py-2 rounded-xl text-xs font-semibold transition-all w-full justify-start text-left whitespace-normal border cursor-pointer ${
                 activeTab === 'monoline'
                   ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
@@ -1010,6 +1012,7 @@ export const MonolineMlmPortalModal: React.FC<MonolineMlmPortalModalProps> = ({
                   onClick={() => {
                     setAdminSection('params');
                     setActiveTab('admin');
+                    setIsPanelDetailOpen(true);
                   }}
                   className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all w-full justify-start text-left whitespace-normal border cursor-pointer ${
                     activeTab === 'admin' && adminSection === 'params'
@@ -1025,6 +1028,7 @@ export const MonolineMlmPortalModal: React.FC<MonolineMlmPortalModalProps> = ({
                   onClick={() => {
                     setAdminSection(undefined);
                     setActiveTab('admin');
+                    setIsPanelDetailOpen(true);
                   }}
                   className={`px-3 py-2 rounded-xl text-xs font-semibold transition-all w-full justify-start text-left whitespace-normal border cursor-pointer ${
                     activeTab === 'admin' &&
@@ -1043,6 +1047,7 @@ export const MonolineMlmPortalModal: React.FC<MonolineMlmPortalModalProps> = ({
                   onClick={() => {
                     setAdminSection('strategic_growth');
                     setActiveTab('admin');
+                    setIsPanelDetailOpen(true);
                   }}
                   className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all w-full justify-start text-left whitespace-normal border cursor-pointer ${
                     activeTab === 'admin' && adminSection === 'strategic_growth'
@@ -1058,6 +1063,7 @@ export const MonolineMlmPortalModal: React.FC<MonolineMlmPortalModalProps> = ({
                   onClick={() => {
                     setAdminSection('bonuses');
                     setActiveTab('admin');
+                    setIsPanelDetailOpen(true);
                   }}
                   className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all w-full justify-start text-left whitespace-normal border cursor-pointer ${
                     activeTab === 'admin' && adminSection === 'bonuses'
@@ -1070,7 +1076,7 @@ export const MonolineMlmPortalModal: React.FC<MonolineMlmPortalModalProps> = ({
 
                 <button
                   type="button"
-                  onClick={() => setActiveTab('webhook')}
+                  onClick={() => { setActiveTab('webhook'); setIsPanelDetailOpen(true); }}
                   className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all w-full justify-start text-left whitespace-normal border cursor-pointer ${
                     activeTab === 'webhook'
                       ? 'bg-slate-900 text-amber-300 border-slate-900 shadow-xs'
@@ -1127,8 +1133,23 @@ export const MonolineMlmPortalModal: React.FC<MonolineMlmPortalModalProps> = ({
           </div>
         </div>
       </div>
+      )}
 
       <div className={`min-w-0 max-w-full flex-1 space-y-8 p-4 sm:p-6 xl:p-8 ${embedded ? 'overflow-x-auto' : 'min-h-0 overflow-auto'}`}>
+        {isPanelDetailOpen && (
+          <div className="flex items-center gap-3 border-b border-slate-200 pb-4">
+            <button
+              type="button"
+              onClick={() => setIsPanelDetailOpen(false)}
+              className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700"
+            >
+              <ArrowLeft className="h-4 w-4" /> Geri
+            </button>
+            <span className="text-sm font-semibold text-slate-700">
+              {activeTab === 'backoffice' ? 'Bayi Back-Office' : activeTab === 'packages' ? 'Alışveriş Paketleri' : activeTab === 'mlm_7nefis' ? '7 Nefis Kariyer & Organizasyon Matrisi' : activeTab === 'monoline' ? 'Monoline Tek Hat Ağacı' : activeTab === 'admin' ? 'Yönetici Paneli' : 'Webhook & 7 Mertebe'}
+            </span>
+          </div>
+        )}
 
         {feedbackBanner && (
           <div
@@ -1149,7 +1170,7 @@ export const MonolineMlmPortalModal: React.FC<MonolineMlmPortalModalProps> = ({
           </div>
         )}
 
-        {state && isAdminAuthenticated && (
+        {state && isAdminAuthenticated && !isPanelDetailOpen && (
           <div className="space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 bg-white border border-slate-200 rounded-2xl shadow-2xs">
               <div className="flex items-center gap-2">
@@ -1433,6 +1454,7 @@ export const MonolineMlmPortalModal: React.FC<MonolineMlmPortalModalProps> = ({
               <DealerBackOfficeView
                 subTab={dealerBackOfficeTab}
                 onSubTabChange={setDealerBackOfficeTab}
+                onReturnToMenu={() => setIsPanelDetailOpen(false)}
                 members={state.members}
                 selectedMemberId={selectedMemberId}
                 onSelectMember={(id) => setSelectedMemberId(id)}

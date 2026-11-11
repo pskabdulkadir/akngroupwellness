@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import {
   AlertTriangle,
   ArrowDown,
+  ArrowLeft,
   ArrowLeftRight,
   ArrowUp,
   Award,
@@ -271,7 +272,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
   poolDistributions,
   systemFundBalance,
   idempotentBlockedCount,
-  initialSection = 'members',
+  initialSection,
   onOpenSmartAccounting,
   onUpdateCareers,
   onDecideWithdrawal,
@@ -291,7 +292,13 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
   onMemberActivityAction,
   isSubmitting,
 }) => {
-  const [adminSection, setAdminSection] = useState<AdminConsoleSection>(initialSection);
+  const [adminSection, setAdminSection] = useState<AdminConsoleSection>(initialSection ?? 'members');
+  const [isSectionDetailOpen, setIsSectionDetailOpen] = useState(initialSection !== undefined);
+
+  const openAdminSection = (section: AdminConsoleSection) => {
+    setAdminSection(section);
+    setIsSectionDetailOpen(true);
+  };
 
   // Veri / Data Yönetim Portalı & Yedekleme State
   const [dataJsonCode, setDataJsonCode] = useState<string>('');
@@ -322,9 +329,8 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
   const [editIsLocked, setEditIsLocked] = useState<boolean>(false);
 
   React.useEffect(() => {
-    if (initialSection) {
-      setAdminSection(initialSection);
-    }
+    if (initialSection) setAdminSection(initialSection);
+    setIsSectionDetailOpen(initialSection !== undefined);
   }, [initialSection]);
 
   // Çift Motorlu Hibrit Komisyon Mimarisi Yönetici Düzenleme State'leri
@@ -1288,9 +1294,9 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
   );
 
   return (
-    <div className="grid min-w-0 max-w-full grid-cols-1 items-start gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
+    <div className={`grid min-w-0 max-w-full grid-cols-1 items-start gap-6 ${isSectionDetailOpen ? 'lg:grid-cols-1' : 'lg:grid-cols-[280px_minmax(0,1fr)]'}`}>
       {/* MODÜL 6 Header & Sub-navigation */}
-      <div className="self-start rounded-2xl border border-indigo-900/70 bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-900 p-5 shadow-xl lg:sticky lg:top-4">
+      {!isSectionDetailOpen && <div className="self-start rounded-2xl border border-indigo-900/70 bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-900 p-5 shadow-xl lg:sticky lg:top-4">
         <div>
           <div className="text-xs font-mono text-emerald-300 font-bold">
             TAM SAYFA YÖNETİCİ KONSOLU · MONOLINE 7 NEFİS MLM · BAYİ, HAT SIRALAMA & BONUS YÖNETİMİ
@@ -1315,7 +1321,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
             </button>
             <button
               type="button"
-              onClick={() => setAdminSection('data_management')}
+              onClick={() => openAdminSection('data_management')}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-blue-900 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-xl cursor-pointer"
             >
               <Database className="w-3.5 h-3.5 text-blue-600" />
@@ -1332,7 +1338,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
             </button>
             <button
               type="button"
-              onClick={() => setAdminSection('data_management')}
+              onClick={() => openAdminSection('data_management')}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-purple-900 bg-purple-50 hover:bg-purple-100 border border-purple-200 rounded-xl cursor-pointer"
             >
               <Upload className="w-3.5 h-3.5 text-purple-600" />
@@ -1352,7 +1358,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
         <nav aria-label="Monoline yönetim bölümleri" className="mt-5 flex flex-col gap-2 rounded-xl border border-white/10 bg-white/5 p-2 [&>button]:w-full [&>button]:justify-start [&>button]:text-left">
           <button
             type="button"
-            onClick={() => setAdminSection('members')}
+            onClick={() => openAdminSection('members')}
             className={`px-3 py-2 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
               adminSection === 'members'
                 ? 'bg-slate-900 text-white shadow-xs'
@@ -1363,7 +1369,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
           </button>
           <button
             type="button"
-            onClick={() => setAdminSection('bonuses')}
+            onClick={() => openAdminSection('bonuses')}
             className={`px-3.5 py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer inline-flex items-center gap-1.5 ${
               adminSection === 'bonuses'
                 ? 'bg-emerald-600 text-white shadow-xs'
@@ -1375,7 +1381,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
           </button>
           <button
             type="button"
-            onClick={() => setAdminSection('activity')}
+            onClick={() => openAdminSection('activity')}
             className={`px-3.5 py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer inline-flex items-center gap-1.5 ${
               adminSection === 'activity'
                 ? 'bg-indigo-600 text-white shadow-xs'
@@ -1387,7 +1393,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
           </button>
           <button
             type="button"
-            onClick={() => setAdminSection('params')}
+            onClick={() => openAdminSection('params')}
             className={`px-3.5 py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer inline-flex items-center gap-1.5 ${
               adminSection === 'params'
                 ? 'bg-amber-600 text-white shadow-xs'
@@ -1399,7 +1405,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
           </button>
           <button
             type="button"
-            onClick={() => setAdminSection('commission_engine_settings')}
+            onClick={() => openAdminSection('commission_engine_settings')}
             className={`px-3.5 py-2.5 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center justify-between gap-1.5 ${
               adminSection === 'commission_engine_settings'
                 ? 'bg-gradient-to-r from-indigo-600 via-purple-600 to-teal-600 text-white shadow-md ring-2 ring-indigo-400'
@@ -1416,7 +1422,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
           </button>
           <button
             type="button"
-            onClick={() => setAdminSection('strategic_growth')}
+            onClick={() => openAdminSection('strategic_growth')}
             className={`px-3.5 py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer inline-flex items-center gap-1.5 ${
               adminSection === 'strategic_growth'
                 ? 'bg-purple-700 text-white shadow-xs'
@@ -1428,7 +1434,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
           </button>
           <button
             type="button"
-            onClick={() => setAdminSection('finance')}
+            onClick={() => openAdminSection('finance')}
             className={`px-3 py-2 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
               adminSection === 'finance'
                 ? 'bg-slate-900 text-white shadow-xs'
@@ -1439,7 +1445,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
           </button>
           <button
             type="button"
-            onClick={() => setAdminSection('tax_refunds')}
+            onClick={() => openAdminSection('tax_refunds')}
             className={`px-3.5 py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer inline-flex items-center gap-1.5 ${
               adminSection === 'tax_refunds'
                 ? 'bg-teal-700 text-white shadow-xs'
@@ -1450,7 +1456,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
           </button>
           <button
             type="button"
-            onClick={() => setAdminSection('webhooks_sql')}
+            onClick={() => openAdminSection('webhooks_sql')}
             className={`px-3 py-2 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
               adminSection === 'webhooks_sql'
                 ? 'bg-slate-900 text-white shadow-xs'
@@ -1461,7 +1467,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
           </button>
           <button
             type="button"
-            onClick={() => setAdminSection('feedback_tickets')}
+            onClick={() => openAdminSection('feedback_tickets')}
             className={`px-3.5 py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer inline-flex items-center gap-1.5 ${
               adminSection === 'feedback_tickets'
                 ? 'bg-rose-700 text-white shadow-xs ring-2 ring-rose-400/50'
@@ -1484,7 +1490,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
           {onOpenWebhookTab && (
             <button
               type="button"
-              onClick={onOpenWebhookTab}
+              onClick={() => { setIsSectionDetailOpen(true); onOpenWebhookTab(); }}
               className="px-3.5 py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer inline-flex items-center gap-1.5 bg-emerald-950 text-amber-300 hover:bg-slate-800 border border-amber-400/40"
             >
               <Play className="w-3.5 h-3.5" />
@@ -1494,7 +1500,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
           <button
             type="button"
             onClick={() => {
-              setAdminSection('rest_api');
+              openAdminSection('rest_api');
               if (!apiResponseJson) {
                 handleTestEndpoint('Admin Stats', '/api/v1/admin/stats', 'GET', 'ADMIN');
               }
@@ -1509,7 +1515,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
           </button>
           <button
             type="button"
-            onClick={() => setAdminSection('data_management')}
+            onClick={() => openAdminSection('data_management')}
             className={`px-3.5 py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer inline-flex items-center gap-1.5 ${
               adminSection === 'data_management'
                 ? 'bg-blue-600 text-white shadow-xs'
@@ -1520,8 +1526,20 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
             <span>💾 10. Veri / Data Portalı (Yedek İndir &amp; Yükle)</span>
           </button>
         </nav>
-      </div>
+      </div>}
       <div className="min-w-0 max-w-full space-y-6 overflow-x-auto">
+      {isSectionDetailOpen && (
+        <div className="flex items-center gap-3 border-b border-slate-200 pb-4">
+          <button
+            type="button"
+            onClick={() => setIsSectionDetailOpen(false)}
+            className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700"
+          >
+            <ArrowLeft className="h-4 w-4" /> Geri
+          </button>
+          <span className="text-sm font-semibold text-slate-700">Yönetici Paneli</span>
+        </div>
+      )}
       {/* SECTION: 🚀 BÜYÜMEYİ 2-3 KATINA ÇIKARAN 5 STRATEJİK İYİLEŞTİRME ÖNERİSİ & V2.2 SİSTEM AYARLARI */}
       {adminSection === 'strategic_growth' && (
         <section className="space-y-6">
@@ -2349,7 +2367,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
               <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => setAdminSection('commission_engine_settings')}
+                  onClick={() => openAdminSection('commission_engine_settings')}
                   className="text-xs px-2.5 py-1 bg-gradient-to-r from-indigo-600 to-teal-600 text-white font-bold rounded-lg cursor-pointer transition-all shadow-xs hover:from-indigo-500 hover:to-teal-500 flex items-center gap-1"
                 >
                   <Sliders className="w-3 h-3 text-amber-300" />
@@ -4660,7 +4678,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
               <div className="flex items-center gap-3">
                 <button
                   type="button"
-                  onClick={() => setAdminSection('bonuses')}
+                  onClick={() => openAdminSection('bonuses')}
                   className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl cursor-pointer"
                 >
                   <Gift className="w-3.5 h-3.5" />
