@@ -72,7 +72,6 @@ import {
   evaluateMemberOrganizationMetrics,
 } from '../types/monoline';
 import { getAdminToken } from '../utils/adminSession';
-import { FixedUsdRateBanner } from './common/FixedUsdRateBanner';
 import { getMemberRegionalPendingUsd, getMemberRegionalUsdBalance } from '../utils/walletRegion';
 import { BUSINESS_RULES } from '../config/businessRules';
 import { CommissionEngineSettingsView } from './CommissionEngineSettingsView';
@@ -2283,8 +2282,26 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
       {/* SECTION 1: SİSTEM & PARAMETRE YÖNETİMİ (`POST /api/v1/admin/settings`) */}
       {adminSection === 'params' && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          <div className="lg:col-span-12">
-            <FixedUsdRateBanner rate={usdRateInfo} loadError={usdRateLoadError} />
+          <div className="lg:col-span-12 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50 to-teal-50 px-5 py-4 shadow-sm">
+            <div>
+              <div className="text-xs font-bold uppercase tracking-wide text-emerald-800">
+                Yönetici Tarafından Belirlenen Sabit Kur
+              </div>
+              <div className="mt-1 text-xl font-mono font-bold text-slate-900 tabular-nums">
+                {usdRateInfo
+                  ? `1 USD = ${usdRateInfo.usd_try_rate.toFixed(2)} TRY`
+                  : usdRateLoadError
+                    ? 'Kur alınamadı'
+                    : 'Kur yükleniyor...'}
+              </div>
+            </div>
+            {usdRateInfo && (
+              <div className="text-xs font-medium text-slate-600">
+                {usdRateInfo.updated_at
+                  ? `Son yönetici güncellemesi: ${new Date(usdRateInfo.updated_at).toLocaleString('tr-TR')}`
+                  : 'Yönetici tarafından henüz güncellenmedi (varsayılan kur)'}
+              </div>
+            )}
           </div>
           <form
             onSubmit={handleUpdateUsdRate}

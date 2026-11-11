@@ -47,33 +47,51 @@ export function getIsPostgresAvailable(): boolean {
  */
 export async function initPostgresDatabase(): Promise<boolean> {
   const maskedUrl = DATABASE_URL.replace(/:[^:@]+@/, ':****@');
-  try {
-    const client = await pool.connect();
-    try {
-      const res = await client.query('SELECT 1 as connected');
-      if (res.rows[0]?.connected === 1) {
-        isPostgresAvailable = true;
-        console.log(`[PostgreSQL-18] PostgreSQL veritabanına (${maskedUrl}) başarıyla bağlanıldı. SSL: ${isRemotePg ? 'Aktif' : 'Pasif'}`);
+  let client: PoolClient | undefined;
+  let lastError: any;
 
-        // Apply monoline_schema.sql if schema file exists
-        const schemaPath = path.resolve(process.cwd(), 'monoline_schema.sql');
-        if (fs.existsSync(schemaPath)) {
-          const sql = fs.readFileSync(schemaPath, 'utf8');
-          await client.query(sql);
-          console.log('[PostgreSQL-18] monoline_schema.sql üretim tabloları ve indeksleri başarıyla doğrulandı.');
-        }
-        return true;
-      }
-    } finally {
-      client.release();
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    let candidate: PoolClient | undefined;
+    try {
+      candidate = await pool.connect();
+      const res = await candidate.query('SELECT 1 as connected');
+      if (res.rows[0]?.connected !== 1) throw new Error('PostgreSQL hazır yanıt vermedi.');
+      client = candidate;
+      break;
+    } catch (err) {
+      lastError = err;
+      candidate?.release();
+      if (attempt < 3) await new Promise((resolve) => setTimeout(resolve, attempt * 1000));
     }
+  }
+
+  if (!client) {
+    isPostgresAvailable = false;
+    console.warn(
+      `[PostgreSQL-18 Notice]: Veritabanına (${maskedUrl}) 3 denemede bağlanılamadı (${lastError?.code || lastError?.message}). Yerel bellek/ACID hibrit motoru aktif tutuldu.`
+    );
+    return false;
+  }
+
+  try {
+    console.log(`[PostgreSQL-18] PostgreSQL veritabanına (${maskedUrl}) başarıyla bağlanıldı. SSL: ${isRemotePg ? 'Aktif' : 'Pasif'}`);
+    const schemaPath = path.resolve(process.cwd(), 'monoline_schema.sql');
+    if (fs.existsSync(schemaPath)) {
+      const sql = fs.readFileSync(schemaPath, 'utf8');
+      await client.query(sql);
+      console.log('[PostgreSQL-18] monoline_schema.sql üretim tabloları ve indeksleri başarıyla doğrulandı.');
+    }
+    isPostgresAvailable = true;
+    return true;
   } catch (err: any) {
     isPostgresAvailable = false;
     console.warn(
-      `[PostgreSQL-18 Notice]: Veritabanına (${maskedUrl}) bağlanılamadı (${err.code || err.message}). Yerel bellek/ACID hibrit motoru aktif tutuldu.`
+      `[PostgreSQL-18 Notice]: Şema başlatılamadı (${err.code || err.message}). Yerel bellek/ACID hibrit motoru aktif tutuldu.`
     );
+    return false;
+  } finally {
+    client.release();
   }
-  return false;
 }
 
 /**

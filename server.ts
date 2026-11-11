@@ -13,10 +13,6 @@ import {
   query as pgQuery,
 } from './server/db';
 
-// Initialize Local PostgreSQL-18 Database (monoline veritabanı)
-initPostgresDatabase().catch((err) => {
-  console.warn('[PostgreSQL-18 Auto-Init Notice]:', err?.message);
-});
 import {
   calculateVoucherWithholding,
   generateOfficialGiderPusulasiXml,
@@ -4364,6 +4360,9 @@ async function startServer() {
     console.warn("[Admin Auth] Warning: ADMIN_PASSWORD is short, using generated secure runtime secret.");
   }
 
+  await initPostgresDatabase().catch((err) => {
+    console.warn('[PostgreSQL-18 Auto-Init Notice]:', err?.message);
+  });
   await hydrateStateFromPostgres().catch((err) => {
     console.warn('[PostgreSQL-18] Startup hydration notice:', err.message);
   });
