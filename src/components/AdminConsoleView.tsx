@@ -76,6 +76,40 @@ import { getMemberRegionalPendingUsd, getMemberRegionalUsdBalance } from '../uti
 import { BUSINESS_RULES } from '../config/businessRules';
 import { CommissionEngineSettingsView } from './CommissionEngineSettingsView';
 
+interface AdminUsdRateInfo {
+  usd_try_rate: number;
+  updated_at: string | null;
+  updated_by: string | null;
+}
+
+const ADMIN_USD_TRY_RATE_CACHE_KEY = 'admin_usd_try_rate_v1';
+
+function readCachedAdminUsdRate(): AdminUsdRateInfo | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const value = window.sessionStorage.getItem(ADMIN_USD_TRY_RATE_CACHE_KEY);
+    if (!value) return null;
+    const parsed = JSON.parse(value);
+    if (!Number.isFinite(parsed?.usd_try_rate)) return null;
+    return {
+      usd_try_rate: parsed.usd_try_rate,
+      updated_at: typeof parsed.updated_at === 'string' ? parsed.updated_at : null,
+      updated_by: typeof parsed.updated_by === 'string' ? parsed.updated_by : null,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function storeAdminUsdRate(rate: AdminUsdRateInfo, setRate: (rate: AdminUsdRateInfo) => void) {
+  setRate(rate);
+  try {
+    window.sessionStorage.setItem(ADMIN_USD_TRY_RATE_CACHE_KEY, JSON.stringify(rate));
+  } catch {
+    return;
+  }
+}
+
 export type AdminConsoleSection =
   | 'members'
   | 'bonuses'
@@ -613,11 +647,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
   const [adminRefundAmount, setAdminRefundAmount] = useState<number>(5000);
   const [strategicActionMsg, setStrategicActionMsg] = useState<string | null>(null);
   const [strategicBusy, setStrategicBusy] = useState<boolean>(false);
-  const [usdRateInfo, setUsdRateInfo] = useState<{
-    usd_try_rate: number;
-    updated_at: string | null;
-    updated_by: string | null;
-  } | null>(null);
+  const [usdRateInfo, setUsdRateInfo] = useState<AdminUsdRateInfo | null>(readCachedAdminUsdRate);
   const [usdRateLoadError, setUsdRateLoadError] = useState(false);
   const [usdRateInput, setUsdRateInput] = useState<string>('');
   const [usdRateBusy, setUsdRateBusy] = useState<boolean>(false);
@@ -831,7 +861,6 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
   React.useEffect(() => {
     if (adminSection !== 'params') return;
     const controller = new AbortController();
-    setUsdRateInfo(null);
     setUsdRateLoadError(false);
     setUsdRateMsg(null);
     fetch('/api/v1/admin/exchange-rate', {
@@ -850,7 +879,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
         if (data.status !== 'success' || !data.data || typeof data.data.usd_try_rate !== 'number' || !Number.isFinite(data.data.usd_try_rate)) {
           throw new Error('Kur bilgisi beklenen biçimde alınamadı.');
         }
-        setUsdRateInfo(data.data);
+        storeAdminUsdRate(data.data, setUsdRateInfo);
       })
       .catch((err) => {
         if (controller.signal.aborted) return;
@@ -887,7 +916,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
       if (!res.ok || data.status !== 'success') {
         throw new Error(data.message || 'Kur güncellenemedi.');
       }
-      setUsdRateInfo(data.data);
+      storeAdminUsdRate(data.data, setUsdRateInfo);
       setUsdRateLoadError(false);
       setUsdRateInput('');
       setUsdRateMsg({ type: 'success', text: 'Kur başarıyla güncellendi' });
