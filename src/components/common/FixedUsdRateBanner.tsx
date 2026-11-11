@@ -7,9 +7,10 @@ export interface FixedUsdRate {
 
 interface FixedUsdRateBannerProps {
   rate?: FixedUsdRate | null;
+  loadError?: boolean;
 }
 
-export function FixedUsdRateBanner({ rate: providedRate }: FixedUsdRateBannerProps) {
+export function FixedUsdRateBanner({ rate: providedRate, loadError = false }: FixedUsdRateBannerProps) {
   const isControlled = providedRate !== undefined;
   const [fetchedRate, setFetchedRate] = useState<FixedUsdRate | null>(null);
   const [failed, setFailed] = useState<boolean>(false);
@@ -34,7 +35,7 @@ export function FixedUsdRateBanner({ rate: providedRate }: FixedUsdRateBannerPro
         <div className="text-lg font-mono font-bold text-slate-900 tabular-nums">
           {rate
             ? `1 USD = ${rate.usd_try_rate.toFixed(2)} TRY`
-            : failed
+            : failed || loadError
               ? 'Kur alınamadı'
               : 'Yükleniyor...'}
         </div>

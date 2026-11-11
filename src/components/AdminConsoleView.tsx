@@ -613,6 +613,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
     updated_at: string | null;
     updated_by: string | null;
   } | null>(null);
+  const [usdRateLoadError, setUsdRateLoadError] = useState(false);
   const [usdRateInput, setUsdRateInput] = useState<string>('');
   const [usdRateBusy, setUsdRateBusy] = useState<boolean>(false);
   const [usdRateMsg, setUsdRateMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(
@@ -824,14 +825,39 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
 
   React.useEffect(() => {
     if (adminSection !== 'params') return;
+    const controller = new AbortController();
+    setUsdRateInfo(null);
+    setUsdRateLoadError(false);
+    setUsdRateMsg(null);
     fetch('/api/v1/admin/exchange-rate', {
-      headers: { Authorization: `Bearer ${getAdminToken() ?? ''}` },
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${getAdminToken() ?? ''}`,
+        'Content-Type': 'application/json',
+      },
+      signal: controller.signal,
     })
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.status === 'success') setUsdRateInfo(data.data);
+      .then(async (res) => {
+        if (!res.ok) {
+          throw new Error(res.status === 401 ? 'Yönetici oturumu doğrulanamadı. Yeniden giriş yapın.' : 'Mevcut kur okunamadı.');
+        }
+        const data = await res.json();
+        if (data.status !== 'success' || !data.data || typeof data.data.usd_try_rate !== 'number' || !Number.isFinite(data.data.usd_try_rate)) {
+          throw new Error('Kur bilgisi beklenen biçimde alınamadı.');
+        }
+        setUsdRateInfo(data.data);
       })
-      .catch(() => setUsdRateMsg({ type: 'error', text: 'Mevcut kur okunamadı.' }));
+      .catch((err) => {
+        if (controller.signal.aborted) return;
+        setUsdRateLoadError(true);
+        setUsdRateMsg({
+          type: 'error',
+          text: err instanceof Error && !(err instanceof TypeError) && !(err instanceof SyntaxError)
+            ? err.message
+            : 'Mevcut kur okunamadı.',
+        });
+      });
+    return () => controller.abort();
   }, [adminSection]);
 
   const handleUpdateUsdRate = async (e: React.FormEvent) => {
@@ -857,6 +883,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
         throw new Error(data.message || 'Kur güncellenemedi.');
       }
       setUsdRateInfo(data.data);
+      setUsdRateLoadError(false);
       setUsdRateInput('');
       setUsdRateMsg({ type: 'success', text: 'Kur başarıyla güncellendi' });
     } catch (err) {
@@ -2239,7 +2266,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
       {adminSection === 'params' && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           <div className="lg:col-span-12">
-            <FixedUsdRateBanner rate={usdRateInfo} />
+            <FixedUsdRateBanner rate={usdRateInfo} loadError={usdRateLoadError} />
           </div>
           <form
             onSubmit={handleUpdateUsdRate}
