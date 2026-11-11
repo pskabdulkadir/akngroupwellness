@@ -823,7 +823,9 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
 
   React.useEffect(() => {
     if (adminSection !== 'params') return;
-    fetch('/api/v1/admin/exchange-rate')
+    fetch('/api/v1/admin/exchange-rate', {
+      headers: { Authorization: `Bearer ${getAdminToken() ?? ''}` },
+    })
       .then((res) => res.json())
       .then((data) => {
         if (data.status === 'success') setUsdRateInfo(data.data);
@@ -843,7 +845,10 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
     try {
       const res = await fetch('/api/v1/admin/exchange-rate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${getAdminToken() ?? ''}`,
+        },
         body: JSON.stringify({ usd_try_rate: rate }),
       });
       const data = await res.json();
