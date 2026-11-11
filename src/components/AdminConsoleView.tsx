@@ -71,6 +71,7 @@ import {
   evaluateMemberOrganizationMetrics,
 } from '../types/monoline';
 import { getAdminToken } from '../utils/adminSession';
+import { FixedUsdRateBanner } from './common/FixedUsdRateBanner';
 import { getMemberRegionalPendingUsd, getMemberRegionalUsdBalance } from '../utils/walletRegion';
 import { BUSINESS_RULES } from '../config/businessRules';
 import { CommissionEngineSettingsView } from './CommissionEngineSettingsView';
@@ -2237,6 +2238,9 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
       {/* SECTION 1: SİSTEM & PARAMETRE YÖNETİMİ (`POST /api/v1/admin/settings`) */}
       {adminSection === 'params' && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          <div className="lg:col-span-12">
+            <FixedUsdRateBanner rate={usdRateInfo} />
+          </div>
           <form
             onSubmit={handleUpdateUsdRate}
             className="lg:col-span-12 bg-white border border-slate-200 rounded-2xl p-6 space-y-4 shadow-2xs"

@@ -5377,6 +5377,13 @@ async function startServer() {
     res.json({ status: 'success', data: buildUsdTryRateResponse() });
   });
 
+  app.get('/api/v1/exchange-rate/usd-try', (_req, res) => {
+    res.json({
+      status: 'success',
+      data: { usd_try_rate: usdTryRate, updated_at: usdTryRateUpdatedAt },
+    });
+  });
+
   app.post('/api/v1/admin/exchange-rate', requireAdminJwt, (req, res) => {
     const rawRate = req.body?.usd_try_rate;
     const rate = typeof rawRate === 'string' && rawRate.trim() === '' ? NaN : Number(rawRate);

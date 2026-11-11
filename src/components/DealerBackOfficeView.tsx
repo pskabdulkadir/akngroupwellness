@@ -69,6 +69,7 @@ import {
   resolveMemberRegion,
 } from '../utils/walletRegion';
 import { recordUserContractApprovals } from '../utils/paymentProcessor';
+import { FixedUsdRateBanner } from './common/FixedUsdRateBanner';
 import { DealerRegionalUsdPanel } from './DealerRegionalUsdPanel';
 import { DealerEthicsGuidelines } from './DealerEthicsGuidelines';
 import { SharedDocumentsPanel } from './SharedDocumentsPanel';
@@ -2252,6 +2253,8 @@ export const DealerBackOfficeView: React.FC<DealerBackOfficeViewProps> = ({
             )}
           </div>
         </div>
+
+        <FixedUsdRateBanner />
 
         {/* 5-Card Dual Engine Wallet Strip: Çekilebilir Bakiye, Bekleyen Bakiye (14 Gün), Motor 1 Unilevel, Motor 2 Monoline, Seans Kredisi */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
