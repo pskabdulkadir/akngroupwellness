@@ -1,0 +1,6 @@
+{
+  "name": "Hoş Geldiniz",
+  "description": "Merkezi buton ve karşılama mesajı içeren minimalist karşılama sayfası.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

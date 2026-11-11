@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: monoline-mlm-platform
+    runtime: node
+    plan: starter
+    region: frankfurt
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: DATABASE_SSL
+        value: "true"
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: ADMIN_JWT_SECRET
+        generateValue: true
+      - key: MEMBER_JWT_SECRET
+        generateValue: true
