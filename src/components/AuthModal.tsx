@@ -64,6 +64,35 @@ interface AuthModalProps {
   onStartDemo?: () => void;
   allowClose?: boolean;
   initialMode?: 'login' | 'register' | 'dealer';
+  lockedSponsor?: {
+    uid: string;
+    resellerName: string;
+    referralCode: string;
+    email?: string;
+    phone?: string;
+  } | null;
+}
+
+type LockedSponsor = NonNullable<AuthModalProps['lockedSponsor']>;
+
+function createLockedReseller(sponsor: LockedSponsor): Reseller {
+  const now = new Date().toISOString();
+  return {
+    uid: sponsor.uid,
+    resellerName: sponsor.resellerName,
+    email: sponsor.email || '',
+    phone: sponsor.phone || '',
+    referralCode: sponsor.referralCode.trim().toUpperCase(),
+    bankInfo: { bankName: '', accountHolder: sponsor.resellerName, iban: '' },
+    status: 'active',
+    totalEarnings: 0,
+    paidEarnings: 0,
+    pendingEarnings: 0,
+    totalSalesAmount: 0,
+    totalReferredUsers: 0,
+    createdAt: now,
+    updatedAt: now,
+  };
 }
 
 export const AuthModal: React.FC<AuthModalProps> = ({
@@ -73,6 +102,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   onStartDemo,
   allowClose = false,
   initialMode = 'login',
+  lockedSponsor = null,
 }) => {
   // Check if URL specifies dealer mode
   const checkIsDealerFromUrl = (): boolean => {
@@ -129,12 +159,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
   // Reseller / Referral selection state
   const [resellersList, setResellersList] = useState<Reseller[]>([]);
-  const [selectedResellerId, setSelectedResellerId] = useState<string>('');
-  const [customReferralCode, setCustomReferralCode] = useState<string>('');
+  const [selectedResellerId, setSelectedResellerId] = useState<string>(lockedSponsor?.uid || '');
+  const [customReferralCode, setCustomReferralCode] = useState<string>(lockedSponsor?.referralCode || '');
   const [isCustomReferralMode, setIsCustomReferralMode] = useState<boolean>(false);
-  const [validatedReseller, setValidatedReseller] = useState<Reseller | null>(null);
-  const [isUrlReferralDetected, setIsUrlReferralDetected] = useState<boolean>(false);
-  const [isManualSponsorMode, setIsManualSponsorMode] = useState<boolean>(false);
+  const [validatedReseller, setValidatedReseller] = useState<Reseller | null>(() =>
+    lockedSponsor ? createLockedReseller(lockedSponsor) : null
+  );
+  const [isUrlReferralDetected, setIsUrlReferralDetected] = useState<boolean>(Boolean(lockedSponsor));
+  const [isManualSponsorMode, setIsManualSponsorMode] = useState<boolean>(!lockedSponsor);
 
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -170,24 +202,51 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       setIsDealerRequested(true);
       setSelectedPackageId('pkg-5k');
     }
+    if (lockedSponsor) {
+      const sponsor = createLockedReseller(lockedSponsor);
+      setSelectedResellerId(sponsor.uid);
+      setValidatedReseller(sponsor);
+      setCustomReferralCode(sponsor.referralCode);
+      setIsUrlReferralDetected(true);
+      setIsManualSponsorMode(false);
+      setIsCustomReferralMode(false);
+      setTab('register');
+    }
 
     const loadResellers = async () => {
       try {
         const list = await getActiveResellers();
         setResellersList(list);
 
-        // Check if referral code is STRICTLY present in current URL query or hash (?ref=... or ?bayi=...)
-        const directUrlCode = detectReferralCodeFromUrlOnly();
-        if (directUrlCode) {
-          const match = await getResellerByCode(directUrlCode);
-          if (match) {
-            setSelectedResellerId(match.uid);
-            setValidatedReseller(match);
-            setCustomReferralCode(match.referralCode);
+        const referralCode = lockedSponsor?.referralCode.trim().toUpperCase() || detectReferralCodeFromUrlOnly();
+        if (referralCode) {
+          const foundReseller = await getResellerByCode(referralCode);
+          const match = lockedSponsor && foundReseller?.uid !== lockedSponsor.uid
+            ? null
+            : foundReseller;
+          const reseller = match || (lockedSponsor
+            ? createLockedReseller({ ...lockedSponsor, referralCode })
+            : null);
+          if (reseller) {
+            setSelectedResellerId(reseller.uid);
+            setValidatedReseller(reseller);
+            setCustomReferralCode(reseller.referralCode);
             setIsUrlReferralDetected(true);
             setIsManualSponsorMode(false);
             setIsCustomReferralMode(false);
-            setTab('register'); // Switch to register automatically if opened via invite link
+            setErrorMsg(null);
+            setTab('register');
+            return;
+          }
+          if (lockedSponsor) {
+            setErrorMsg('Bağlı bayi referansı doğrulanamadı. Lütfen yeniden deneyin.');
+            setSelectedResellerId('');
+            setValidatedReseller(null);
+            setCustomReferralCode('');
+            setIsUrlReferralDetected(true);
+            setIsManualSponsorMode(false);
+            setIsCustomReferralMode(false);
+            setTab('register');
             return;
           }
         }
@@ -206,7 +265,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     };
 
     loadResellers();
-  }, [isOpen, initialMode]);
+  }, [isOpen, initialMode, lockedSponsor]);
 
   // Strict enforcement: ensure selected package exists
   useEffect(() => {
@@ -272,6 +331,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   };
 
   const isResellerSelected = Boolean(
+    lockedSponsor ||
     selectedResellerId === 'DIRECT_CENTRAL' ||
     selectedResellerId || 
     validatedReseller || 
@@ -319,12 +379,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     setSuccessMsg(null);
 
     try {
-      const targetResellerId = selectedResellerId === 'DIRECT_CENTRAL' 
-        ? '' 
-        : (selectedResellerId || validatedReseller?.uid || '');
-      const targetReferralCode = selectedResellerId === 'DIRECT_CENTRAL'
+      const targetResellerId = lockedSponsor?.uid || (selectedResellerId === 'DIRECT_CENTRAL'
         ? ''
-        : (validatedReseller?.referralCode || (customReferralCode ? customReferralCode.trim().toUpperCase() : ''));
+        : (selectedResellerId || validatedReseller?.uid || ''));
+      const targetReferralCode = lockedSponsor?.referralCode.trim().toUpperCase() || (selectedResellerId === 'DIRECT_CENTRAL'
+        ? ''
+        : (validatedReseller?.referralCode || (customReferralCode ? customReferralCode.trim().toUpperCase() : '')));
 
       const dealerData: DealerDetails | undefined = isDealerRequested ? {
         companyName: dealerCompanyName.trim(),
@@ -855,7 +915,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                         Davet Kodu: <strong className="text-amber-200">{validatedReseller.referralCode}</strong>
                       </div>
                       <div className="text-[10px] text-slate-300">
-                        Bu bayi davet bağlantısı üzerinden kayıt işleminiz doğrudan bu yetkili bayinin sponsorluğuna kilitlenmiştir.
+                        Bu kayıt ilgili bayinin referansıyla açıldı; sponsor seçimi değiştirilemez.
                       </div>
                     </div>
                   </div>

@@ -145,6 +145,13 @@ export default function WellnessApp({
     return false;
   });
   const [authModalInitialMode, setAuthModalInitialMode] = useState<'login' | 'register' | 'dealer'>('login');
+  const [dealerRegistrationSponsor, setDealerRegistrationSponsor] = useState<{
+    uid: string;
+    resellerName: string;
+    referralCode: string;
+    email?: string;
+    phone?: string;
+  } | null>(null);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState<boolean>(() => initialNav.activeModal === 'payment');
   const [isResellerDashboardOpen, setIsResellerDashboardOpen] = useState<boolean>(() => initialNav.activeModal === 'reseller_dashboard' || initialNav.activeModal === 'reseller' || initialNav.activeModal === 'bayi' || initialNav.activeModal === 'dealer' || initialNav.activeModal === 'member_dashboard' || initialNav.activeModal === 'profile');
   const [isAdminOpen, setIsAdminOpen] = useState<boolean>(() => initialNav.activeModal === 'admin');
@@ -690,7 +697,25 @@ export default function WellnessApp({
       }
     };
 
-    const handleOpenDealerRegistration = () => {
+    const handleOpenDealerRegistration = (event: Event) => {
+      const detail = (event as CustomEvent<{
+        user_id: string;
+        full_name: string;
+        ref_code: string;
+        email?: string;
+        phone?: string;
+      } | null>).detail;
+      setDealerRegistrationSponsor(
+        detail?.user_id && detail.ref_code
+          ? {
+              uid: detail.user_id,
+              resellerName: detail.full_name,
+              referralCode: detail.ref_code,
+              email: detail.email,
+              phone: detail.phone,
+            }
+          : null
+      );
       setIsMonolineModalOpen(false);
       setIsResellerDashboardOpen(false);
       setIsAdminOpen(false);
@@ -1161,11 +1186,19 @@ export default function WellnessApp({
           isOpen={isAuthModalOpen}
           allowClose={true}
           initialMode={authModalInitialMode}
-          onClose={() => setIsAuthModalOpen(false)}
-          onAuthSuccess={handleAuthSuccess}
+          lockedSponsor={dealerRegistrationSponsor}
+          onClose={() => {
+            setIsAuthModalOpen(false);
+            setDealerRegistrationSponsor(null);
+          }}
+          onAuthSuccess={(user) => {
+            setDealerRegistrationSponsor(null);
+            handleAuthSuccess(user);
+          }}
           onStartDemo={() => {
             setIsGuestDemoActive(true);
             setIsAuthModalOpen(false);
+            setDealerRegistrationSponsor(null);
           }}
         />
       )}
