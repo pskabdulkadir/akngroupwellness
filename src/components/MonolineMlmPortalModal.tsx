@@ -206,7 +206,7 @@ export const MonolineMlmPortalModal: React.FC<MonolineMlmPortalModalProps> = ({
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
       }
-      const res = await fetch('/api/v1/state', { headers });
+      const res = await fetch('/api/v1/state', { headers, cache: 'no-store' });
       if (!res.ok) throw new Error('Sunucu durum bilgisi alınamadı.');
       const data: SystemStateResponse = await res.json();
       applyServerState(data);
@@ -242,7 +242,7 @@ export const MonolineMlmPortalModal: React.FC<MonolineMlmPortalModalProps> = ({
     if (!isOpen || !isLivePolling) return;
     const intervalId = window.setInterval(() => {
       fetchSystemState(false);
-    }, 6000);
+    }, 3000);
     return () => window.clearInterval(intervalId);
   }, [isOpen, isLivePolling]);
 
