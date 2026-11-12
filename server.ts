@@ -207,11 +207,10 @@ let distributionParams: SystemDistributionParameters = {
   fast_roi_bonus_percent: 15,
   career_pool_percent: 5,
 };
-// Sabit kur (1 USD = X TRY). Admin panelinden güncellenir.
-const DEFAULT_USD_TRY_RATE = 30;
-let usdTryRate: number = DEFAULT_USD_TRY_RATE;
-let usdTryRateUpdatedAt: string | null = null;
-let usdTryRateUpdatedBy: string | null = null;
+const DEFAULT_USD_TRY_RATE = 50;
+const usdTryRate = DEFAULT_USD_TRY_RATE;
+const usdTryRateUpdatedAt: string | null = null;
+const usdTryRateUpdatedBy: string | null = null;
 let adminAuditLogs: AdminAuditLogRecord[] = [];
 let nextAdminAuditLogId = 1;
 
@@ -5388,31 +5387,12 @@ async function startServer() {
     });
   });
 
-  app.post('/api/v1/admin/exchange-rate', requireAdminJwt, (req, res) => {
-    const rawRate = req.body?.usd_try_rate;
-    const rate = typeof rawRate === 'string' && rawRate.trim() === '' ? NaN : Number(rawRate);
-    const newRate = Number.isFinite(rate) ? roundCurrency(rate) : 0;
-    if (!(newRate > 0)) {
-      res.status(400).json({
-        status: 'error',
-        message: 'Kur pozitif bir sayı olmalıdır (1 USD = X TRY).',
-      });
-      return;
-    }
-    const previousRate = usdTryRate;
-    const now = new Date().toISOString();
-    usdTryRate = newRate;
-    usdTryRateUpdatedAt = now;
-    usdTryRateUpdatedBy = res.locals.adminUid;
-    adminAuditLogs.unshift({
-      id: nextAdminAuditLogId++,
-      action: 'USD_TRY_RATE_UPDATED',
-      admin_uid: res.locals.adminUid,
-      previous_value: previousRate,
-      new_value: newRate,
-      created_at: now,
+  app.post('/api/v1/admin/exchange-rate', requireAdminJwt, (_req, res) => {
+    res.status(403).json({
+      status: 'error',
+      message: 'USD/TRY kuru 50.00 TRY olarak sabitlenmiştir ve değiştirilemez.',
+      data: buildUsdTryRateResponse(),
     });
-    res.json({ status: 'success', data: buildUsdTryRateResponse() });
   });
 
   // 4. POST /api/v1/admin/settings
@@ -6431,8 +6411,12 @@ async function startServer() {
             assignedSponsorId = foundSponsor.user_id;
             assignedSponsorDbId = foundSponsor.id;
           } else {
-            assignedSponsorId = lastMember ? lastMember.user_id : 'USR-ADMIN';
-            assignedSponsorDbId = lastMember ? lastMember.id : 1;
+            res.status(400).json({
+              status: 'error',
+              code: 'SPONSOR_NOT_FOUND',
+              message: 'Belirtilen sponsor bayi bulunamadı.',
+            });
+            return;
           }
         } else {
           // Public monoline registration: placed under the last member in the chain
@@ -10375,11 +10359,6 @@ async function startServer() {
       if (payload.v2ArchitectureConfig) {
         v2ArchitectureConfig = { ...v2ArchitectureConfig, ...payload.v2ArchitectureConfig };
       }
-      if (typeof payload.usdTryRate === 'number' && payload.usdTryRate > 0) {
-        usdTryRate = roundCurrency(payload.usdTryRate);
-        usdTryRateUpdatedAt = payload.usdTryRateUpdatedAt ?? null;
-        usdTryRateUpdatedBy = payload.usdTryRateUpdatedBy ?? null;
-      }
       if (Array.isArray(payload.adminAuditLogs)) {
         adminAuditLogs = payload.adminAuditLogs;
         nextAdminAuditLogId = adminAuditLogs.reduce((max, log) => Math.max(max, log.id), 0) + 1;
@@ -11360,11 +11339,6 @@ async function startServer() {
     processMaturedExpenseVouchers().catch((e) => console.warn('[Cron] Voucher processing error:', e?.message));
   }, 30000);
 
-  if (usdTryRateUpdatedAt === null) {
-    console.warn(
-      `WARNING: usdTryRate is not explicitly set. Falling back to default rate: ${DEFAULT_USD_TRY_RATE}. Set the rate from the admin panel before going live.`
-    );
-  }
 
   const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
   app.listen(PORT, '0.0.0.0', () => {

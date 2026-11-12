@@ -1765,26 +1765,30 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                           referredByCode: activeReseller.referralCode,
                           sponsorId: activeReseller.uid,
                           keepCurrentSession: true,
+                          deferMonolineSync: true,
                         });
                         if (!res.success) {
                           setSubDealerFeedback({ type: 'error', text: res.message });
                         } else {
-                          try {
-                            await fetch('/api/v1/members', {
-                              method: 'POST',
-                              headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify({
-                                user_id: res.reseller?.uid,
-                                full_name: subDealerName.trim(),
-                                city: subDealerCity.trim() || 'İstanbul',
-                                email: subDealerEmail.trim(),
-                                phone: subDealerPhone.trim(),
-                                ref_code: res.reseller?.referralCode,
-                                sponsor_id: activeReseller.uid,
-                                initial_package_id: 'PKG_MINI_DENEME',
-                              }),
-                            });
-                          } catch {}
+                          const memberResponse = await fetch('/api/v1/members', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                              user_id: res.reseller?.uid,
+                              full_name: subDealerName.trim(),
+                              city: subDealerCity.trim() || 'İstanbul',
+                              email: subDealerEmail.trim(),
+                              phone: subDealerPhone.trim(),
+                              ref_code: res.reseller?.referralCode,
+                              sponsor_id: activeReseller.referralCode,
+                              initial_package_id: 'PKG_MINI_DENEME',
+                            }),
+                          });
+                          const memberResult = await memberResponse.json();
+                          if (!memberResponse.ok) {
+                            throw new Error(memberResult.message || 'Alt bayi komisyon kaydı oluşturulamadı.');
+                          }
+                          window.dispatchEvent(new CustomEvent('monoline_webhook_triggered'));
                           setSubDealerFeedback({
                             type: 'success',
                             text: `${subDealerName.trim()} sizin doğrudan sponsorluğunuzda (${activeReseller.referralCode}) alt bayi olarak kaydedildi ve Monoline tek hat ağacınıza eklendi!`,

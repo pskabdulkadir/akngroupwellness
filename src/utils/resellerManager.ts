@@ -2833,6 +2833,7 @@ export async function registerNewReseller(data: {
   referredByCode?: string;
   sponsorId?: string;
   keepCurrentSession?: boolean;
+  deferMonolineSync?: boolean;
   commissionRate?: number;
   initialCredits?: number;
   bankInfo?: Partial<BankInfo>;
@@ -2991,15 +2992,17 @@ export async function registerNewReseller(data: {
       console.warn('Firestore reseller save notice:', fsErr);
     }
 
-    try {
-      import('./monolineSyncBridge').then(m => {
-        m.syncFrekansWithMonolineEngine().then(() => {
-          if (typeof window !== 'undefined') {
-            window.dispatchEvent(new CustomEvent('monoline_webhook_triggered'));
-          }
-        });
-      }).catch(() => {});
-    } catch {}
+    if (!data.deferMonolineSync) {
+      try {
+        import('./monolineSyncBridge').then(m => {
+          m.syncFrekansWithMonolineEngine().then(() => {
+            if (typeof window !== 'undefined') {
+              window.dispatchEvent(new CustomEvent('monoline_webhook_triggered'));
+            }
+          });
+        }).catch(() => {});
+      } catch {}
+    }
 
     return {
       success: true,

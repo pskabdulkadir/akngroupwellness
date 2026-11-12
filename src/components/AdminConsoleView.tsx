@@ -76,39 +76,7 @@ import { getMemberRegionalPendingUsd, getMemberRegionalUsdBalance } from '../uti
 import { BUSINESS_RULES } from '../config/businessRules';
 import { CommissionEngineSettingsView } from './CommissionEngineSettingsView';
 
-interface AdminUsdRateInfo {
-  usd_try_rate: number;
-  updated_at: string | null;
-  updated_by: string | null;
-}
-
-const ADMIN_USD_TRY_RATE_CACHE_KEY = 'admin_usd_try_rate_v1';
-
-function readCachedAdminUsdRate(): AdminUsdRateInfo | null {
-  if (typeof window === 'undefined') return null;
-  try {
-    const value = window.sessionStorage.getItem(ADMIN_USD_TRY_RATE_CACHE_KEY);
-    if (!value) return null;
-    const parsed = JSON.parse(value);
-    if (!Number.isFinite(parsed?.usd_try_rate)) return null;
-    return {
-      usd_try_rate: parsed.usd_try_rate,
-      updated_at: typeof parsed.updated_at === 'string' ? parsed.updated_at : null,
-      updated_by: typeof parsed.updated_by === 'string' ? parsed.updated_by : null,
-    };
-  } catch {
-    return null;
-  }
-}
-
-function storeAdminUsdRate(rate: AdminUsdRateInfo, setRate: (rate: AdminUsdRateInfo) => void) {
-  setRate(rate);
-  try {
-    window.sessionStorage.setItem(ADMIN_USD_TRY_RATE_CACHE_KEY, JSON.stringify(rate));
-  } catch {
-    return;
-  }
-}
+const FIXED_USD_TRY_RATE = 50;
 
 export type AdminConsoleSection =
   | 'members'
@@ -647,13 +615,6 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
   const [adminRefundAmount, setAdminRefundAmount] = useState<number>(5000);
   const [strategicActionMsg, setStrategicActionMsg] = useState<string | null>(null);
   const [strategicBusy, setStrategicBusy] = useState<boolean>(false);
-  const [usdRateInfo, setUsdRateInfo] = useState<AdminUsdRateInfo | null>(readCachedAdminUsdRate);
-  const [usdRateLoadError, setUsdRateLoadError] = useState(false);
-  const [usdRateInput, setUsdRateInput] = useState<string>('');
-  const [usdRateBusy, setUsdRateBusy] = useState<boolean>(false);
-  const [usdRateMsg, setUsdRateMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(
-    null
-  );
 
   const showStrategicFeedback = (msg: string) => {
     setStrategicActionMsg(msg);
@@ -857,78 +818,6 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
   }, [careerTiers]);
 
   const sortedMembers = [...members].sort((a, b) => a.global_line_id - b.global_line_id);
-
-  React.useEffect(() => {
-    if (adminSection !== 'params') return;
-    const controller = new AbortController();
-    setUsdRateLoadError(false);
-    setUsdRateMsg(null);
-    fetch('/api/v1/admin/exchange-rate', {
-      method: 'GET',
-      headers: {
-        Authorization: `Bearer ${getAdminToken() ?? ''}`,
-        'Content-Type': 'application/json',
-      },
-      signal: controller.signal,
-    })
-      .then(async (res) => {
-        if (!res.ok) {
-          throw new Error(res.status === 401 ? 'Yönetici oturumu doğrulanamadı. Yeniden giriş yapın.' : 'Mevcut kur okunamadı.');
-        }
-        const data = await res.json();
-        if (data.status !== 'success' || !data.data || typeof data.data.usd_try_rate !== 'number' || !Number.isFinite(data.data.usd_try_rate)) {
-          throw new Error('Kur bilgisi beklenen biçimde alınamadı.');
-        }
-        storeAdminUsdRate(data.data, setUsdRateInfo);
-      })
-      .catch((err) => {
-        if (controller.signal.aborted) return;
-        setUsdRateLoadError(true);
-        setUsdRateMsg({
-          type: 'error',
-          text: err instanceof Error && !(err instanceof TypeError) && !(err instanceof SyntaxError)
-            ? err.message
-            : 'Mevcut kur okunamadı.',
-        });
-      });
-    return () => controller.abort();
-  }, [adminSection]);
-
-  const handleUpdateUsdRate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const rate = Number(usdRateInput);
-    if (!Number.isFinite(rate) || rate <= 0) {
-      setUsdRateMsg({ type: 'error', text: 'Kur pozitif bir sayı olmalıdır.' });
-      return;
-    }
-    setUsdRateBusy(true);
-    setUsdRateMsg(null);
-    try {
-      const res = await fetch('/api/v1/admin/exchange-rate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${getAdminToken() ?? ''}`,
-        },
-        body: JSON.stringify({ usd_try_rate: rate }),
-      });
-      const data = await res.json();
-      if (!res.ok || data.status !== 'success') {
-        throw new Error(data.message || 'Kur güncellenemedi.');
-      }
-      storeAdminUsdRate(data.data, setUsdRateInfo);
-      setUsdRateLoadError(false);
-      setUsdRateInput('');
-      setUsdRateMsg({ type: 'success', text: 'Kur başarıyla güncellendi' });
-    } catch (err) {
-      setUsdRateMsg({
-        type: 'error',
-        text: err instanceof Error ? err.message : 'Kur güncellenirken bilinmeyen bir hata oluştu.',
-      });
-    } finally {
-      setUsdRateBusy(false);
-    }
-  };
 
   const handleSaveCareerTiers = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -2314,91 +2203,19 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
           <div className="lg:col-span-12 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50 to-teal-50 px-5 py-4 shadow-sm">
             <div>
               <div className="text-xs font-bold uppercase tracking-wide text-emerald-800">
-                Yönetici Tarafından Belirlenen Sabit Kur
+                Kodlarda Sabitlenen Kur
               </div>
               <div className="mt-1 text-xl font-mono font-bold text-slate-900 tabular-nums">
-                {usdRateInfo
-                  ? `1 USD = ${usdRateInfo.usd_try_rate.toFixed(2)} TRY`
-                  : usdRateLoadError
-                    ? 'Kur alınamadı'
-                    : 'Kur yükleniyor...'}
+                1 USD = {FIXED_USD_TRY_RATE.toFixed(2)} TRY
               </div>
             </div>
-            {usdRateInfo && (
-              <div className="text-xs font-medium text-slate-600">
-                {usdRateInfo.updated_at
-                  ? `Son yönetici güncellemesi: ${new Date(usdRateInfo.updated_at).toLocaleString('tr-TR')}`
-                  : 'Yönetici tarafından henüz güncellenmedi (varsayılan kur)'}
-              </div>
-            )}
+            <div className="text-xs font-medium text-slate-600">
+              Sabit kur değişikliği yönetici panelinden yapılamaz.
+            </div>
           </div>
-          <form
-            onSubmit={handleUpdateUsdRate}
-            className="lg:col-span-12 bg-white border border-slate-200 rounded-2xl p-6 space-y-4 shadow-2xs"
-          >
-            <div className="border-b border-slate-200 pb-3 flex items-center justify-between">
-              <div>
-                <div className="text-xs font-mono text-slate-500">
-                  GET/POST /api/v1/admin/exchange-rate · SABİT USD/TRY KURU
-                </div>
-                <h3 className="text-base font-bold text-slate-900 mt-0.5">
-                  Sabit Kur (1 USD = X TRY)
-                </h3>
-              </div>
-              <div className="text-right">
-                <div className="text-xs text-slate-500">Mevcut Kur</div>
-                <div className="text-lg font-mono font-bold text-slate-900 tabular-nums">
-                  {usdRateInfo ? `1 $ = ${usdRateInfo.usd_try_rate.toFixed(2)} TRY` : '—'}
-                </div>
-              </div>
-            </div>
-
-            {usdRateInfo && (
-              <div className="text-xs text-slate-500">
-                Son güncelleme:{' '}
-                {usdRateInfo.updated_at
-                  ? `${new Date(usdRateInfo.updated_at).toLocaleString('tr-TR')} (Admin: ${usdRateInfo.updated_by})`
-                  : 'Henüz güncellenmedi (varsayılan kur)'}
-              </div>
-            )}
-
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-3">
-              <div className="flex-1">
-                <label className="block text-xs font-medium text-slate-700 mb-1">
-                  Yeni Kur (1 USD = ? TRY)
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min={0}
-                  value={usdRateInput}
-                  onChange={(e) => setUsdRateInput(e.target.value)}
-                  placeholder="Örn: 32.50"
-                  className="w-full px-3 py-2 text-sm font-mono tabular-nums bg-slate-50 border border-slate-300 rounded-xl"
-                />
-              </div>
-              <button
-                type="submit"
-                disabled={usdRateBusy || usdRateInput.trim() === ''}
-                className="py-2.5 px-4 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-xl transition-colors cursor-pointer disabled:opacity-50"
-              >
-                {usdRateBusy ? 'Güncelleniyor...' : 'Kuru Güncelle'}
-              </button>
-            </div>
-
-            {usdRateMsg && (
-              <div
-                role="status"
-                className={`text-xs font-medium px-3 py-2 rounded-xl ${
-                  usdRateMsg.type === 'success'
-                    ? 'bg-emerald-50 text-emerald-700'
-                    : 'bg-red-50 text-red-700'
-                }`}
-              >
-                {usdRateMsg.text}
-              </div>
-            )}
-          </form>
+          <div className="lg:col-span-12 bg-white border border-slate-200 rounded-2xl p-6 text-sm text-slate-600">
+            Sistem işlemlerinde USD/TRY kuru sabit olarak 50.00 TRY kullanılır.
+          </div>
 
           <section className="lg:col-span-5 bg-white border border-slate-200 rounded-2xl p-6 space-y-5 shadow-2xs">
             <div className="border-b border-slate-200 pb-3 flex items-center justify-between">
