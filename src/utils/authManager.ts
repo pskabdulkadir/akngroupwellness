@@ -540,7 +540,7 @@ const STORAGE_DEMO_BLACKLIST_KEY = 'aurabio_demo_used_blacklist_v1';
 async function requestMemberWalletToken(
   email: string,
   password: string
-): Promise<{ success: boolean; message?: string }> {
+): Promise<{ success: boolean; message?: string; member?: any }> {
   try {
     const response = await fetch('/api/v1/member/session', {
       method: 'POST',
@@ -555,7 +555,7 @@ async function requestMemberWalletToken(
       };
     }
     saveMemberWalletToken(data.token);
-    return { success: true };
+    return { success: true, member: data.member };
   } catch {
     return { success: false, message: 'Bayi giriş servisine ulaşılamadı.' };
   }
@@ -1098,13 +1098,7 @@ export async function registerMember(
       markWelcomeBonusClaimed(cleanEmail, cleanPhone, uid);
     }
 
-    // 1. Save to local persistent storage immediately
-    saveToLocalMembersDirectory(newUser);
-    localStorage.setItem(STORAGE_SESSION_KEY, JSON.stringify(newUser));
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('aurabio_session_updated', { detail: newUser }));
-    }
-    // 2. Create the reseller profile only after the initial payment is confirmed
+    // 1. Create the reseller profile only after the initial payment is confirmed
 
     if (!isPendingDealerRegistration) try {
       const resellerProfile = {
@@ -1212,44 +1206,46 @@ export async function registerMember(
     });
 
     // 5. Sync new registration & package order with Monoline 7 Nefis MLM & Commission Engine
-    try {
-      const m = await import('./monolineSyncBridge');
-      const monolinePkgId = m.mapFrekansPkgToMonolinePkgId(effectiveStarterPkg);
-      const memberResponse = await fetch('/api/v1/members', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          user_id: uid,
-          full_name: companyName || cleanFullName,
-          city: completeDealerDetails.address || completeDealerDetails.taxOffice || 'İstanbul',
-          email: cleanEmail,
-          phone: cleanPhone,
-          ref_code: personalReferralCode,
-          country_code: cleanCountryCode,
-          sponsor_id: resellerId || '',
-          initial_package_id: monolinePkgId,
-          password,
-          assigned_leg: dealerApplicationData?.assignedLeg || 'AUTO',
-          pending_payment: isPendingDealerRegistration,
-        }),
-      });
-      if (!memberResponse.ok && isPendingDealerRegistration) {
-        const error = await memberResponse.json().catch(() => ({}));
-        throw new Error(error?.message || 'Bayi hesabı ödeme için hazırlanamıyor.');
-      }
-      if (memberResponse.ok && !isPendingDealerRegistration) {
-        await requestMemberWalletToken(cleanEmail, password);
-      }
+    const m = await import('./monolineSyncBridge');
+    const monolinePkgId = m.mapFrekansPkgToMonolinePkgId(effectiveStarterPkg);
+    const memberResponse = await fetch('/api/v1/members', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        user_id: uid,
+        full_name: companyName || cleanFullName,
+        city: completeDealerDetails.address || completeDealerDetails.taxOffice || 'İstanbul',
+        email: cleanEmail,
+        phone: cleanPhone,
+        ref_code: personalReferralCode,
+        country_code: cleanCountryCode,
+        sponsor_id: resellerId || '',
+        initial_package_id: monolinePkgId,
+        password,
+        assigned_leg: dealerApplicationData?.assignedLeg || 'AUTO',
+        pending_payment: isPendingDealerRegistration,
+      }),
+    });
+    if (!memberResponse.ok) {
+      const error = await memberResponse.json().catch(() => ({}));
+      throw new Error(error?.message || 'Bayi hesabı sunucuya kaydedilemiyor.');
+    }
+    if (memberResponse.ok && !isPendingDealerRegistration) {
+      await requestMemberWalletToken(cleanEmail, password);
+    }
 
-      if (!isPendingDealerRegistration) {
-        m.syncFrekansWithMonolineEngine().then(() => {
-          if (typeof window !== 'undefined') {
-            window.dispatchEvent(new CustomEvent('monoline_webhook_triggered'));
-          }
-        }).catch(() => {});
-      }
-    } catch (err) {
-      if (isPendingDealerRegistration) throw err;
+    if (!isPendingDealerRegistration) {
+      m.syncFrekansWithMonolineEngine().then(() => {
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('monoline_webhook_triggered'));
+        }
+      }).catch(() => {});
+    }
+
+    saveToLocalMembersDirectory(newUser);
+    localStorage.setItem(STORAGE_SESSION_KEY, JSON.stringify(newUser));
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('aurabio_session_updated', { detail: newUser }));
     }
 
     return {
@@ -2040,7 +2036,15 @@ export async function loginMember(
       return { success: true, message: 'Yönetici & Bayi Yetkili girişi başarılı!', user: adminUser };
     }
 
-    // 2. Try Firestore lookup with auth assurance
+    const walletSession = await requestMemberWalletToken(cleanEmail, cleanPassword);
+    if (!walletSession.success) {
+      return {
+        success: false,
+        message: walletSession.message || 'Bayi oturumu sunucuda doğrulanamadı.',
+      };
+    }
+
+    // 2. Load the profile associated with the verified server identity
     let userData: UserMember | null = null;
     try {
       await ensureFirebaseAuthUser(cleanEmail, cleanPassword);
@@ -2066,72 +2070,48 @@ export async function loginMember(
       }
     }
 
-    // 4. Fallback to server session /api/v1/member/session if not in local directory or Firestore
-    if (!userData) {
-      try {
-        const srvRes = await fetch('/api/v1/member/session', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: cleanEmail, password: cleanPassword }),
-        });
-        if (srvRes.ok) {
-          const srvData = await srvRes.json();
-          if (srvData.status === 'success' && srvData.member) {
-            const m = srvData.member;
-            userData = {
-              uid: m.user_id,
-              email: m.email || cleanEmail,
-              fullName: m.full_name,
-              phone: m.phone || '',
-              passwordHash: hashPassword(cleanPassword),
-              isAllowed: true,
-              isApproved: true,
-              expiryDate: null,
-              role: 'dealer',
-              dealerStatus: 'approved',
-              isDealerRequested: true,
-              referralCode: m.ref_code,
-              creditsBalance: typeof m.session_credits === 'number' ? m.session_credits : 64,
-              referredByCode: m.sponsor_id || undefined,
-              dealerPackageId: 'silver-dealer',
-              createdAt: m.joined_at || new Date().toISOString(),
-              lastLoginAt: new Date().toISOString(),
-              dealerDetails: {
-                companyName: m.full_name,
-                taxNumber: '',
-                taxOffice: '',
-                businessField: 'Biyo-Rezonans & Holistik Terapi',
-                whatsapp: m.phone || '',
-                referralCode: m.ref_code,
-                commissionRate: 20,
-                creditsBalance: typeof m.session_credits === 'number' ? m.session_credits : 64,
-                dealerPackageId: 'silver-dealer',
-                appliedAt: m.joined_at || new Date().toISOString(),
-                bankInfo: {
-                  bankName: m.bank_details?.bank_name || 'Ziraat Bankası',
-                  accountHolder: m.bank_details?.iban_holder_name || m.full_name,
-                  iban: m.bank_details?.iban || '',
-                },
-              },
-            };
-            if (srvData.token) {
-              sessionStorage.setItem('aurabio_member_wallet_token_v1', srvData.token);
-              localStorage.setItem('aurabio_member_wallet_token_v1', srvData.token);
-            }
-          }
-        }
-      } catch (srvLoginErr) {
-        console.debug('Login server fallback notice:', srvLoginErr);
-      }
+    if (!userData && walletSession.member) {
+      const m = walletSession.member;
+      userData = {
+        uid: m.user_id,
+        email: m.email || cleanEmail,
+        fullName: m.full_name,
+        phone: m.phone || '',
+        passwordHash: hashPassword(cleanPassword),
+        isAllowed: true,
+        isApproved: true,
+        expiryDate: null,
+        role: 'dealer',
+        dealerStatus: 'approved',
+        isDealerRequested: true,
+        referralCode: m.ref_code,
+        creditsBalance: typeof m.session_credits === 'number' ? m.session_credits : 64,
+        referredByCode: m.sponsor_id || undefined,
+        dealerPackageId: 'silver-dealer',
+        createdAt: m.joined_at || new Date().toISOString(),
+        lastLoginAt: new Date().toISOString(),
+        dealerDetails: {
+          companyName: m.full_name,
+          taxNumber: '',
+          taxOffice: '',
+          businessField: 'Biyo-Rezonans & Holistik Terapi',
+          whatsapp: m.phone || '',
+          referralCode: m.ref_code,
+          commissionRate: 20,
+          creditsBalance: typeof m.session_credits === 'number' ? m.session_credits : 64,
+          dealerPackageId: 'silver-dealer',
+          appliedAt: m.joined_at || new Date().toISOString(),
+          bankInfo: {
+            bankName: m.bank_details?.bank_name || 'Ziraat Bankası',
+            accountHolder: m.bank_details?.iban_holder_name || m.full_name,
+            iban: m.bank_details?.iban || '',
+          },
+        },
+      };
     }
 
     if (!userData) {
       return { success: false, message: 'Bu e-posta adresine ait kayıt bulunamadı.' };
-    }
-
-    // Verify password
-    if (userData.passwordHash && userData.passwordHash !== hashPassword(cleanPassword)) {
-      return { success: false, message: 'Hatalı şifre girdiniz. Lütfen tekrar deneyin.' };
     }
 
     // Ensure dealer role and permissions
@@ -2143,14 +2123,6 @@ export async function loginMember(
       if (typeof userData.creditsBalance !== 'number') {
         userData.creditsBalance = 100;
       }
-    }
-
-    const walletSession = await requestMemberWalletToken(cleanEmail, cleanPassword);
-    if (!walletSession.success) {
-      return {
-        success: false,
-        message: walletSession.message || 'Bayi oturumu sunucuda doğrulanamadı.',
-      };
     }
 
     // Update lastLoginAt
