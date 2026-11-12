@@ -4,15 +4,16 @@ const ADMIN_API_PATH =
   /^\/api\/v1\/(admin|cron|career-pool)\/|^\/api\/v1\/reset$|^\/api\/v1\/simulation\/full-career-journey$/;
 
 export function getAdminToken(): string | null {
-  return sessionStorage.getItem(ADMIN_TOKEN_KEY);
+  const token = sessionStorage.getItem(ADMIN_TOKEN_KEY);
+  if (!token) return null;
+  if (token.split('.').length === 2) return token;
+  clearAdminToken();
+  return null;
 }
 
 export function clearAdminToken(): void {
   sessionStorage.removeItem(ADMIN_TOKEN_KEY);
 }
-
-export const ADMIN_DEFAULT_EMAIL = 'psikologabdulkadirkan@gmail.com';
-export const ADMIN_DEFAULT_PASSWORD = 'Abdulkadir1983';
 
 export async function loginAdminWithMessage(
   email: string,
@@ -20,6 +21,7 @@ export async function loginAdminWithMessage(
 ): Promise<{ success: boolean; message?: string }> {
   const cleanEmail = String(email || '').trim().toLowerCase();
   const cleanPassword = String(password || '').trim();
+  clearAdminToken();
 
   try {
     const res = await fetch('/api/v1/admin/login', {
@@ -32,21 +34,11 @@ export async function loginAdminWithMessage(
       sessionStorage.setItem(ADMIN_TOKEN_KEY, data.token);
       return { success: true };
     }
-    if (cleanEmail === ADMIN_DEFAULT_EMAIL && cleanPassword === ADMIN_DEFAULT_PASSWORD) {
-      const fallbackToken = `admin-token-safe-${Date.now()}`;
-      sessionStorage.setItem(ADMIN_TOKEN_KEY, fallbackToken);
-      return { success: true };
-    }
     return {
       success: false,
       message: data?.message || 'E-posta veya şifre hatalı.',
     };
   } catch {
-    if (cleanEmail === ADMIN_DEFAULT_EMAIL && cleanPassword === ADMIN_DEFAULT_PASSWORD) {
-      const fallbackToken = `admin-token-offline-${Date.now()}`;
-      sessionStorage.setItem(ADMIN_TOKEN_KEY, fallbackToken);
-      return { success: true };
-    }
     return { success: false, message: 'Yönetici giriş servisine ulaşılamadı.' };
   }
 }

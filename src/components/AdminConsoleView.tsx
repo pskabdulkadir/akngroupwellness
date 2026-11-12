@@ -373,7 +373,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('aurabio_admin_jwt') || ''}`,
+          Authorization: `Bearer ${getAdminToken() || ''}`,
         },
         body: JSON.stringify({
           UNILEVEL_DEPTH_PERCENTAGES: editUnilevelPercentages.map(Number),

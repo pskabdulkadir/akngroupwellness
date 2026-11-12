@@ -537,18 +537,27 @@ const STORAGE_SESSION_KEY = 'aurabio_active_session_v1';
 const MEMBER_WALLET_TOKEN_KEY = 'aurabio_member_wallet_token_v1';
 const STORAGE_DEMO_BLACKLIST_KEY = 'aurabio_demo_used_blacklist_v1';
 
-async function requestMemberWalletToken(email: string, password: string): Promise<void> {
+async function requestMemberWalletToken(
+  email: string,
+  password: string
+): Promise<{ success: boolean; message?: string }> {
   try {
     const response = await fetch('/api/v1/member/session', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
     });
-    if (!response.ok) return;
-    const data = await response.json();
-    if (typeof data?.token === 'string') saveMemberWalletToken(data.token);
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || typeof data?.token !== 'string') {
+      return {
+        success: false,
+        message: data?.message || 'Bayi oturumu sunucuda doğrulanamadı.',
+      };
+    }
+    saveMemberWalletToken(data.token);
+    return { success: true };
   } catch {
-    return;
+    return { success: false, message: 'Bayi giriş servisine ulaşılamadı.' };
   }
 }
 const STORAGE_MEMBERS_DIRECTORY_KEY = 'aurabio_members_directory_v1';
@@ -2136,11 +2145,18 @@ export async function loginMember(
       }
     }
 
+    const walletSession = await requestMemberWalletToken(cleanEmail, cleanPassword);
+    if (!walletSession.success) {
+      return {
+        success: false,
+        message: walletSession.message || 'Bayi oturumu sunucuda doğrulanamadı.',
+      };
+    }
+
     // Update lastLoginAt
     userData.lastLoginAt = new Date().toISOString();
     saveToLocalMembersDirectory(userData);
     localStorage.setItem(STORAGE_SESSION_KEY, JSON.stringify(userData));
-    await requestMemberWalletToken(cleanEmail, cleanPassword);
 
     // Sync active reseller session
     try {

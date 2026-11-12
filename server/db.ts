@@ -8,7 +8,7 @@
  * - Row-level locking ('SELECT ... FOR UPDATE') for financial & credit operations
  * - ACID Transactions ('withTransaction')
  * - Idempotency tracking ('request_id')
- * - Graceful resilient fallback during build / pre-warming
+ * - PostgreSQL is required; unavailable database operations fail closed
  */
 
 import { Pool, PoolClient, QueryResult, QueryResultRow } from 'pg';
@@ -42,7 +42,7 @@ export function getIsPostgresAvailable(): boolean {
 }
 
 /**
- * Initializes the PostgreSQL database schema if available.
+ * Initializes the required PostgreSQL schema before the API starts.
  * Applies monoline_schema.sql automatically on first connect.
  */
 export async function initPostgresDatabase(): Promise<boolean> {
@@ -67,8 +67,8 @@ export async function initPostgresDatabase(): Promise<boolean> {
 
   if (!client) {
     isPostgresAvailable = false;
-    console.warn(
-      `[PostgreSQL-18 Notice]: Veritabanına (${maskedUrl}) 3 denemede bağlanılamadı (${lastError?.code || lastError?.message}). Yerel bellek/ACID hibrit motoru aktif tutuldu.`
+    console.error(
+      `[PostgreSQL-18] Veritabanına (${maskedUrl}) 3 denemede bağlanılamadı (${lastError?.code || lastError?.message}). PostgreSQL zorunlu modda uygulama başlatılmayacak.`
     );
     return false;
   }
@@ -85,8 +85,8 @@ export async function initPostgresDatabase(): Promise<boolean> {
     return true;
   } catch (err: any) {
     isPostgresAvailable = false;
-    console.warn(
-      `[PostgreSQL-18 Notice]: Şema başlatılamadı (${err.code || err.message}). Yerel bellek/ACID hibrit motoru aktif tutuldu.`
+    console.error(
+      `[PostgreSQL-18] Şema başlatılamadı (${err.code || err.message}). PostgreSQL zorunlu modda uygulama başlatılmayacak.`
     );
     return false;
   } finally {
@@ -99,7 +99,7 @@ export async function initPostgresDatabase(): Promise<boolean> {
  */
 export async function query<T extends QueryResultRow = any>(text: string, params?: any[]): Promise<QueryResult<T> | null> {
   if (!isPostgresAvailable) {
-    return null;
+    throw new Error('PostgreSQL bağlantısı yok; veritabanı sorgusu gerçekleştirilemedi.');
   }
   try {
     return await pool.query<T>(text, params);
@@ -116,12 +116,7 @@ export async function withTransaction<T>(
   callback: (client: PoolClient) => Promise<T>
 ): Promise<T> {
   if (!isPostgresAvailable) {
-    // If PG is offline, execute callback in fallback mode
-    const dummyClient = {
-      query: async () => ({ rows: [] }),
-      release: () => {},
-    } as unknown as PoolClient;
-    return await callback(dummyClient);
+    throw new Error('PostgreSQL bağlantısı yok; kalıcı veri gerektiren işlem reddedildi.');
   }
 
   const client = await pool.connect();
@@ -232,10 +227,13 @@ export async function deductResellerCreditsAtomic(
     });
   }
 
-  // Graceful in-memory fallback if PG offline
-  return {
-    success: true,
-    remainingCredits: 100,
-    message: 'Kredi işlemi başarıyla tamamlandı (Yerel mod).',
-  };
+  throw new Error('PostgreSQL bağlantısı yok; kredi işlemi gerçekleştirilemedi.');
+}
+
+export async function readApplicationState(): Promise<unknown | null> {
+  if (!isPostgresAvailable) {
+    throw new Error('PostgreSQL bağlantısı yok; kalıcı uygulama durumu okunamadı.');
+  }
+  const result = await pool.query('SELECT payload FROM application_state WHERE state_key = $1', ['main']);
+  return result.rows[0]?.payload ?? null;
 }

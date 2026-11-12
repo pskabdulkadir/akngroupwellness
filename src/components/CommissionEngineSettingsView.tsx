@@ -196,11 +196,7 @@ export const CommissionEngineSettingsView: React.FC<CommissionEngineSettingsView
     setIsSaving(true);
     setStatusMessage(null);
 
-    const token =
-      getAdminToken() ||
-      localStorage.getItem('aurabio_admin_jwt') ||
-      sessionStorage.getItem('aurabio_admin_token_v1') ||
-      '';
+    const token = getAdminToken() || '';
 
     try {
       const payload = {

@@ -11,6 +11,7 @@ import {
   withTransaction,
   deductResellerCreditsAtomic,
   query as pgQuery,
+  readApplicationState,
 } from './server/db';
 
 import {
@@ -315,6 +316,315 @@ let nextJournalEntryId = 1;
 
 // V2.1 Anti-Fraud IP 24h Activity Tracker
 let ipActivityEvents: Array<{ ip: string; user_id: string; order_id?: string; timestamp_ms: number }> = [];
+
+function buildPersistentState() {
+  return {
+    exchangeRate: usdTryRate,
+    ethicsGuidelinesContent,
+    activityLogs,
+    members,
+    memberCredentials: Array.from(memberCredentials.entries()),
+    creditsOwnedByServer: Array.from(creditsOwnedByServer),
+    careerTiers,
+    distributionParams,
+    activeBusinessRules,
+    adminAuditLogs,
+    nextAdminAuditLogId,
+    transactions,
+    commissionLogs,
+    ordersLog,
+    systemWallet,
+    unclaimedCommissions,
+    queueJobs,
+    v2ArchitectureConfig,
+    withdrawalRequests,
+    taxRefundInvoices,
+    nextTaxRefundId,
+    sharedDocuments: Array.from(sharedDocuments.entries()).map(([id, document]) => [
+      id,
+      { ...document, data: document.data.toString('base64') },
+    ]),
+    feedbackTickets,
+    nextTicketNumber,
+    userRewardsLog,
+    notificationOutbox,
+    fomoCountdownAlerts,
+    p2pTransfers,
+    walletTransactions,
+    activationVouchers,
+    fraudAlerts,
+    webhookLogs,
+    cronLogs,
+    poolDistributions,
+    processedOrderIds: Array.from(processedOrderIds),
+    processedEventIdempotencyKeys: Array.from(processedEventIdempotencyKeys),
+    idempotentBlockedCount,
+    systemCareerFundBalance,
+    systemCareerFundCumulative,
+    enforceCareerDepthLock,
+    nextCommissionLogId,
+    nextUnclaimedCommissionId,
+    nextWithdrawalId,
+    nextActivityLogId,
+    nextRewardLogId,
+    nextNotificationId,
+    nextFraudAlertId,
+    nextFomoAlertId,
+    nextP2PTransferId,
+    nextWalletTransactionId,
+    nextVoucherId,
+    expenseVouchers,
+    payoutBatches,
+    payoutBatchItems,
+    journalEntries,
+    nextVoucherSequence,
+    nextPayoutBatchSequence,
+    nextJournalEntryId,
+    ipActivityEvents,
+    businessRuleValues: {
+      CLAWBACK_PROTECTION_DAYS,
+      SYSTEM_FUND_PERCENT,
+      DIRECT_SPONSOR_PERCENT,
+      UNILEVEL_DEPTH_PERCENTAGES,
+      MONOLINE_INCENTIVE_PERCENTAGES,
+      MONOLINE_DEPTH_PERCENTAGES,
+    },
+  };
+}
+
+let statePersistPromise: Promise<void> = Promise.resolve();
+let persistenceFailure: string | null = null;
+function persistApplicationState() {
+  const snapshot = buildPersistentState();
+  const userRows = members.map((member) => {
+    const credentials = memberCredentials.get(member.user_id);
+    return {
+      user_id: member.user_id,
+      full_name: member.full_name,
+      email: member.email || `${member.user_id.toLowerCase()}@invalid.local`,
+      phone: member.phone || '',
+      city: member.city || 'Türkiye',
+      referral_code: member.ref_code || `AURA-BAYI-${member.global_line_id}`,
+      sponsor_id: member.sponsor_id,
+      monoline_position: member.global_line_id,
+      career_level: member.career_level || 1,
+      max_career_level: member.max_career_level || member.career_level || 1,
+      active_career_level: member.active_career_level || member.career_level || 1,
+      personal_volume_30d: member.personal_volume_30d || member.personal_volume || 0,
+      group_volume_30d: member.group_volume_30d || member.group_volume || 0,
+      active_direct_referrals_30d: member.active_direct_referrals_30d || member.active_direct_referrals || 0,
+      activity_expires_at: member.activity_expires_at,
+      is_active: member.is_active,
+      is_locked: member.is_locked,
+      scan_credits: member.session_credits || 0,
+      has_tax_company: Boolean(member.has_tax_company),
+      tc_identity_no: member.tc_identity_no || '',
+      assigned_leg: member.assigned_leg || 'AUTO',
+      left_leg_volume: member.left_leg_volume || 0,
+      right_leg_volume: member.right_leg_volume || 0,
+      password_salt: credentials?.salt || null,
+      password_hash: credentials?.hash || null,
+      created_at: member.joined_at,
+      updated_at: new Date().toISOString(),
+    };
+  });
+  const walletRows = members.map((member) => ({
+    user_id: member.user_id,
+    balance: (member.wallets.wallet_domestic_usd || 0) + (member.wallets.wallet_international_usd || 0),
+    pending_balance: (member.wallets.pending_domestic_usd || 0) + (member.wallets.pending_international_usd || 0),
+    total_withdrawn: member.wallets.total_withdrawn || 0,
+    total_earned: member.wallets.total_earnings || 0,
+    unilevel_earnings: member.wallets.unilevel_wallet || 0,
+    monoline_incentive_earnings: member.wallets.monoline_incentive_wallet || 0,
+    direct_sponsor_earnings: member.wallets.sponsor_wallet || 0,
+    iban: member.bank_details?.iban || '',
+    iban_holder_name: member.bank_details?.iban_holder_name || member.full_name,
+    bank_name: member.bank_details?.bank_name || '',
+    crypto_trc20: member.bank_details?.trc20_address || '',
+    wallet_data: member.wallets,
+  }));
+  const memberIds = new Set(members.map((member) => member.user_id));
+  const orderRows = ordersLog.map((order) => ({
+    order_id: order.order_id,
+    user_id: memberIds.has(order.external_user_id) ? order.external_user_id : null,
+    package_id: order.package_id,
+    amount: order.amount,
+    status: order.status,
+    payment_method: order.payment_method || 'CREDIT_CARD',
+    created_at: order.created_at,
+  }));
+  const commissionRows = commissionLogs.map((log) => ({
+    order_id: log.order_id,
+    source_user_id: memberIds.has(log.source_external_id) ? log.source_external_id : null,
+    target_user_id: log.target_user_id && memberIds.has(log.target_external_id) ? log.target_external_id : null,
+    type: log.type,
+    depth_level: log.depth_level,
+    amount: log.amount,
+    status: log.status || log.clawback_status || 'RELEASED',
+    release_at: log.release_at || log.created_at,
+    created_at: log.created_at,
+  }));
+  const nextWrite = statePersistPromise.then(() =>
+    withTransaction(async (client) => {
+      await client.query(
+        `INSERT INTO users (user_id, full_name, email, phone, city, referral_code, sponsor_id, monoline_position, career_level, max_career_level, active_career_level, personal_volume_30d, group_volume_30d, active_direct_referrals_30d, activity_expires_at, is_active, is_locked, scan_credits, has_tax_company, tc_identity_no, assigned_leg, left_leg_volume, right_leg_volume, password_salt, password_hash, created_at, updated_at)
+         SELECT user_id, full_name, email, phone, city, referral_code, sponsor_id, monoline_position, career_level, max_career_level, active_career_level, personal_volume_30d, group_volume_30d, active_direct_referrals_30d, activity_expires_at, is_active, is_locked, scan_credits, has_tax_company, tc_identity_no, assigned_leg, left_leg_volume, right_leg_volume, password_salt, password_hash, created_at, updated_at
+         FROM jsonb_to_recordset($1::jsonb) AS x(user_id text, full_name text, email text, phone text, city text, referral_code text, sponsor_id text, monoline_position bigint, career_level integer, max_career_level integer, active_career_level integer, personal_volume_30d numeric, group_volume_30d numeric, active_direct_referrals_30d integer, activity_expires_at timestamptz, is_active boolean, is_locked boolean, scan_credits integer, has_tax_company boolean, tc_identity_no text, assigned_leg text, left_leg_volume numeric, right_leg_volume numeric, password_salt text, password_hash text, created_at timestamptz, updated_at timestamptz)
+         ON CONFLICT (user_id) DO UPDATE SET full_name = EXCLUDED.full_name, email = EXCLUDED.email, phone = EXCLUDED.phone, city = EXCLUDED.city, referral_code = EXCLUDED.referral_code, sponsor_id = EXCLUDED.sponsor_id, monoline_position = EXCLUDED.monoline_position, career_level = EXCLUDED.career_level, max_career_level = EXCLUDED.max_career_level, active_career_level = EXCLUDED.active_career_level, personal_volume_30d = EXCLUDED.personal_volume_30d, group_volume_30d = EXCLUDED.group_volume_30d, active_direct_referrals_30d = EXCLUDED.active_direct_referrals_30d, activity_expires_at = EXCLUDED.activity_expires_at, is_active = EXCLUDED.is_active, is_locked = EXCLUDED.is_locked, scan_credits = EXCLUDED.scan_credits, has_tax_company = EXCLUDED.has_tax_company, tc_identity_no = EXCLUDED.tc_identity_no, assigned_leg = EXCLUDED.assigned_leg, left_leg_volume = EXCLUDED.left_leg_volume, right_leg_volume = EXCLUDED.right_leg_volume, password_salt = EXCLUDED.password_salt, password_hash = EXCLUDED.password_hash, updated_at = EXCLUDED.updated_at`,
+        [JSON.stringify(userRows)]
+      );
+      await client.query(
+        'UPDATE users SET is_active = FALSE, is_locked = TRUE WHERE NOT (user_id = ANY($1::text[]))',
+        [members.map((member) => member.user_id)]
+      );
+      await client.query(
+        `INSERT INTO wallets (user_id, balance, pending_balance, total_withdrawn, total_earned, unilevel_earnings, monoline_incentive_earnings, direct_sponsor_earnings, iban, iban_holder_name, bank_name, crypto_trc20, wallet_data)
+         SELECT user_id, balance, pending_balance, total_withdrawn, total_earned, unilevel_earnings, monoline_incentive_earnings, direct_sponsor_earnings, iban, iban_holder_name, bank_name, crypto_trc20, wallet_data
+         FROM jsonb_to_recordset($1::jsonb) AS x(user_id text, balance numeric, pending_balance numeric, total_withdrawn numeric, total_earned numeric, unilevel_earnings numeric, monoline_incentive_earnings numeric, direct_sponsor_earnings numeric, iban text, iban_holder_name text, bank_name text, crypto_trc20 text, wallet_data jsonb)
+         ON CONFLICT (user_id) DO UPDATE SET balance = EXCLUDED.balance, pending_balance = EXCLUDED.pending_balance, total_withdrawn = EXCLUDED.total_withdrawn, total_earned = EXCLUDED.total_earned, unilevel_earnings = EXCLUDED.unilevel_earnings, monoline_incentive_earnings = EXCLUDED.monoline_incentive_earnings, direct_sponsor_earnings = EXCLUDED.direct_sponsor_earnings, iban = EXCLUDED.iban, iban_holder_name = EXCLUDED.iban_holder_name, bank_name = EXCLUDED.bank_name, crypto_trc20 = EXCLUDED.crypto_trc20, wallet_data = EXCLUDED.wallet_data`,
+        [JSON.stringify(walletRows)]
+      );
+      await client.query(
+        `INSERT INTO system_wallet (id, system_pool_balance, unclaimed_pool_balance, career_pool_balance)
+         VALUES (1, $1, $2, $3)
+         ON CONFLICT (id) DO UPDATE SET system_pool_balance = EXCLUDED.system_pool_balance, unclaimed_pool_balance = EXCLUDED.unclaimed_pool_balance, career_pool_balance = EXCLUDED.career_pool_balance, updated_at = CURRENT_TIMESTAMP`,
+        [systemWallet.system_pool_balance, systemWallet.unclaimed_pool_balance, systemCareerFundBalance]
+      );
+      await client.query(
+        `INSERT INTO orders_log (order_id, user_id, package_id, amount, status, payment_method, created_at)
+         SELECT order_id, user_id, package_id, amount, status, payment_method, created_at
+         FROM jsonb_to_recordset($1::jsonb) AS x(order_id text, user_id text, package_id text, amount numeric, status text, payment_method text, created_at timestamptz)
+         ON CONFLICT (order_id) DO UPDATE SET user_id = EXCLUDED.user_id, package_id = EXCLUDED.package_id, amount = EXCLUDED.amount, status = EXCLUDED.status, payment_method = EXCLUDED.payment_method`,
+        [JSON.stringify(orderRows)]
+      );
+      await client.query(
+        `INSERT INTO commission_logs (order_id, source_user_id, target_user_id, type, depth_level, amount, status, release_at, created_at)
+         SELECT order_id, source_user_id, target_user_id, type, depth_level, amount, status, release_at, created_at
+         FROM jsonb_to_recordset($1::jsonb) AS x(order_id text, source_user_id text, target_user_id text, type text, depth_level integer, amount numeric, status text, release_at timestamptz, created_at timestamptz)
+         ON CONFLICT (order_id, type, (COALESCE(depth_level, 0)), (COALESCE(target_user_id, 'SYSTEM')))
+         DO UPDATE SET source_user_id = EXCLUDED.source_user_id, target_user_id = EXCLUDED.target_user_id, amount = EXCLUDED.amount, status = EXCLUDED.status, release_at = EXCLUDED.release_at`,
+        [JSON.stringify(commissionRows)]
+      );
+      await client.query(
+        `INSERT INTO application_state (state_key, payload, updated_at)
+         VALUES ('main', $1::jsonb, CURRENT_TIMESTAMP)
+         ON CONFLICT (state_key) DO UPDATE SET payload = EXCLUDED.payload, updated_at = CURRENT_TIMESTAMP`,
+        [JSON.stringify(snapshot)]
+      );
+    })
+  );
+  statePersistPromise = nextWrite.catch(() => {});
+  return nextWrite;
+}
+
+async function hydrateApplicationState() {
+  const stored = await readApplicationState();
+  if (!stored || typeof stored !== 'object') return false;
+  const state = stored as Record<string, any>;
+  if (state.exchangeRate !== undefined && Number(state.exchangeRate) !== usdTryRate) {
+    throw new Error('PostgreSQL’de kayıtlı USD/TRY kuru kodda sabitlenen 50.00 TRY ile uyuşmuyor.');
+  }
+  const arrays: Record<string, (value: any[]) => void> = {
+    activityLogs: (value) => (activityLogs = value),
+    members: (value) => (members = value),
+    careerTiers: (value) => (careerTiers = value),
+    adminAuditLogs: (value) => (adminAuditLogs = value),
+    transactions: (value) => (transactions = value),
+    commissionLogs: (value) => (commissionLogs = value),
+    ordersLog: (value) => (ordersLog = value),
+    unclaimedCommissions: (value) => (unclaimedCommissions = value),
+    queueJobs: (value) => (queueJobs = value),
+    withdrawalRequests: (value) => (withdrawalRequests = value),
+    taxRefundInvoices: (value) => (taxRefundInvoices = value),
+    feedbackTickets: (value) => (feedbackTickets = value),
+    userRewardsLog: (value) => (userRewardsLog = value),
+    notificationOutbox: (value) => (notificationOutbox = value),
+    fomoCountdownAlerts: (value) => (fomoCountdownAlerts = value),
+    p2pTransfers: (value) => (p2pTransfers = value),
+    walletTransactions: (value) => (walletTransactions = value),
+    activationVouchers: (value) => (activationVouchers = value),
+    fraudAlerts: (value) => (fraudAlerts = value),
+    webhookLogs: (value) => (webhookLogs = value),
+    cronLogs: (value) => (cronLogs = value),
+    poolDistributions: (value) => (poolDistributions = value),
+    expenseVouchers: (value) => (expenseVouchers = value),
+    payoutBatches: (value) => (payoutBatches = value),
+    payoutBatchItems: (value) => (payoutBatchItems = value),
+    journalEntries: (value) => (journalEntries = value),
+    ipActivityEvents: (value) => (ipActivityEvents = value),
+  };
+  for (const [key, assign] of Object.entries(arrays)) {
+    if (Array.isArray(state[key])) assign(state[key]);
+  }
+  if (state.ethicsGuidelinesContent) ethicsGuidelinesContent = state.ethicsGuidelinesContent;
+  if (state.systemWallet) systemWallet = state.systemWallet;
+  if (state.distributionParams) distributionParams = state.distributionParams;
+  if (state.v2ArchitectureConfig) v2ArchitectureConfig = state.v2ArchitectureConfig;
+  if (state.activeBusinessRules) Object.assign(activeBusinessRules, state.activeBusinessRules);
+  if (Array.isArray(state.memberCredentials)) {
+    memberCredentials.clear();
+    state.memberCredentials.forEach(([userId, credentials]: [string, { salt: string; hash: string }]) =>
+      memberCredentials.set(userId, credentials)
+    );
+  }
+  if (Array.isArray(state.creditsOwnedByServer)) {
+    creditsOwnedByServer.clear();
+    state.creditsOwnedByServer.forEach((userId: string) => creditsOwnedByServer.add(userId));
+  }
+  if (Array.isArray(state.sharedDocuments)) {
+    sharedDocuments.clear();
+    state.sharedDocuments.forEach(([id, document]: [string, any]) =>
+      sharedDocuments.set(id, { ...document, data: Buffer.from(document.data, 'base64') })
+    );
+  }
+  if (Array.isArray(state.processedOrderIds)) processedOrderIds = new Set(state.processedOrderIds);
+  if (Array.isArray(state.processedEventIdempotencyKeys)) {
+    processedEventIdempotencyKeys.clear();
+    state.processedEventIdempotencyKeys.forEach((key: string) => processedEventIdempotencyKeys.add(key));
+  }
+  if (typeof state.nextAdminAuditLogId === 'number') nextAdminAuditLogId = state.nextAdminAuditLogId;
+  const businessValues = state.businessRuleValues || {};
+  CLAWBACK_PROTECTION_DAYS = businessValues.CLAWBACK_PROTECTION_DAYS ?? CLAWBACK_PROTECTION_DAYS;
+  SYSTEM_FUND_PERCENT = businessValues.SYSTEM_FUND_PERCENT ?? SYSTEM_FUND_PERCENT;
+  DIRECT_SPONSOR_PERCENT = businessValues.DIRECT_SPONSOR_PERCENT ?? DIRECT_SPONSOR_PERCENT;
+  UNILEVEL_DEPTH_PERCENTAGES = businessValues.UNILEVEL_DEPTH_PERCENTAGES || UNILEVEL_DEPTH_PERCENTAGES;
+  MONOLINE_INCENTIVE_PERCENTAGES = businessValues.MONOLINE_INCENTIVE_PERCENTAGES || MONOLINE_INCENTIVE_PERCENTAGES;
+  MONOLINE_DEPTH_PERCENTAGES = businessValues.MONOLINE_DEPTH_PERCENTAGES || MONOLINE_DEPTH_PERCENTAGES;
+  const counters = [
+    'nextTaxRefundId', 'nextTicketNumber', 'idempotentBlockedCount', 'systemCareerFundBalance',
+    'systemCareerFundCumulative', 'enforceCareerDepthLock', 'nextCommissionLogId',
+    'nextUnclaimedCommissionId', 'nextWithdrawalId', 'nextActivityLogId', 'nextRewardLogId',
+    'nextNotificationId', 'nextFraudAlertId', 'nextFomoAlertId', 'nextP2PTransferId',
+    'nextWalletTransactionId', 'nextVoucherId', 'nextVoucherSequence', 'nextPayoutBatchSequence',
+    'nextJournalEntryId',
+  ];
+  const targets: Record<string, (value: any) => void> = {
+    nextTaxRefundId: (value) => (nextTaxRefundId = value),
+    nextTicketNumber: (value) => (nextTicketNumber = value),
+    idempotentBlockedCount: (value) => (idempotentBlockedCount = value),
+    systemCareerFundBalance: (value) => (systemCareerFundBalance = value),
+    systemCareerFundCumulative: (value) => (systemCareerFundCumulative = value),
+    enforceCareerDepthLock: (value) => (enforceCareerDepthLock = value),
+    nextCommissionLogId: (value) => (nextCommissionLogId = value),
+    nextUnclaimedCommissionId: (value) => (nextUnclaimedCommissionId = value),
+    nextWithdrawalId: (value) => (nextWithdrawalId = value),
+    nextActivityLogId: (value) => (nextActivityLogId = value),
+    nextRewardLogId: (value) => (nextRewardLogId = value),
+    nextNotificationId: (value) => (nextNotificationId = value),
+    nextFraudAlertId: (value) => (nextFraudAlertId = value),
+    nextFomoAlertId: (value) => (nextFomoAlertId = value),
+    nextP2PTransferId: (value) => (nextP2PTransferId = value),
+    nextWalletTransactionId: (value) => (nextWalletTransactionId = value),
+    nextVoucherId: (value) => (nextVoucherId = value),
+    nextVoucherSequence: (value) => (nextVoucherSequence = value),
+    nextPayoutBatchSequence: (value) => (nextPayoutBatchSequence = value),
+    nextJournalEntryId: (value) => (nextJournalEntryId = value),
+  };
+  counters.forEach((key) => {
+    if (state[key] !== undefined) targets[key](state[key]);
+  });
+  return true;
+}
 
 function enqueueNotification(params: {
   member: MonolineMember;
@@ -3861,7 +4171,9 @@ function sha256Digest(value: string): Buffer {
 }
 
 function adminSecretsConfigured(): boolean {
-  return Boolean(process.env.ADMIN_PASSWORD && process.env.ADMIN_PASSWORD.length >= 12);
+  const password = process.env.ADMIN_PASSWORD?.trim() || '';
+  const secret = process.env.ADMIN_JWT_SECRET?.trim() || '';
+  return password.length >= 12 && secret.length >= 16;
 }
 
 function issueAdminToken(secret?: string): string {
@@ -4284,6 +4596,9 @@ async function hydrateStateFromPostgres(): Promise<void> {
       if (res && res.rows.length > 0) {
         const loadedMembers: MonolineMember[] = res.rows.map((row: any, idx: number) => {
           const lineId = Number(row.monoline_position) || idx + 1;
+          if (row.password_salt && row.password_hash) {
+            memberCredentials.set(row.user_id, { salt: row.password_salt, hash: row.password_hash });
+          }
           return {
             id: lineId,
             user_id: row.user_id,
@@ -4349,29 +4664,125 @@ async function hydrateStateFromPostgres(): Promise<void> {
         });
         loadedMembers.sort((a, b) => a.global_line_id - b.global_line_id);
         members = loadedMembers;
-        console.log(`[PostgreSQL-18] Yerel veritabanından ${loadedMembers.length} üye yüklendi.`);
+        const walletRows = await pgQuery('SELECT user_id, balance, pending_balance, total_withdrawn, total_earned, wallet_data FROM wallets');
+        for (const row of walletRows?.rows || []) {
+          const member = members.find((item) => item.user_id === row.user_id);
+          if (!member) continue;
+          if (row.wallet_data && typeof row.wallet_data === 'object') {
+            member.wallets = { ...member.wallets, ...row.wallet_data };
+          } else {
+            member.wallets.wallet_domestic_usd = Number(row.balance) || 0;
+            member.wallets.pending_domestic_usd = Number(row.pending_balance) || 0;
+            member.wallets.total_withdrawn = Number(row.total_withdrawn) || 0;
+            member.wallets.total_earnings = Number(row.total_earned) || 0;
+          }
+        }
+        const systemWalletRow = await pgQuery('SELECT system_pool_balance, unclaimed_pool_balance, career_pool_balance, updated_at FROM system_wallet WHERE id = 1');
+        if (systemWalletRow?.rows[0]) {
+          systemWallet = {
+            id: 1,
+            system_pool_balance: Number(systemWalletRow.rows[0].system_pool_balance) || 0,
+            unclaimed_pool_balance: Number(systemWalletRow.rows[0].unclaimed_pool_balance) || 0,
+            updated_at: new Date(systemWalletRow.rows[0].updated_at).toISOString(),
+          };
+          systemCareerFundBalance = Number(systemWalletRow.rows[0].career_pool_balance) || 0;
+        }
+        const orderRows = await pgQuery('SELECT * FROM orders_log ORDER BY created_at DESC');
+        ordersLog = (orderRows?.rows || []).map((row: any) => {
+          const member = members.find((item) => item.user_id === row.user_id);
+          return {
+            order_id: row.order_id,
+            user_id: member?.id || 0,
+            external_user_id: row.user_id || '',
+            user_full_name: member?.full_name || '',
+            package_id: row.package_id || '',
+            amount: Number(row.amount) || 0,
+            status: row.status || 'COMPLETED',
+            transaction_id: row.provider_transaction_id || undefined,
+            payment_method: row.payment_method || undefined,
+            created_at: row.created_at ? new Date(row.created_at).toISOString() : new Date().toISOString(),
+          };
+        });
+        const commissionRows = await pgQuery('SELECT * FROM commission_logs ORDER BY created_at DESC, id DESC');
+        commissionLogs = (commissionRows?.rows || []).map((row: any) => {
+          const source = members.find((item) => item.user_id === row.source_user_id);
+          const target = members.find((item) => item.user_id === row.target_user_id);
+          return {
+            id: Number(row.id),
+            order_id: row.order_id,
+            source_user_id: source?.id || 0,
+            source_external_id: row.source_user_id || '',
+            source_user_name: source?.full_name || '',
+            target_user_id: target?.id ?? null,
+            target_external_id: row.target_user_id || 'SYSTEM_POOL',
+            target_user_name: target?.full_name || 'Sistem / Devir Havuzu',
+            type: row.type,
+            commission_type: row.type,
+            depth_level: row.depth_level === null ? null : Number(row.depth_level),
+            amount: Number(row.amount) || 0,
+            status: row.status,
+            clawback_status: row.status === 'PENDING_14D' ? 'PENDING_14D' : undefined,
+            release_at: row.release_at ? new Date(row.release_at).toISOString() : null,
+            created_at: row.created_at ? new Date(row.created_at).toISOString() : new Date().toISOString(),
+          };
+        });
+        processedOrderIds = new Set(ordersLog.filter((order) => order.status !== 'REFUNDED').map((order) => order.order_id));
+        console.log(`[PostgreSQL-18] Yerel veritabanından ${loadedMembers.length} üye, cüzdan, sipariş ve komisyon yüklendi.`);
       }
     } catch (err: any) {
-      console.warn('[PostgreSQL-18 Hydration Notice]:', err.message);
+      console.error('[PostgreSQL-18 Hydration Error]:', err.message);
+      throw err;
     }
   }
 }
 
 async function startServer() {
-  const effectivePass = getEffectiveAdminPassword();
-  const effectiveJwt = getEffectiveAdminJwtSecret();
-  if (process.env.ADMIN_PASSWORD && process.env.ADMIN_PASSWORD.length < 12) {
-    console.warn("[Admin Auth] Warning: ADMIN_PASSWORD is short, using generated secure runtime secret.");
+  const postgresReady = await initPostgresDatabase();
+  if (!postgresReady) {
+    throw new Error('PostgreSQL bağlantısı zorunludur; sunucu bellek modunda başlatılmadı.');
   }
+  await hydrateStateFromPostgres();
+  await hydrateApplicationState();
+  await persistApplicationState();
 
-  await initPostgresDatabase().catch((err) => {
-    console.warn('[PostgreSQL-18 Auto-Init Notice]:', err?.message);
-  });
-  await hydrateStateFromPostgres().catch((err) => {
-    console.warn('[PostgreSQL-18] Startup hydration notice:', err.message);
-  });
   const app = express();
   app.use(express.json({ limit: '50mb' }));
+  app.use((req, res, next) => {
+    if (persistenceFailure && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {
+      res.status(503).json({
+        status: 'error',
+        code: 'DATABASE_PERSISTENCE_FAILED',
+        message: 'Veritabanına yazma durumu doğrulanamıyor; işlem reddedildi.',
+      });
+      return;
+    }
+    if (!['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {
+      next();
+      return;
+    }
+    const sendJson = res.json.bind(res);
+    let saveStarted = false;
+    res.json = ((body: any) => {
+      if (saveStarted || res.statusCode >= 400) return sendJson(body);
+      saveStarted = true;
+      void persistApplicationState()
+        .then(() => sendJson(body))
+        .catch((err: any) => {
+          persistenceFailure = err?.message || 'PostgreSQL state write failed';
+          console.error('[PostgreSQL State Persistence Error]:', persistenceFailure);
+          if (!res.headersSent) {
+            res.status(503);
+            sendJson({
+              status: 'error',
+              code: 'DATABASE_PERSISTENCE_FAILED',
+              message: 'Veriler PostgreSQL’e kaydedilemedi; işlem tamamlanmış sayılmadı.',
+            });
+          }
+        });
+      return res;
+    }) as typeof res.json;
+    next();
+  });
 
   app.post('/api/v1/member/session', async (req, res) => {
     const identifier = String(req.body?.email || req.body?.login || req.body?.code || req.body?.user_id || '').trim();
@@ -4390,12 +4801,15 @@ async function startServer() {
     if (!member && getIsPostgresAvailable()) {
       try {
         const userRes = await pgQuery(
-          'SELECT * FROM users WHERE user_id = $1 OR email = $2 OR referral_code = $3 LIMIT 1',
-          [identifier, cleanLower, cleanUpper]
+          'SELECT * FROM users WHERE LOWER(user_id) = $1 OR LOWER(email) = $2 OR LOWER(referral_code) = $3 LIMIT 1',
+          [cleanLower, cleanLower, cleanLower]
         );
         if (userRes && userRes.rows.length > 0) {
           const data = userRes.rows[0];
           const lineId = Number(data.monoline_position) || members.length + 1;
+          if (data.password_salt && data.password_hash) {
+            memberCredentials.set(data.user_id, { salt: data.password_salt, hash: data.password_hash });
+          }
           member = {
             id: lineId,
             user_id: data.user_id,
@@ -4461,7 +4875,13 @@ async function startServer() {
           members.push(member);
         }
       } catch (pgErr: any) {
-        console.warn('[PostgreSQL-18 member lookup notice]:', pgErr.message);
+        console.error('[PostgreSQL-18 member lookup error]:', pgErr.message);
+        res.status(503).json({
+          status: 'error',
+          code: 'MEMBER_LOOKUP_UNAVAILABLE',
+          message: 'Bayi kaydı şu anda doğrulanamıyor. Lütfen daha sonra tekrar deneyiniz.',
+        });
+        return;
       }
     }
 
@@ -4475,37 +4895,9 @@ async function startServer() {
       return;
     }
 
-    let credentials = memberCredentials.get(member.user_id);
-    let isPasswordValid = false;
-
-    if (credentials) {
-      isPasswordValid = verifyMemberPassword(password, credentials.salt, credentials.hash);
-    }
-
-    // Default password support if credentials not yet hashed or standard default '123456'
-    if (!isPasswordValid && (!credentials || password === '123456')) {
-      if (password === '123456' || password.length >= 4) {
-        const newCreds = hashMemberPassword(password);
-        memberCredentials.set(member.user_id, newCreds);
-        credentials = newCreds;
-        isPasswordValid = true;
-
-        if (getIsPostgresAvailable()) {
-          pgQuery(
-            `UPDATE users SET updated_at = CURRENT_TIMESTAMP WHERE user_id = $1`,
-            [member.user_id]
-          ).catch(() => {});
-        }
-      }
-    }
-
-    if (!isPasswordValid) {
+    const credentials = memberCredentials.get(member.user_id);
+    if (!credentials || !verifyMemberPassword(password, credentials.salt, credentials.hash)) {
       res.status(401).json({ status: 'error', code: 'MEMBER_LOGIN_FAILED', message: 'E-posta veya şifre hatalı.' });
-      return;
-    }
-
-    if (!process.env.MEMBER_JWT_SECRET) {
-      res.status(503).json({ status: 'error', code: 'MEMBER_AUTH_NOT_CONFIGURED', message: 'Bayi oturum servisi yapılandırılmamış.' });
       return;
     }
 
@@ -4611,6 +5003,15 @@ async function startServer() {
   });
 
   app.post('/api/v1/admin/login', (req, res) => {
+    if (!adminSecretsConfigured()) {
+      res.status(503).json({
+        status: 'error',
+        code: 'ADMIN_AUTH_NOT_CONFIGURED',
+        message: 'Yönetici giriş bilgileri sunucuda yapılandırılmamış.',
+      });
+      return;
+    }
+
     const secret = getEffectiveAdminJwtSecret();
     const effectivePassword = getEffectiveAdminPassword();
 
@@ -4619,14 +5020,7 @@ async function startServer() {
     const emailMatches = email === ADMIN_LOGIN_EMAIL.toLowerCase();
     const passwordMatches =
       Boolean(password) &&
-      (password === effectivePassword ||
-        password === 'Abdulkadir1983' ||
-        timingSafeEqual(sha256Digest(password), sha256Digest(effectivePassword)) ||
-        (Boolean(process.env.ADMIN_SECRET_PIN) &&
-          timingSafeEqual(
-            sha256Digest(password),
-            sha256Digest(process.env.ADMIN_SECRET_PIN as string)
-          )));
+      timingSafeEqual(sha256Digest(password), sha256Digest(effectivePassword));
 
     if (!emailMatches || !passwordMatches) {
       res.status(401).json({
@@ -6000,7 +6394,7 @@ async function startServer() {
       database: 'PostgreSQL-18',
       engine: 'monoline',
       is_connected: isAvailable,
-      mode: isAvailable ? 'POSTGRESQL_18_ACID' : 'LOCAL_IN_MEMORY_RESILIENT',
+      mode: isAvailable ? 'POSTGRESQL_18_ACID' : 'UNAVAILABLE',
       timestamp: new Date().toISOString(),
     });
   });
@@ -6607,9 +7001,9 @@ async function startServer() {
         try {
           await withTransaction(async (client) => {
             await client.query(
-              `INSERT INTO users (user_id, email, full_name, phone, city, referral_code, sponsor_id, monoline_position, career_level, scan_credits, is_active, is_locked, activity_expires_at, created_at, updated_at)
-               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
-               ON CONFLICT (user_id) DO UPDATE SET full_name = EXCLUDED.full_name, updated_at = CURRENT_TIMESTAMP`,
+              `INSERT INTO users (user_id, email, full_name, phone, city, referral_code, sponsor_id, monoline_position, career_level, scan_credits, is_active, is_locked, activity_expires_at, password_salt, password_hash, created_at, updated_at)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+               ON CONFLICT (user_id) DO UPDATE SET full_name = EXCLUDED.full_name, password_salt = EXCLUDED.password_salt, password_hash = EXCLUDED.password_hash, updated_at = CURRENT_TIMESTAMP`,
               [
                 newUserId,
                 newMember.email,
@@ -6624,6 +7018,8 @@ async function startServer() {
                 newMember.is_active,
                 newMember.is_locked,
                 newMember.activity_expires_at,
+                hashedCreds.salt,
+                hashedCreds.hash,
                 nowIso,
                 nowIso,
               ]
@@ -11336,7 +11732,9 @@ async function startServer() {
   setInterval(() => {
     checkAndExpireAccountsCron('ACTIVITY_EXPIRY_CRON');
     releaseMaturedCommissions();
-    processMaturedExpenseVouchers().catch((e) => console.warn('[Cron] Voucher processing error:', e?.message));
+    processMaturedExpenseVouchers()
+      .then(() => persistApplicationState())
+      .catch((e) => console.warn('[Cron/PostgreSQL] Kalıcı kayıt hatası:', e?.message));
   }, 30000);
 
 

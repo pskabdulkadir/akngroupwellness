@@ -35,6 +35,7 @@ import {
 import { MonolineMember, SystemStateResponse } from '../types/monoline';
 import { getActiveResellerSession } from '../utils/resellerManager';
 import { getActiveMemberSession } from '../utils/authManager';
+import { getAdminToken } from '../utils/adminSession';
 
 export const CAREER_TIER_CONFIG: Record<
   number,
@@ -284,7 +285,7 @@ export const UnilevelOrganizationTreePanel: React.FC<UnilevelOrganizationTreePan
     const newActiveState = !m.is_active;
     setIsSaving(true);
     try {
-      const token = sessionStorage.getItem('aurabio_admin_token_v1') || sessionStorage.getItem('aurabio_admin_jwt');
+      const token = getAdminToken();
       const res = await fetch(`/api/v1/admin/members/${m.user_id}`, {
         method: 'PUT',
         headers: {
@@ -327,7 +328,7 @@ export const UnilevelOrganizationTreePanel: React.FC<UnilevelOrganizationTreePan
     if (!editingMember || mode !== 'admin') return;
     setIsSaving(true);
     try {
-      const token = sessionStorage.getItem('aurabio_admin_token_v1') || sessionStorage.getItem('aurabio_admin_jwt');
+      const token = getAdminToken();
       const payload: Record<string, any> = {
         is_active: editActiveStatus,
         career_level: editCareerLevel,
