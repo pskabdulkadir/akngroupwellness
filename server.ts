@@ -1419,6 +1419,11 @@ function processOrderCommission(payload: OrderCommissionPayload): CommissionTran
 
   const processedAt = new Date().toISOString();
   let activityExtended = false;
+  if (isInitialRegistrationSync) {
+    buyer.is_active = true;
+    buyer.is_locked = false;
+    buyer.activity_expires_at = createFutureExpiryIso();
+  }
   if (!isInitialRegistrationSync) {
     const prevExp = buyer.activity_expires_at || null;
     const nowMs = Date.parse(processedAt);
@@ -5897,6 +5902,20 @@ async function startServer() {
         { attempts: 3, backoff: 5000 }
       );
 
+      if (normalizedOrderId.startsWith('ORD-KAYIT-')) {
+        const paidMember = members.find((member) => member.user_id === String(user_id));
+        if (paidMember && getIsPostgresAvailable()) {
+          try {
+            await pgQuery(
+              'UPDATE users SET scan_credits = $1, is_active = $2, is_locked = $3, activity_expires_at = $4, updated_at = CURRENT_TIMESTAMP WHERE user_id = $5',
+              [paidMember.session_credits, paidMember.is_active, paidMember.is_locked, paidMember.activity_expires_at, paidMember.user_id]
+            );
+          } catch (dbErr: any) {
+            console.warn('[PostgreSQL-18] Paid registration update notice:', dbErr.message);
+          }
+        }
+      }
+
       return res.status(200).json({
         success: true,
         status: 'success',
@@ -5909,6 +5928,9 @@ async function startServer() {
           ? `Sipariş kuyruğa alındı ve işleniyor. (+${transaction.session_credits_added} Kredi, Aktiflik süresi +${ACTIVITY_PERIOD_DAYS} gün uzatıldı)`
           : `Sipariş kuyruğa alındı ve işleniyor. (+${transaction.session_credits_added} Kredi ve komisyon dağıtımı tamamlandı)`,
         transaction,
+        member_token: normalizedOrderId.startsWith('ORD-KAYIT-')
+          ? issueMemberToken(String(user_id))
+          : undefined,
         state: buildStateResponse(),
       });
     } catch (err: any) {
@@ -6323,6 +6345,7 @@ async function startServer() {
         initial_package_id,
         manual_career_override,
         skip_initial_order,
+        pending_payment,
         session_credits,
         password,
         assigned_leg,
@@ -6429,6 +6452,7 @@ async function startServer() {
       const nowIso = new Date().toISOString();
       const customRef = ref_code ? String(ref_code).trim().toUpperCase() : '';
 
+      const isPendingPayment = Boolean(pending_payment && !isCallingAdmin);
       const manualCareer =
         isCallingAdmin &&
         manual_career_override !== undefined &&
@@ -6440,9 +6464,11 @@ async function startServer() {
       const effectiveCredits =
         isCallingAdmin && typeof session_credits === 'number' && session_credits >= 0
           ? Math.round(session_credits)
-          : skip_initial_order
-          ? WELCOME_BONUS_TOTAL_CREDITS
-          : (PACKAGES[pkgKey]?.sessionCredits ?? 32);
+          : isPendingPayment
+            ? 0
+            : skip_initial_order
+              ? WELCOME_BONUS_TOTAL_CREDITS
+              : (PACKAGES[pkgKey]?.sessionCredits ?? 32);
 
       let finalLeg: 'LEFT' | 'RIGHT' = 'LEFT';
       if (assigned_leg === 'LEFT' || assigned_leg === 'RIGHT') {
@@ -6515,11 +6541,11 @@ async function startServer() {
           verified_at: null,
           backup_codes: generateSecureBackupCodes(4),
         },
-        is_active: true,
-        is_locked: false,
+        is_active: !isPendingPayment,
+        is_locked: isPendingPayment,
         activity_expires_at: createFutureExpiryIso(),
-        welcome_bonus_granted: Boolean(skip_initial_order),
-        welcome_bonus_credits: skip_initial_order ? WELCOME_BONUS_TOTAL_CREDITS : 0,
+        welcome_bonus_granted: !isPendingPayment && Boolean(skip_initial_order),
+        welcome_bonus_credits: !isPendingPayment && skip_initial_order ? WELCOME_BONUS_TOTAL_CREDITS : 0,
         tc_identity_no:
           tc_identity_no ||
           req.body?.tc_identity_no ||
@@ -6537,6 +6563,13 @@ async function startServer() {
         left_leg_volume: 0,
         right_leg_volume: 0,
       };
+
+      if (isPendingPayment) {
+        newMember.is_active = false;
+        newMember.is_locked = true;
+        newMember.welcome_bonus_granted = false;
+        newMember.welcome_bonus_credits = 0;
+      }
 
       // In-Memory dizisini anında senkronize et
       members.push(newMember);
@@ -6557,7 +6590,9 @@ async function startServer() {
 
       let commissionTx: any = null;
 
-      if (skip_initial_order) {
+      if (isPendingPayment) {
+        commissionTx = null;
+      } else if (skip_initial_order) {
         creditsOwnedByServer.add(newMember.user_id);
         logActivityEvent({
           member: newMember,
@@ -6588,8 +6623,8 @@ async function startServer() {
         try {
           await withTransaction(async (client) => {
             await client.query(
-              `INSERT INTO users (user_id, email, full_name, phone, city, referral_code, sponsor_id, monoline_position, career_level, scan_credits, created_at, updated_at)
-               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+              `INSERT INTO users (user_id, email, full_name, phone, city, referral_code, sponsor_id, monoline_position, career_level, scan_credits, is_active, is_locked, activity_expires_at, created_at, updated_at)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
                ON CONFLICT (user_id) DO UPDATE SET full_name = EXCLUDED.full_name, updated_at = CURRENT_TIMESTAMP`,
               [
                 newUserId,
@@ -6602,6 +6637,9 @@ async function startServer() {
                 newMember.global_line_id,
                 newMember.career_level,
                 newMember.session_credits,
+                newMember.is_active,
+                newMember.is_locked,
+                newMember.activity_expires_at,
                 nowIso,
                 nowIso,
               ]
@@ -6614,12 +6652,14 @@ async function startServer() {
               [newUserId]
             );
 
-            await client.query(
-              `INSERT INTO orders_log (order_id, user_id, package_id, amount, status, created_at)
-               VALUES ($1, $2, $3, $4, $5, $6)
-               ON CONFLICT (order_id) DO NOTHING`,
-              [orderId, newUserId, pkgKey, orderAmt, skip_initial_order ? 'COMPLETED' : 'PENDING', nowIso]
-            );
+            if (!isPendingPayment) {
+              await client.query(
+                `INSERT INTO orders_log (order_id, user_id, package_id, amount, status, created_at)
+                 VALUES ($1, $2, $3, $4, $5, $6)
+                 ON CONFLICT (order_id) DO NOTHING`,
+                [orderId, newUserId, pkgKey, orderAmt, skip_initial_order ? 'COMPLETED' : 'PENDING', nowIso]
+              );
+            }
 
             if (commissionTx) {
               await client.query(
@@ -6649,9 +6689,11 @@ async function startServer() {
       // =========================================================================
       res.status(201).json({
         status: 'success',
-        message: commissionTx
-          ? `${newMember.full_name} Global Tek Hat #${newMember.global_line_id} sırasına eklendi (Sponsor: ${newMember.sponsor_id}). Ödeme yönlendirmesi hazır.`
-          : `${newMember.full_name} Global Tek Hat #${newMember.global_line_id} sırasına başarıyla eklendi ve hoşgeldin bonusu tanımlandı.`,
+        message: isPendingPayment
+          ? `${newMember.full_name} için bayi hesabı ödeme bekliyor olarak oluşturuldu.`
+          : commissionTx
+            ? `${newMember.full_name} Global Tek Hat #${newMember.global_line_id} sırasına eklendi (Sponsor: ${newMember.sponsor_id}). Ödeme yönlendirmesi hazır.`
+            : `${newMember.full_name} Global Tek Hat #${newMember.global_line_id} sırasına başarıyla eklendi ve hoşgeldin bonusu tanımlandı.`,
         member: newMember,
         order: {
           order_id: orderId,
@@ -6659,12 +6701,12 @@ async function startServer() {
           package_id: pkgKey,
           amount: orderAmt,
           currency: 'TRY',
-          payment_status: skip_initial_order ? 'COMPLETED' : 'PENDING',
+          payment_status: isPendingPayment ? 'PENDING' : skip_initial_order ? 'COMPLETED' : 'PENDING',
         },
         payment_url: paymentUrl,
         payment_token: paymentToken,
         payment_provider: 'PAYTR_VPOS_GATEWAY',
-        redirect_required: !skip_initial_order,
+        redirect_required: !skip_initial_order && !isPendingPayment,
         transaction: commissionTx,
         state: buildStateResponse(),
       });

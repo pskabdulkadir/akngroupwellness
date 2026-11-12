@@ -41,6 +41,7 @@ export type MonolineSubTab =
 interface MonolineMlmPortalModalProps {
   isOpen?: boolean;
   onClose?: () => void;
+  onLogout?: () => void;
   onGoToCamera?: () => void;
   initialSubTab?: MonolineSubTab;
   onSubTabChange?: (tab: MonolineSubTab) => void;
@@ -52,6 +53,7 @@ interface MonolineMlmPortalModalProps {
 export const MonolineMlmPortalModal: React.FC<MonolineMlmPortalModalProps> = ({
   isOpen = true,
   onClose,
+  onLogout,
   onGoToCamera,
   initialSubTab = 'backoffice',
   onSubTabChange,
@@ -1455,6 +1457,7 @@ export const MonolineMlmPortalModal: React.FC<MonolineMlmPortalModalProps> = ({
                 subTab={dealerBackOfficeTab}
                 onSubTabChange={setDealerBackOfficeTab}
                 onReturnToMenu={() => setIsPanelDetailOpen(false)}
+                onLogout={onLogout}
                 members={state.members}
                 selectedMemberId={selectedMemberId}
                 onSelectMember={(id) => setSelectedMemberId(id)}

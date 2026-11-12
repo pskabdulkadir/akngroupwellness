@@ -583,6 +583,107 @@ export function saveToLocalMembersDirectory(user: UserMember): void {
   }
 }
 
+export async function completePaidDealerRegistration(
+  user: UserMember,
+  creditsBalance: number
+): Promise<UserMember> {
+  const existing = getLocalMembersDirectory().find((member) => member.uid === user.uid) || user;
+  const wasPending = existing.paymentStatus !== 'PAID';
+  const now = new Date().toISOString();
+  const companyName = existing.dealerDetails?.companyName || existing.fullName;
+  const updated: UserMember = {
+    ...existing,
+    isAllowed: true,
+    isApproved: true,
+    paymentStatus: 'PAID',
+    dealerStatus: 'approved',
+    creditsBalance,
+    welcomeBonusGranted: true,
+    welcomeBonusCredits: creditsBalance,
+    welcomeBonusBreakdown: '32+32',
+    welcomeBonusGrantedAt: now,
+    dealerDetails: {
+      ...existing.dealerDetails,
+      companyName,
+      creditsBalance,
+      approvedAt: now,
+    },
+  };
+
+  saveToLocalMembersDirectory(updated);
+  localStorage.setItem(STORAGE_SESSION_KEY, JSON.stringify(updated));
+  window.dispatchEvent(new CustomEvent('aurabio_session_updated', { detail: updated }));
+
+  try {
+    await setDoc(doc(db, 'users', updated.uid), updated, { merge: true });
+  } catch (error) {
+    console.debug('Paid dealer registration Firestore notice:', error);
+  }
+
+  const {
+    adminSaveReseller,
+    setActiveResellerSession,
+    markWelcomeBonusClaimed,
+    recordCreditTransaction,
+  } = await import('./resellerManager');
+  const resellerProfile = {
+    uid: updated.uid,
+    email: updated.email,
+    fullName: updated.fullName,
+    phone: updated.phone,
+    whatsapp: updated.dealerDetails?.whatsapp || updated.phone,
+    resellerName: companyName,
+    businessName: companyName,
+    referralCode: updated.referralCode || updated.dealerDetails?.referralCode || '',
+    referredByCode: updated.referredByCode || '',
+    resellerId: updated.resellerId || '',
+    sponsorId: updated.resellerId || '',
+    taxNumber: updated.dealerDetails?.taxNumber || 'Belirtilmedi',
+    taxOffice: updated.dealerDetails?.taxOffice || 'Belirtilmedi',
+    commissionRate: 20,
+    creditsBalance,
+    dealerPackageId: updated.dealerPackageId || 'pkg-5k',
+    welcomeBonusGranted: true,
+    welcomeBonusCredits: creditsBalance,
+    welcomeBonusBreakdown: '32+32',
+    welcomeBonusGrantedAt: now,
+    status: 'active' as const,
+    joinedAt: updated.createdAt,
+    totalEarnings: 0,
+    pendingEarnings: 0,
+    paidEarnings: 0,
+    clientsCount: 0,
+    salesCount: 0,
+    totalSalesAmount: 0,
+    totalReferredUsers: 0,
+    createdAt: updated.createdAt,
+    updatedAt: now,
+    bankInfo: {
+      bankName: updated.dealerDetails?.bankInfo?.bankName || '',
+      accountHolder: updated.fullName,
+      iban: updated.dealerDetails?.bankInfo?.iban || '',
+    },
+  };
+  await adminSaveReseller(resellerProfile);
+  setActiveResellerSession(resellerProfile);
+
+  if (wasPending) {
+    markWelcomeBonusClaimed(updated.email, updated.phone, updated.uid);
+    await recordCreditTransaction({
+      resellerId: updated.uid,
+      resellerName: companyName,
+      type: 'bonus',
+      amount: creditsBalance,
+      previousBalance: 0,
+      newBalance: creditsBalance,
+      description: 'Ödemesi onaylanan yeni bayi için 32+32 hoşgeldin kredisi tanımlandı.',
+      performedBy: 'Sistem Ödeme Onayı',
+    });
+  }
+
+  return updated;
+}
+
 function removeFromLocalMembersDirectory(uid: string): void {
   if (typeof window === 'undefined' || !uid) return;
   try {
@@ -852,7 +953,7 @@ export async function registerMember(
   referredByCode?: string,
   dealerApplicationData?: DealerDetails,
   countryCode: string = 'TR'
-): Promise<{ success: boolean; message: string; user?: UserMember; whatsappDealerUrl?: string }> {
+): Promise<{ success: boolean; message: string; user?: UserMember; whatsappDealerUrl?: string; pendingPayment?: boolean }> {
   try {
     const cleanEmail = email.trim().toLowerCase();
     const cleanFullName = fullName.trim();
@@ -913,6 +1014,7 @@ export async function registerMember(
 
     const uid = generateUid();
     const isDealer = true; // In the unified dealer architecture, all registrations are Dealer registrations
+    const isPendingDealerRegistration = Boolean(dealerApplicationData);
 
     const {
       generateUniqueReferralCode,
@@ -947,9 +1049,9 @@ export async function registerMember(
         'İlk bayi kaydı — Bir defaya mahsus 32+32 (64) Hoşgeldin Bonusu Kredisi otomatik tanımlandı.',
       referralCode: personalReferralCode,
       commissionRate: 20,
-      creditsBalance: initialCredits,
+      creditsBalance: isPendingDealerRegistration ? 0 : initialCredits,
       appliedAt: nowIso,
-      approvedAt: nowIso,
+      approvedAt: isPendingDealerRegistration ? undefined : nowIso,
     };
 
     const newUser: UserMember = {
@@ -958,18 +1060,18 @@ export async function registerMember(
       fullName: cleanFullName,
       phone: cleanPhone,
       passwordHash: hashPassword(password),
-      isAllowed: true, // Unified Dealer accounts have instant access
-      isApproved: true,
+      isAllowed: !isPendingDealerRegistration,
+      isApproved: !isPendingDealerRegistration,
       expiryDate: null,
       selectedPackage: effectiveStarterPkg,
       dealerPackageId: 'pkg-5k',
-      creditsBalance: initialCredits,
-      welcomeBonusGranted: !alreadyClaimedBonus,
-      welcomeBonusCredits: initialCredits,
-      welcomeBonusBreakdown: '32+32',
-      welcomeBonusGrantedAt: nowIso,
+      creditsBalance: isPendingDealerRegistration ? 0 : initialCredits,
+      welcomeBonusGranted: !isPendingDealerRegistration && !alreadyClaimedBonus,
+      welcomeBonusCredits: isPendingDealerRegistration ? 0 : initialCredits,
+      welcomeBonusBreakdown: isPendingDealerRegistration ? undefined : '32+32',
+      welcomeBonusGrantedAt: isPendingDealerRegistration ? undefined : nowIso,
       cart: [{ packageId: effectiveStarterPkg, quantity: 1 }],
-      paymentStatus: 'PAID',
+      paymentStatus: isPendingDealerRegistration ? 'PENDING' : 'PAID',
       demoUsed: wasDemoUsed,
       resellerId: resellerId || '',
       referredByCode: referredByCode || '',
@@ -979,11 +1081,11 @@ export async function registerMember(
       lastLoginAt: nowIso,
       role: 'dealer', // Unified B2B Dealer Role
       isDealerRequested: true,
-      dealerStatus: 'approved',
+      dealerStatus: isPendingDealerRegistration ? 'pending' : 'approved',
       dealerDetails: completeDealerDetails
     };
 
-    if (!alreadyClaimedBonus) {
+    if (!alreadyClaimedBonus && !isPendingDealerRegistration) {
       markWelcomeBonusClaimed(cleanEmail, cleanPhone, uid);
     }
 
@@ -993,9 +1095,9 @@ export async function registerMember(
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('aurabio_session_updated', { detail: newUser }));
     }
-    // 2. Automatically register into Reseller Directory so Bayi Paneli is immediately active
+    // 2. Create the reseller profile only after the initial payment is confirmed
 
-    try {
+    if (!isPendingDealerRegistration) try {
       const resellerProfile = {
         uid,
         email: cleanEmail,
@@ -1076,7 +1178,7 @@ export async function registerMember(
     }
 
     // 4. Immediately attribute and increment referral statistics for the referring Reseller / Dealer
-    if (resellerId || referredByCode) {
+    if (!isPendingDealerRegistration && (resellerId || referredByCode)) {
       try {
         const { recordNewUserReferral } = await import('./resellerManager');
         await recordNewUserReferral(resellerId, referredByCode, newUser);
@@ -1119,22 +1221,36 @@ export async function registerMember(
           initial_package_id: monolinePkgId,
           password,
           assigned_leg: dealerApplicationData?.assignedLeg || 'AUTO',
+          pending_payment: isPendingDealerRegistration,
         }),
       });
-      if (memberResponse.ok) await requestMemberWalletToken(cleanEmail, password);
+      if (!memberResponse.ok && isPendingDealerRegistration) {
+        const error = await memberResponse.json().catch(() => ({}));
+        throw new Error(error?.message || 'Bayi hesabı ödeme için hazırlanamıyor.');
+      }
+      if (memberResponse.ok && !isPendingDealerRegistration) {
+        await requestMemberWalletToken(cleanEmail, password);
+      }
 
-      m.syncFrekansWithMonolineEngine().then(() => {
-        if (typeof window !== 'undefined') {
-          window.dispatchEvent(new CustomEvent('monoline_webhook_triggered'));
-        }
-      }).catch(() => {});
-    } catch {}
+      if (!isPendingDealerRegistration) {
+        m.syncFrekansWithMonolineEngine().then(() => {
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('monoline_webhook_triggered'));
+          }
+        }).catch(() => {});
+      }
+    } catch (err) {
+      if (isPendingDealerRegistration) throw err;
+    }
 
-    return { 
-      success: true, 
-      message: `Tebrikler! ${companyName} yetkili bayilik hesabınız başarıyla oluşturuldu. 🎁 Sisteme Hoşgeldin Bonusu olarak bir defaya mahsus 32+32 (Toplam ${initialCredits}) Seans Kredisi hesabınıza otomatik tanımlandı!`, 
+    return {
+      success: true,
+      message: isPendingDealerRegistration
+        ? `${companyName} bayi kaydınız alındı. Hesabınız ödeme bekliyor; sandbox sanal kart ödemesi tamamlanınca 32+32 toplam 64 kredi tanımlanacak.`
+        : `Tebrikler! ${companyName} yetkili bayilik hesabınız başarıyla oluşturuldu. Sisteme Hoşgeldin Bonusu olarak bir defaya mahsus 32+32 (Toplam ${initialCredits}) Seans Kredisi hesabınıza otomatik tanımlandı!`,
       user: newUser,
-      whatsappDealerUrl
+      whatsappDealerUrl,
+      pendingPayment: isPendingDealerRegistration,
     };
   } catch (err: any) {
     console.error('Member registration error:', err);
@@ -2084,7 +2200,7 @@ export function getMemberWalletToken(): string | null {
   return typeof window === 'undefined' ? null : sessionStorage.getItem(MEMBER_WALLET_TOKEN_KEY);
 }
 
-function saveMemberWalletToken(token: string): void {
+export function saveMemberWalletToken(token: string): void {
   if (typeof window !== 'undefined') sessionStorage.setItem(MEMBER_WALLET_TOKEN_KEY, token);
 }
 
@@ -2234,6 +2350,21 @@ export function checkMemberAccess(user: UserMember | null): {
       remainingSeconds: 999999,
       remainingText: 'Yönetici Hesabı (Sınırsız)',
       statusBadge: 'YÖNETİCİ',
+    };
+  }
+
+  if (user.role === 'dealer' && user.paymentStatus === 'PENDING') {
+    return {
+      isLoggedIn: true,
+      isAdmin: false,
+      isAllowed: false,
+      isExpired: false,
+      isPending: true,
+      isDemo: false,
+      remainingDays: 0,
+      remainingSeconds: 0,
+      remainingText: 'Sandbox ödemesi bekleniyor',
+      statusBadge: 'ÖDEME BEKLİYOR',
     };
   }
 

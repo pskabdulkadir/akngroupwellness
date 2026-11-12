@@ -152,7 +152,10 @@ export default function WellnessApp({
     email?: string;
     phone?: string;
   } | null>(null);
-  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState<boolean>(() => initialNav.activeModal === 'payment');
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState<boolean>(() =>
+    initialNav.activeModal === 'payment' ||
+    Boolean(currentUser?.role === 'dealer' && currentUser.paymentStatus === 'PENDING')
+  );
   const [isResellerDashboardOpen, setIsResellerDashboardOpen] = useState<boolean>(() => initialNav.activeModal === 'reseller_dashboard' || initialNav.activeModal === 'reseller' || initialNav.activeModal === 'bayi' || initialNav.activeModal === 'dealer' || initialNav.activeModal === 'member_dashboard' || initialNav.activeModal === 'profile');
   const [isAdminOpen, setIsAdminOpen] = useState<boolean>(() => initialNav.activeModal === 'admin');
   useEffect(() => {
@@ -1259,6 +1262,10 @@ export default function WellnessApp({
           }}
           allowClose={true}
           isExpiredNotice={access.isExpired}
+          isPendingDealerRegistration={
+            currentUser.role === 'dealer' && currentUser.paymentStatus === 'PENDING'
+          }
+          onDealerRegistrationPaid={setCurrentUser}
         />
       )}
       <Vpos3DSecureModal />
@@ -1472,6 +1479,10 @@ export default function WellnessApp({
       <MonolineMlmPortalModal
         isOpen={isMonolineModalOpen}
         onClose={() => setIsMonolineModalOpen(false)}
+        onLogout={() => {
+          setIsMonolineModalOpen(false);
+          handleLogout();
+        }}
         onSubTabChange={setMonolineInitialSubTab}
         onGoToCamera={() => {
           setIsMonolineModalOpen(false);

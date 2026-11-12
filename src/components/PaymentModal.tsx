@@ -37,7 +37,9 @@ import {
   getWhatsAppCartOrderUrl,
   activateDemoSession,
   updateMemberCart,
-  recordMemberOrder
+  recordMemberOrder,
+  completePaidDealerRegistration,
+  saveMemberWalletToken
 } from '../utils/authManager';
 import { DealerPackage, getDealerPackages, subscribeToDealerPackages } from '../utils/resellerManager';
 import { DemoProtocolModal } from './DemoProtocolModal';
@@ -60,6 +62,8 @@ interface PaymentModalProps {
   onDemoActivated?: (updatedUser: UserMember) => void;
   allowClose?: boolean;
   isExpiredNotice?: boolean;
+  isPendingDealerRegistration?: boolean;
+  onDealerRegistrationPaid?: (user: UserMember) => void;
 }
 
 export const PaymentModal: React.FC<PaymentModalProps> = ({
@@ -69,6 +73,8 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
   onDemoActivated,
   allowClose = false,
   isExpiredNotice = false,
+  isPendingDealerRegistration = false,
+  onDealerRegistrationPaid,
 }) => {
   const isDealerUser = Boolean(
     user.isDealerRequested || 
@@ -299,11 +305,19 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
       return;
     }
 
+    if (
+      isPendingDealerRegistration &&
+      (cartItems.length !== 1 || cartItems[0].packageId !== user.selectedPackage || cartItems[0].quantity !== 1)
+    ) {
+      setPosError('Yeni bayi kaydında yalnızca seçilen başlangıç paketiyle devam edilebilir.');
+      return;
+    }
+
     const packageItems = cartItems.map((item) => ({ package_id: item.packageId, quantity: item.quantity }));
 
     setPosProcessing(true);
     try {
-      const orderId = `ORD-MEMBER-${crypto.randomUUID()}`;
+      const orderId = `ORD-${isPendingDealerRegistration ? 'KAYIT' : 'MEMBER'}-${crypto.randomUUID()}`;
       const approvals = await recordUserContractApprovals({
         user_id: user.uid,
         user_name: user.fullName || user.email,
@@ -327,6 +341,42 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
         user.uid,
         packageItems
       );
+
+      let orderUser = user;
+      if (isPendingDealerRegistration) {
+        const settlementResponse = await fetch('/api/v1/integrations/order-commission', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            user_id: user.uid,
+            order_id: orderId,
+            order_amount: totalCartPrice,
+            package_id: cartItems[0].packageId,
+            timestamp: new Date().toISOString(),
+            order_type: 'STANDARD_ORDER',
+            payment_method: 'CARD_3D',
+            merchant_oid: posCharge.merchant_oid,
+            transaction_id: posCharge.transaction_id,
+          }),
+        });
+        const settlement = await settlementResponse.json().catch(() => ({}));
+        if (
+          !settlementResponse.ok ||
+          settlement.status !== 'success' ||
+          Number(settlement.transaction?.session_credits_added) !== 64 ||
+          typeof settlement.member_token !== 'string'
+        ) {
+          throw new Error(
+            `Ödeme alındı ancak bayi kaydı etkinleştirilemedi. İşlem numarası: ${posCharge.transaction_id}. ${settlement.message || ''}`
+          );
+        }
+        saveMemberWalletToken(settlement.member_token);
+        orderUser = await completePaidDealerRegistration(
+          user,
+          Number(settlement.transaction.session_credits_added)
+        );
+        onDealerRegistrationPaid?.(orderUser);
+      }
 
       const activeItems = cartItems.map((item) => {
         const pkg = allAvailablePackages.find((p) => p.id === item.packageId);
@@ -360,7 +410,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
         paymentMethod: '3D Secure Sanal POS (Kredi Kartı)',
         referenceNumber: posCharge.transaction_id,
         items: activeItems,
-      });
+      }, orderUser);
       if (!orderRecorded) throw new Error(`Ödeme alındı ancak sipariş kaydedilemedi. İşlem numarası: ${posCharge.transaction_id}`);
 
       setPosSuccessReceipt({
@@ -607,7 +657,9 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
             {isDealerUser ? (
               // DEALER PACKAGES ONLY
-              dealerPackages.map((pkg) => {
+              dealerPackages
+                .filter((pkg) => !isPendingDealerRegistration || pkg.id === user.selectedPackage)
+                .map((pkg) => {
                 const qtyInCart = cart[pkg.id] || 0;
 
                 return (
@@ -667,7 +719,11 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
 
                     {/* Add / Quantity Controls */}
                     <div className="mt-4 pt-3 border-t border-slate-850">
-                      {qtyInCart === 0 ? (
+                      {isPendingDealerRegistration ? (
+                        <div className="text-center text-xs font-semibold text-amber-300">
+                          Ödeme onayında toplam 64 kredi tanımlanır
+                        </div>
+                      ) : qtyInCart === 0 ? (
                         <button
                           type="button"
                           onClick={() => handleAddToCart(pkg.id)}

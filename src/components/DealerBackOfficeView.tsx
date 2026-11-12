@@ -35,6 +35,7 @@ import {
   MessageSquare,
   HelpCircle,
   LifeBuoy,
+  LogOut,
 } from 'lucide-react';
 import {
   ActivationVoucherRecord,
@@ -90,6 +91,7 @@ interface DealerBackOfficeViewProps {
   subTab: DealerBackOfficeSubTab;
   onSubTabChange: (tab: DealerBackOfficeSubTab) => void;
   onReturnToMenu?: () => void;
+  onLogout?: () => void;
   members: MonolineMember[];
   selectedMemberId: string;
   onSelectMember: (userId: string) => void;
@@ -221,6 +223,7 @@ export const DealerBackOfficeView: React.FC<DealerBackOfficeViewProps> = ({
   subTab,
   onSubTabChange: setSubTab,
   onReturnToMenu,
+  onLogout,
   members,
   selectedMemberId,
   onSelectMember,
@@ -2068,8 +2071,18 @@ export const DealerBackOfficeView: React.FC<DealerBackOfficeViewProps> = ({
 
   return (
     <div className="space-y-8">
-      <div className="flex justify-end">
+      <div className="flex flex-wrap items-center justify-end gap-3">
         <DealerEthicsGuidelines />
+        {onLogout && (
+          <button
+            type="button"
+            onClick={onLogout}
+            className="inline-flex items-center gap-2 rounded-xl border border-rose-300 bg-rose-50 px-3.5 py-2 text-xs font-bold text-rose-700 transition-colors hover:bg-rose-100"
+          >
+            <LogOut className="h-4 w-4" />
+            <span>Çıkış Yap</span>
+          </button>
+        )}
       </div>
       {/* AKTİFLİK SÜRESİ GERİ SAYIMI & ÇEKİM ŞARTI ÖZET PANELİ */}
       <section

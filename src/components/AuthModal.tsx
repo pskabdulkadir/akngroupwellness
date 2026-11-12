@@ -411,7 +411,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
       if (res.success && res.user) {
         setSuccessMsg(res.message);
-        
+
+        if (res.pendingPayment) {
+          setTimeout(() => onAuthSuccess(res.user!, true), 600);
+          return;
+        }
+
         if (res.whatsappDealerUrl) {
           setPendingWhatsappUrl(res.whatsappDealerUrl);
           // Wait a moment so user sees the message, or allow click
@@ -1081,7 +1086,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                {dealerPackages.map((pkg) => {
+                {dealerPackages.filter((pkg) => !isDealerRequested || pkg.id === 'pkg-5k').map((pkg) => {
                   const isSelected = selectedPackageId === pkg.id;
                   const regionalPackage = getRegionalDealerPackage(pkg);
                   return (
