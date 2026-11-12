@@ -61,8 +61,7 @@ import {
   getDealerMonolineDownlineTree,
   redirectToDealerRegistrationPortal,
 } from '../utils/monolineSyncBridge';
-import { getMemberWalletToken, getActiveMemberSession } from '../utils/authManager';
-import { getActiveResellerSession } from '../utils/resellerManager';
+import { getMemberWalletToken } from '../utils/authManager';
 import {
   getActivationPriceForRegion,
   getMemberRegionalPendingUsd,
@@ -300,166 +299,10 @@ export const DealerBackOfficeView: React.FC<DealerBackOfficeViewProps> = ({
     [members]
   );
 
-  const member = useMemo<MonolineMember | null>(() => {
-    const found = sortedMembers.find((m) => m.user_id === selectedMemberId);
-    if (found) return found;
-
-    const activeRes = getActiveResellerSession();
-    if (activeRes) {
-      const matchRes = sortedMembers.find(
-        (m) =>
-          m.user_id === activeRes.uid ||
-          (activeRes.referralCode && m.ref_code && m.ref_code.toUpperCase() === activeRes.referralCode.toUpperCase()) ||
-          (activeRes.email && m.email && m.email.toLowerCase() === activeRes.email.toLowerCase())
-      );
-      if (matchRes) return matchRes;
-    }
-
-    const activeMem = getActiveMemberSession();
-    if (activeMem) {
-      const matchMem = sortedMembers.find(
-        (m) =>
-          m.user_id === activeMem.uid ||
-          (activeMem.referralCode && m.ref_code && m.ref_code.toUpperCase() === activeMem.referralCode.toUpperCase()) ||
-          (activeMem.email && m.email && m.email.toLowerCase() === activeMem.email.toLowerCase())
-      );
-      if (matchMem) return matchMem;
-    }
-
-    if (sortedMembers.length > 0) return sortedMembers[0];
-
-    if (activeRes) {
-      return {
-        id: 1,
-        user_id: activeRes.uid,
-        global_line_id: 1,
-        ref_code: activeRes.referralCode || 'AURA-BAYI-01',
-        full_name: activeRes.resellerName || activeRes.fullName || 'Bayi',
-        email: activeRes.email || '',
-        phone: activeRes.phone || '',
-        city: 'Türkiye',
-        country_code: 'TR',
-        joined_at: activeRes.createdAt || new Date().toISOString(),
-        sponsor_id: 'USR-ADMIN',
-        sponsor_db_id: 1,
-        highest_package_id: 'PKG_ALTIN_PRO',
-        session_credits: typeof activeRes.creditsBalance === 'number' ? activeRes.creditsBalance : 64,
-        personal_volume: 0,
-        group_volume: 0,
-        active_direct_referrals: 0,
-        career_level: 1,
-        career_title: 'Emmâre',
-        manual_career_override: null,
-        unlocked_depth: 1,
-        wallets: {
-          sponsor_wallet: 0,
-          monoline_wallet: 0,
-          career_pool_wallet: 0,
-          total_earnings: activeRes.totalEarnings || 0,
-          wallet_domestic_usd: 0,
-          wallet_international_usd: 0,
-          system_fund_balance: 0,
-          total_withdrawn: activeRes.paidEarnings || 0,
-        },
-        bank_details: {
-          iban_holder_name: activeRes.bankInfo?.accountHolder || activeRes.resellerName || 'Bayi',
-          bank_name: activeRes.bankInfo?.bankName || 'Ziraat Bankası',
-          iban: activeRes.bankInfo?.iban || '',
-          trc20_address: '',
-          preferred_method: 'IBAN',
-        },
-        two_factor: {
-          enabled: false,
-          secret_key: '',
-          verified_at: null,
-          backup_codes: [],
-        },
-        is_active: true,
-        is_locked: activeRes.status === 'suspended',
-        activity_expires_at: new Date(Date.now() + 30 * 86400000).toISOString(),
-        welcome_bonus_granted: true,
-        welcome_bonus_credits: 64,
-        tc_identity_no: '***...***',
-        has_tax_company: false,
-        last_login_ip: '',
-        device_fingerprint: '',
-        kvkk_approved_at: new Date().toISOString(),
-        contract_version: 'v2.0',
-        daily_withdrawal_limit: 5000,
-        fast_start_awarded: false,
-        assigned_leg: 'LEFT',
-        left_leg_volume: 0,
-        right_leg_volume: 0,
-      } as MonolineMember;
-    }
-
-    if (activeMem) {
-      return {
-        id: 1,
-        user_id: activeMem.uid,
-        global_line_id: 1,
-        ref_code: activeMem.referralCode || activeMem.dealerDetails?.referralCode || 'AURA-BAYI-01',
-        full_name: activeMem.fullName || 'Bayi',
-        email: activeMem.email || '',
-        phone: activeMem.phone || '',
-        city: 'Türkiye',
-        country_code: 'TR',
-        joined_at: activeMem.createdAt || new Date().toISOString(),
-        sponsor_id: activeMem.referredByCode || 'USR-ADMIN',
-        sponsor_db_id: 1,
-        highest_package_id: 'PKG_ALTIN_PRO',
-        session_credits: typeof activeMem.creditsBalance === 'number' ? activeMem.creditsBalance : 64,
-        personal_volume: 0,
-        group_volume: 0,
-        active_direct_referrals: 0,
-        career_level: 1,
-        career_title: 'Emmâre',
-        manual_career_override: null,
-        unlocked_depth: 1,
-        wallets: {
-          sponsor_wallet: 0,
-          monoline_wallet: 0,
-          career_pool_wallet: 0,
-          total_earnings: 0,
-          wallet_domestic_usd: 0,
-          wallet_international_usd: 0,
-          system_fund_balance: 0,
-          total_withdrawn: 0,
-        },
-        bank_details: {
-          iban_holder_name: activeMem.fullName || 'Bayi',
-          bank_name: 'Ziraat Bankası',
-          iban: '',
-          trc20_address: '',
-          preferred_method: 'IBAN',
-        },
-        two_factor: {
-          enabled: false,
-          secret_key: '',
-          verified_at: null,
-          backup_codes: [],
-        },
-        is_active: true,
-        is_locked: false,
-        activity_expires_at: new Date(Date.now() + 30 * 86400000).toISOString(),
-        welcome_bonus_granted: true,
-        welcome_bonus_credits: 64,
-        tc_identity_no: '***...***',
-        has_tax_company: false,
-        last_login_ip: '',
-        device_fingerprint: '',
-        kvkk_approved_at: new Date().toISOString(),
-        contract_version: 'v2.0',
-        daily_withdrawal_limit: 5000,
-        fast_start_awarded: false,
-        assigned_leg: 'LEFT',
-        left_leg_volume: 0,
-        right_leg_volume: 0,
-      } as MonolineMember;
-    }
-
-    return null;
-  }, [sortedMembers, selectedMemberId]);
+  const member = useMemo<MonolineMember | null>(
+    () => sortedMembers.find((candidate) => candidate.user_id === selectedMemberId) || null,
+    [sortedMembers, selectedMemberId]
+  );
 
   // B2C Retail Session Value Calculator state (Revizyon 4)
   const [retailSessionFee, setRetailSessionFee] = useState<number>(500);
@@ -1729,12 +1572,11 @@ export const DealerBackOfficeView: React.FC<DealerBackOfficeViewProps> = ({
     return (
       <div className="bg-white border border-slate-200 rounded-2xl p-10 text-center space-y-3">
         <div className="text-base font-bold text-slate-900">
-          Bayi Back-Office İçin Henüz Kayıtlı Üye Bulunmuyor
+          Giriş yapılan hesaba ait bayi kaydı bulunamadı
         </div>
         <p className="text-xs text-slate-500 max-w-xl mx-auto">
-          Üst menüdeki <strong>&ldquo;Frekans Kayıtlarını Senkronize Et&rdquo;</strong> butonuna
-          tıklayarak Frekans uygulamasındaki gerçek üyeleri ve alışverişleri aktarabilir veya{' '}
-          <strong>Monoline Tek Hat Ağacı</strong> sekmesinden yeni bir bayi ekleyebilirsiniz.
+          Başka bir bayi hesabının cüzdanı gösterilmeyecek. Hesap kaydı Monoline sisteminde görünmüyorsa
+          yöneticiden senkronizasyonu kontrol etmesini isteyin.
         </p>
       </div>
     );

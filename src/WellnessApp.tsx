@@ -1483,6 +1483,7 @@ export default function WellnessApp({
           setIsMonolineModalOpen(false);
           handleLogout();
         }}
+        authenticatedUser={currentUser}
         onSubTabChange={setMonolineInitialSubTab}
         onGoToCamera={() => {
           setIsMonolineModalOpen(false);

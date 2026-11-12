@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { AlertTriangle, ArrowLeft, BarChart3, Camera, ChevronDown, ChevronUp, Database, RefreshCw, RotateCcw, X } from 'lucide-react';
 import { AdminConsoleView } from './AdminConsoleView';
 import { CareerMatrixView } from './CareerMatrixView';
@@ -17,7 +17,7 @@ import {
 } from '../utils/monolineSyncBridge';
 import { getActiveResellerSession } from '../utils/resellerManager';
 import { getAdminToken } from '../utils/adminSession';
-import { getActiveMemberSession, getMemberWalletToken, updateMemberProfile } from '../utils/authManager';
+import { getActiveMemberSession, getMemberWalletToken, updateMemberProfile, type UserMember } from '../utils/authManager';
 import { wipeAllLocalApplicationData } from '../lib/db';
 import {
   CareerTier,
@@ -42,6 +42,7 @@ interface MonolineMlmPortalModalProps {
   isOpen?: boolean;
   onClose?: () => void;
   onLogout?: () => void;
+  authenticatedUser?: UserMember | null;
   onGoToCamera?: () => void;
   initialSubTab?: MonolineSubTab;
   onSubTabChange?: (tab: MonolineSubTab) => void;
@@ -54,6 +55,7 @@ export const MonolineMlmPortalModal: React.FC<MonolineMlmPortalModalProps> = ({
   isOpen = true,
   onClose,
   onLogout,
+  authenticatedUser,
   onGoToCamera,
   initialSubTab = 'backoffice',
   onSubTabChange,
@@ -114,47 +116,41 @@ export const MonolineMlmPortalModal: React.FC<MonolineMlmPortalModalProps> = ({
     onSubTabChange?.(activeTab);
   }, [activeTab, onSubTabChange]);
 
-  const resolveLoggedDealerId = (membersList: MonolineMember[]): string | null => {
-    const activeRes = getActiveResellerSession();
-    if (activeRes) {
-      const matchByUid = membersList.find((m) => m.user_id === activeRes.uid);
+  const resolveLoggedDealerId = useCallback((membersList: MonolineMember[]): string | null => {
+    const user = authenticatedUser || getActiveMemberSession();
+    if (user) {
+      const matchByUid = membersList.find((member) => member.user_id === user.uid);
       if (matchByUid) return matchByUid.user_id;
-      if (activeRes.referralCode) {
-        const cleanCode = activeRes.referralCode.trim().toUpperCase();
+      const cleanEmail = user.email.trim().toLowerCase();
+      const matchByEmail = membersList.find(
+        (member) => member.email && member.email.toLowerCase() === cleanEmail
+      );
+      if (matchByEmail) return matchByEmail.user_id;
+      const referralCode = (user.dealerDetails?.referralCode || user.referralCode || '').trim().toUpperCase();
+      if (referralCode) {
         const matchByCode = membersList.find(
-          (m) => m.ref_code && m.ref_code.toUpperCase() === cleanCode
+          (member) => member.ref_code && member.ref_code.toUpperCase() === referralCode
         );
         if (matchByCode) return matchByCode.user_id;
       }
-      if (activeRes.email) {
-        const cleanEmail = activeRes.email.trim().toLowerCase();
-        const matchByEmail = membersList.find(
-          (m) => m.email && m.email.toLowerCase() === cleanEmail
-        );
-        if (matchByEmail) return matchByEmail.user_id;
-      }
-      if (activeRes.resellerName) {
-        const cleanName = activeRes.resellerName.trim().toLowerCase();
-        const matchByName = membersList.find(
-          (m) => m.full_name && m.full_name.trim().toLowerCase() === cleanName
-        );
-        if (matchByName) return matchByName.user_id;
-      }
+      return null;
     }
-    const activeMem = getActiveMemberSession();
-    if (activeMem) {
-      const matchByUid = membersList.find((m) => m.user_id === activeMem.uid);
-      if (matchByUid) return matchByUid.user_id;
-      if (activeMem.email) {
-        const cleanEmail = activeMem.email.trim().toLowerCase();
-        const matchByEmail = membersList.find(
-          (m) => m.email && m.email.toLowerCase() === cleanEmail
-        );
-        if (matchByEmail) return matchByEmail.user_id;
-      }
-    }
-    return null;
-  };
+
+    const activeReseller = getActiveResellerSession();
+    if (!activeReseller) return null;
+    const matchByUid = membersList.find((member) => member.user_id === activeReseller.uid);
+    if (matchByUid) return matchByUid.user_id;
+    const cleanEmail = (activeReseller.email || '').trim().toLowerCase();
+    const matchByEmail = membersList.find(
+      (member) => cleanEmail && member.email && member.email.toLowerCase() === cleanEmail
+    );
+    if (matchByEmail) return matchByEmail.user_id;
+    const referralCode = (activeReseller.referralCode || '').trim().toUpperCase();
+    const matchByCode = membersList.find(
+      (member) => referralCode && member.ref_code && member.ref_code.toUpperCase() === referralCode
+    );
+    return matchByCode?.user_id || null;
+  }, [authenticatedUser]);
 
   const applyServerState = (data: SystemStateResponse) => {
     setState(data);
@@ -162,12 +158,10 @@ export const MonolineMlmPortalModal: React.FC<MonolineMlmPortalModalProps> = ({
     if (data.members.length > 0) {
       const loggedDealerId = !isAdminAuthenticated ? resolveLoggedDealerId(data.members) : null;
       setSelectedMemberId((prev) => {
-        if (loggedDealerId && (!prev || prev === data.members[0]?.user_id)) {
-          return loggedDealerId;
-        }
-        return data.members.some((m) => m.user_id === prev)
+        if (!isAdminAuthenticated) return loggedDealerId || '';
+        return data.members.some((member) => member.user_id === prev)
           ? prev
-          : loggedDealerId || data.members[0].user_id;
+          : data.members[0].user_id;
       });
     } else {
       setSelectedMemberId('');
@@ -187,12 +181,18 @@ export const MonolineMlmPortalModal: React.FC<MonolineMlmPortalModalProps> = ({
       const incoming = (e as CustomEvent<SystemStateResponse>).detail;
       if (!incoming || !Array.isArray(incoming.members)) return;
       setState((prev) => (prev && JSON.stringify(prev) === JSON.stringify(incoming) ? prev : incoming));
+      setSelectedMemberId((prev) => {
+        if (!isAdminAuthenticated) return resolveLoggedDealerId(incoming.members) || '';
+        return incoming.members.some((member) => member.user_id === prev)
+          ? prev
+          : incoming.members[0]?.user_id || '';
+      });
     };
     window.addEventListener('aurabio_monoline_state_updated', handleServerStateUpdated);
     return () => {
       window.removeEventListener('aurabio_monoline_state_updated', handleServerStateUpdated);
     };
-  }, []);
+  }, [authenticatedUser, isAdminAuthenticated, resolveLoggedDealerId]);
 
   const fetchSystemState = async (runLiveSync = false) => {
     try {
@@ -1459,8 +1459,18 @@ export const MonolineMlmPortalModal: React.FC<MonolineMlmPortalModalProps> = ({
                 onReturnToMenu={() => setIsPanelDetailOpen(false)}
                 onLogout={onLogout}
                 members={state.members}
-                selectedMemberId={selectedMemberId}
-                onSelectMember={(id) => setSelectedMemberId(id)}
+                selectedMemberId={
+                  isAdminAuthenticated
+                    ? selectedMemberId
+                    : resolveLoggedDealerId(state.members) || ''
+                }
+                onSelectMember={(id) => {
+                  if (isAdminAuthenticated) {
+                    setSelectedMemberId(id);
+                    return;
+                  }
+                  setSelectedMemberId(resolveLoggedDealerId(state.members) || '');
+                }}
                 withdrawalRequests={state.withdrawal_requests}
                 taxRefundInvoices={state.tax_refund_invoices}
                 feedbackTickets={state.feedback_tickets}
