@@ -1,5 +1,5 @@
 import express from 'express';
-import 'dotenv/config';
+import './server/loadEnv';
 import path from 'path';
 import { createHash, createHmac, randomBytes, scryptSync, timingSafeEqual } from 'crypto';
 import { fileURLToPath } from 'url';
@@ -4313,7 +4313,7 @@ seedInitialData();
 
 // Section 5: Admin oturum token'ı (HMAC-SHA256) ve Admin Endpoint Middleware
 const ADMIN_TOKEN_TTL_MS = 8 * 60 * 60 * 1000;
-const ADMIN_LOGIN_EMAIL = 'psikologabdulkadirkan@gmail.com';
+const ADMIN_LOGIN_EMAIL = (process.env.ADMIN_EMAIL || 'psikologabdulkadirkan@gmail.com').trim().toLowerCase();
 const RUNTIME_GENERATED_ADMIN_PASSWORD = randomBytes(16).toString('hex');
 const RUNTIME_GENERATED_ADMIN_SECRET = randomBytes(32).toString('hex');
 const RUNTIME_GENERATED_MEMBER_SECRET = randomBytes(32).toString('hex');
