@@ -1401,7 +1401,7 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
     setEditMemberFullName(m.fullName || '');
     setEditMemberEmail(m.email || '');
     setEditMemberPhone(m.phone || '');
-    setEditMemberRole(m.role || 'member');
+    setEditMemberRole(m.role === 'accounting' ? 'member' : m.role || 'member');
     setEditMemberSponsorCode(m.referredByCode || m.resellerId || '');
     setEditMemberAssignedLeg((m as any).assignedLeg || 'AUTO');
     setEditMemberLeftLegVol((m as any).leftLegVolume || 0);
@@ -1422,7 +1422,7 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
         fullName: editMemberFullName.trim(),
         email: editMemberEmail.trim().toLowerCase(),
         phone: editMemberPhone.trim(),
-        role: editMemberRole,
+        role: memberToEditSponsorship.role === 'accounting' ? 'accounting' : editMemberRole,
         referredByCode: editMemberSponsorCode.trim().toUpperCase() || undefined,
         resellerId: editMemberSponsorCode.trim().toUpperCase() || undefined,
         creditsBalance: Number(editMemberCredits) || 0,

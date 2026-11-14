@@ -4383,9 +4383,9 @@ function issueAccountingToken(passwordHash: string) {
 
 function verifyAccountingToken(token: string): string | null {
   const [payload, signature, extra] = token.split('.');
-  if (!payload || !signature || extra !== undefined) return false;
+  if (!payload || !signature || extra !== undefined) return null;
   const expected = createHmac('sha256', getEffectiveAdminJwtSecret()).update(payload).digest('base64url');
-  if (!timingSafeEqual(sha256Digest(signature), sha256Digest(expected))) return false;
+  if (!timingSafeEqual(sha256Digest(signature), sha256Digest(expected))) return null;
   try {
     const claims = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
     return claims.sub === 'ACCOUNTING-01' && claims.role === 'ACCOUNTING' && claims.exp > Date.now()
