@@ -4356,7 +4356,6 @@ function issueAdminToken(secret?: string): string {
 
 function verifyAdminToken(token: string): string | null {
   if (!token) return null;
-  // Security Hardening: Static backdoor prefixes ('admin-token-safe-', etc.) are completely eliminated
   const secret = getEffectiveAdminJwtSecret();
   const [payload, signature, extra] = token.split('.');
   if (!secret || !payload || !signature || extra !== undefined) return null;
@@ -4371,6 +4370,42 @@ function verifyAdminToken(token: string): string | null {
   } catch {
     return null;
   }
+}
+
+function issueAccountingToken(passwordHash: string) {
+  const payload = Buffer.from(
+    JSON.stringify({ sub: 'ACCOUNTING-01', role: 'ACCOUNTING', exp: Date.now() + ADMIN_TOKEN_TTL_MS, credentialVersion: passwordHash })
+  ).toString('base64url');
+  const signature = createHmac('sha256', getEffectiveAdminJwtSecret()).update(payload).digest('base64url');
+  return `${payload}.${signature}`;
+}
+
+function verifyAccountingToken(token: string): string | null {
+  const [payload, signature, extra] = token.split('.');
+  if (!payload || !signature || extra !== undefined) return false;
+  const expected = createHmac('sha256', getEffectiveAdminJwtSecret()).update(payload).digest('base64url');
+  if (!timingSafeEqual(sha256Digest(signature), sha256Digest(expected))) return false;
+  try {
+    const claims = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
+    return claims.sub === 'ACCOUNTING-01' && claims.role === 'ACCOUNTING' && claims.exp > Date.now()
+      ? String(claims.credentialVersion || '') || null
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+async function ensureAccountingCredentials() {
+  const result = await pgQuery('SELECT setting_value FROM system_settings WHERE setting_key = $1', ['ACCOUNTING_CREDENTIALS']);
+  if (result?.rows[0]) return;
+  const email = (process.env.ACCOUNTING_EMAIL || 'muhasebe@akngroupwellness.com').trim().toLowerCase();
+  const password = process.env.ACCOUNTING_PASSWORD || 'muhasebe123456';
+  const credentials = hashMemberPassword(password);
+  await pgQuery(
+    `INSERT INTO system_settings (setting_key, setting_value, updated_by)
+     VALUES ($1, $2::jsonb, 'SYSTEM') ON CONFLICT (setting_key) DO NOTHING`,
+    ['ACCOUNTING_CREDENTIALS', JSON.stringify({ email, ...credentials })]
+  );
 }
 
 // Real Cryptographic TOTP Verification (RFC 6238 Standard)
@@ -4546,6 +4581,37 @@ function requireWithdrawalMember(req: express.Request, res: express.Response, ne
   }
   res.locals.memberUserId = tokenUserId;
   next();
+}
+
+async function requireAccountingOrAdmin(
+  req: express.Request,
+  res: express.Response,
+  next: express.NextFunction
+) {
+  const token = req.headers.authorization?.startsWith('Bearer ')
+    ? req.headers.authorization.slice('Bearer '.length).trim()
+    : '';
+  const adminUid = token ? verifyAdminToken(token) : null;
+  if (adminUid) {
+    res.locals.adminUid = adminUid;
+    next();
+    return;
+  }
+  const tokenVersion = token ? verifyAccountingToken(token) : null;
+  if (tokenVersion) {
+    try {
+      const result = await pgQuery('SELECT setting_value FROM system_settings WHERE setting_key = $1', ['ACCOUNTING_CREDENTIALS']);
+      if (result?.rows[0]?.setting_value?.hash === tokenVersion) {
+        res.locals.accountingUid = 'ACCOUNTING-01';
+        next();
+        return;
+      }
+    } catch {
+      res.status(503).json({ status: 'error', code: 'ACCOUNTING_AUTH_UNAVAILABLE', message: 'Muhasebe oturumu doğrulanamadı.' });
+      return;
+    }
+  }
+  res.status(401).json({ status: 'error', code: 'ACCOUNTING_AUTH_REQUIRED', message: 'Muhasebe veya yönetici oturumu gereklidir.' });
 }
 
 function requireAdminJwt(
@@ -4942,6 +5008,7 @@ async function startServer() {
   if (!postgresReady) {
     throw new Error('PostgreSQL bağlantısı zorunludur; sunucu bellek modunda başlatılmadı.');
   }
+  await ensureAccountingCredentials();
   await loadUsdTryRateFromPostgres();
   await hydrateApplicationState();
   await hydrateStateFromPostgres();
@@ -5207,6 +5274,65 @@ async function startServer() {
   app.post('/api/v1/member/verify-otp', (req, res) => {
     req.url = '/api/v1/auth/verify-otp';
     app._router.handle(req, res, () => {});
+  });
+
+  app.post('/api/v1/accounting/login', async (req, res) => {
+    try {
+      const email = String(req.body?.email || '').trim().toLowerCase();
+      const password = String(req.body?.password || '');
+      const result = await pgQuery('SELECT setting_value FROM system_settings WHERE setting_key = $1', ['ACCOUNTING_CREDENTIALS']);
+      const credentials = result?.rows[0]?.setting_value;
+      if (!credentials || email !== String(credentials.email || '').toLowerCase()) {
+        res.status(404).json({ status: 'error', code: 'ACCOUNTING_ACCOUNT_NOT_FOUND' });
+        return;
+      }
+      if (!verifyMemberPassword(password, credentials.salt, credentials.hash)) {
+        res.status(401).json({ status: 'error', code: 'ACCOUNTING_LOGIN_FAILED', message: 'E-posta veya şifre hatalı.' });
+        return;
+      }
+      res.json({
+        status: 'success',
+        token: issueAccountingToken(credentials.hash),
+        user: { uid: 'ACCOUNTING-01', email: credentials.email, fullName: 'Akıllı Muhasebe', role: 'accounting' },
+        expires_in_ms: ADMIN_TOKEN_TTL_MS,
+      });
+    } catch (err: any) {
+      res.status(503).json({ status: 'error', code: 'ACCOUNTING_LOGIN_UNAVAILABLE', message: err?.message || 'Muhasebe girişi doğrulanamadı.' });
+    }
+  });
+
+  app.get('/api/v1/admin/accounting-credentials', requireAdminJwt, async (_req, res) => {
+    try {
+      const result = await pgQuery('SELECT setting_value, updated_at FROM system_settings WHERE setting_key = $1', ['ACCOUNTING_CREDENTIALS']);
+      const credentials = result?.rows[0]?.setting_value;
+      if (!credentials?.email) throw new Error('Muhasebe hesabı ayarı bulunamadı.');
+      res.json({ status: 'success', data: { email: credentials.email, updated_at: result?.rows[0]?.updated_at || null } });
+    } catch (err: any) {
+      res.status(503).json({ status: 'error', message: err?.message || 'Muhasebe hesabı ayarı okunamadı.' });
+    }
+  });
+
+  app.put('/api/v1/admin/accounting-credentials', requireAdminJwt, async (req, res) => {
+    const email = String(req.body?.email || '').trim().toLowerCase();
+    const password = String(req.body?.password || '');
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || password.length < 12) {
+      res.status(400).json({ status: 'error', message: 'Geçerli bir e-posta ve en az 12 karakterli yeni şifre giriniz.' });
+      return;
+    }
+    try {
+      const credentials = { email, ...hashMemberPassword(password) };
+      await withTransaction(async (client) => {
+        await client.query(
+          `INSERT INTO system_settings (setting_key, setting_value, updated_by)
+           VALUES ('ACCOUNTING_CREDENTIALS', $1::jsonb, $2)
+           ON CONFLICT (setting_key) DO UPDATE SET setting_value = EXCLUDED.setting_value, updated_by = EXCLUDED.updated_by, updated_at = CURRENT_TIMESTAMP`,
+          [JSON.stringify(credentials), String(res.locals.adminUid || 'ADMIN-AKN-01')]
+        );
+      });
+      res.json({ status: 'success', data: { email, updated_at: new Date().toISOString() } });
+    } catch (err: any) {
+      res.status(503).json({ status: 'error', message: err?.message || 'Muhasebe giriş bilgileri PostgreSQL’e kaydedilemedi.' });
+    }
   });
 
   app.post('/api/v1/admin/login', (req, res) => {
@@ -11283,7 +11409,7 @@ async function startServer() {
   });
 
   // 8. Gerçek Muhasebe ve Yevmiye Entegrasyonu Uç Noktası (Real PostgreSQL Ledger Data)
-  app.get('/api/v1/integrations/accounting/sync-data', async (_req, res) => {
+  app.get('/api/v1/integrations/accounting/sync-data', requireAccountingOrAdmin, async (_req, res) => {
     try {
       const [stateMembers, ordersRes, commRes, journalRes] = await Promise.all([
         queryMembersFromPostgres(),
@@ -11649,7 +11775,7 @@ async function startServer() {
   // ============================================================================
   // UÇ NOKTALAR: GİDER PUSULALARI VE RESMİ XML BELGELERİ
   // ============================================================================
-  app.get('/api/v1/accounting/vouchers', async (_req, res) => {
+  app.get('/api/v1/accounting/vouchers', requireAccountingOrAdmin, async (_req, res) => {
     try {
       const result = await pgQuery('SELECT voucher_data FROM expense_vouchers ORDER BY created_at DESC, id DESC');
       const vouchers = (result?.rows || []).map((row: any) => row.voucher_data).filter((row: any) => row && Object.keys(row).length > 0);
@@ -11659,7 +11785,7 @@ async function startServer() {
     }
   });
 
-  app.get('/api/v1/accounting/vouchers/:id', async (req, res) => {
+  app.get('/api/v1/accounting/vouchers/:id', requireAccountingOrAdmin, async (req, res) => {
     try {
       const result = await pgQuery(
         'SELECT voucher_data FROM expense_vouchers WHERE voucher_number = $1 OR id::text = $1 LIMIT 1',
@@ -11673,7 +11799,7 @@ async function startServer() {
     }
   });
 
-  app.get('/api/v1/accounting/vouchers/:id/xml', async (req, res) => {
+  app.get('/api/v1/accounting/vouchers/:id/xml', requireAccountingOrAdmin, async (req, res) => {
     try {
       const result = await pgQuery(
         'SELECT voucher_data FROM expense_vouchers WHERE voucher_number = $1 OR id::text = $1 LIMIT 1',
@@ -11690,7 +11816,7 @@ async function startServer() {
     }
   });
 
-  app.post('/api/v1/accounting/vouchers/generate-matured', async (_req, res) => {
+  app.post('/api/v1/accounting/vouchers/generate-matured', requireAdminJwt, async (_req, res) => {
     try {
       const result = await processMaturedExpenseVouchers();
       res.json({
@@ -11707,7 +11833,7 @@ async function startServer() {
   // ============================================================================
   // UÇ NOKTALAR: TOPLU BAYİ BANKA ÖDEMELERİ (BATCH PAYOUT ENGINE)
   // ============================================================================
-  app.get('/api/v1/accounting/payouts/pending', async (_req, res) => {
+  app.get('/api/v1/accounting/payouts/pending', requireAccountingOrAdmin, async (_req, res) => {
     try {
     const voucherRows = await pgQuery(
       "SELECT voucher_data FROM expense_vouchers WHERE status IN ('ISSUED', 'QUEUED_FOR_PAYOUT') ORDER BY created_at DESC, id DESC"
@@ -11747,7 +11873,7 @@ async function startServer() {
   });
 
   // Banka Toplu Transfer Dosyası İndirme (.csv / .txt)
-  app.get('/api/v1/accounting/payouts/export-bank-file', async (req, res) => {
+  app.get('/api/v1/accounting/payouts/export-bank-file', requireAccountingOrAdmin, async (req, res) => {
     try {
     const bank = ((req.query.bank as string) || 'GARANTI').toUpperCase() as 'GARANTI' | 'AKBANK' | 'ISBANK' | 'ZIRAAT';
     const rawIds = (req.query.commission_ids as string) || '';
@@ -11793,7 +11919,7 @@ async function startServer() {
   });
 
   // Seçilenleri Onayla ve Ödemeyi Tamamla (Atomik PostgreSQL Transaction)
-  app.post('/api/v1/accounting/payouts/execute-batch', async (req, res) => {
+  app.post('/api/v1/accounting/payouts/execute-batch', requireAdminJwt, async (req, res) => {
     try {
       const { commission_ids, bank_name = 'GARANTI', executed_by = 'Yönetici' } = req.body || {};
       const ids: string[] = Array.isArray(commission_ids) ? commission_ids : [];
@@ -11964,7 +12090,7 @@ async function startServer() {
   });
 
   // Toplu Ödeme Geçmişi
-  app.get('/api/v1/accounting/payouts/batches', async (_req, res) => {
+  app.get('/api/v1/accounting/payouts/batches', requireAccountingOrAdmin, async (_req, res) => {
     try {
       const [batches, items] = await Promise.all([
         pgQuery('SELECT batch_data FROM payout_batches ORDER BY created_at DESC'),

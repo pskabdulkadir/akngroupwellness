@@ -349,6 +349,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       if (res.success && res.user) {
         setSuccessMsg(res.message);
         setTimeout(() => {
+          if (res.user?.role === 'accounting') {
+            window.dispatchEvent(new CustomEvent('open-smart-accounting'));
+            return;
+          }
           onAuthSuccess(res.user!, false);
         }, 500);
       } else {

@@ -15,7 +15,7 @@ import {
 } from '../lib/db';
 import { formatUsd } from './currency';
 import { getPackagePriceForRegion, resolveMemberRegion } from './walletRegion';
-import { loginAdmin, loginAdminWithMessage } from './adminSession';
+import { loginAdmin, loginAdminWithMessage, loginAccountingWithMessage, clearAccountingToken } from './adminSession';
 
 // ADMIN CREDENTIALS & CONSTANTS
 export const ADMIN_EMAILS = [
@@ -519,7 +519,7 @@ export interface UserMember {
   country_code?: string; // Kayıtta seçilen ülke (ISO 3166-1 alpha-2); bölge bu değerden türetilir
   createdAt: string;
   lastLoginAt?: string;
-  role?: 'customer' | 'member' | 'dealer' | 'admin';
+  role?: 'customer' | 'member' | 'dealer' | 'admin' | 'accounting';
   notes?: string;
   // Dynamic Dealer & Reseller Integration Fields (AKN Spec):
   isDealerRequested?: boolean;
@@ -1955,6 +1955,27 @@ export async function loginMember(
       return { success: false, message: 'E-posta ve şifre giriniz.' };
     }
 
+    const accountingLogin = await loginAccountingWithMessage(cleanEmail, cleanPassword);
+    if (accountingLogin.isAccounting) {
+      if (!accountingLogin.success) {
+        return { success: false, message: accountingLogin.message || 'Muhasebe girişi başarısız oldu.' };
+      }
+      const accountingUser: UserMember = {
+        uid: 'ACCOUNTING-01',
+        email: cleanEmail,
+        fullName: 'Akıllı Muhasebe',
+        phone: '',
+        isAllowed: true,
+        isApproved: true,
+        expiryDate: null,
+        createdAt: new Date().toISOString(),
+        lastLoginAt: new Date().toISOString(),
+        role: 'accounting',
+      };
+      localStorage.setItem(STORAGE_SESSION_KEY, JSON.stringify(accountingUser));
+      return { success: true, message: 'Akıllı Muhasebe girişi başarılı.', user: accountingUser };
+    }
+
     // 1. Direct Admin Login Check (admin email / password)
     if (ADMIN_EMAILS.includes(cleanEmail)) {
       const adminLogin = await loginAdminWithMessage(cleanEmail, cleanPassword);
@@ -2198,6 +2219,7 @@ export function saveMemberWalletToken(token: string): void {
 
 export function logoutMemberSession(): void {
   if (typeof window === 'undefined') return;
+  clearAccountingToken();
   sessionStorage.removeItem(MEMBER_WALLET_TOKEN_KEY);
   localStorage.removeItem(STORAGE_SESSION_KEY);
   localStorage.removeItem('aurabio_active_reseller_session_v1');
@@ -2326,6 +2348,21 @@ export function checkMemberAccess(user: UserMember | null): {
       remainingSeconds: 0,
       remainingText: 'Giriş Yapılmadı',
       statusBadge: 'GİRİŞ GEREKLİ',
+    };
+  }
+
+  if (user.role === 'accounting' || user.uid === 'ACCOUNTING-01') {
+    return {
+      isLoggedIn: true,
+      isAdmin: false,
+      isAllowed: false,
+      isExpired: false,
+      isPending: false,
+      isDemo: false,
+      remainingDays: 0,
+      remainingSeconds: 0,
+      remainingText: 'Muhasebe hesabı',
+      statusBadge: 'MUHASEBE',
     };
   }
 

@@ -150,8 +150,10 @@ const CLEAN_TAX_OFFICE_ACCRUALS: TaxOfficeAccrual[] = [
 
 export default function SmartAccountingApp({
   onReturnToWellness,
+  accountingOnly = false,
 }: {
   onReturnToWellness?: () => void;
+  accountingOnly?: boolean;
 } = {}) {
   const [currentTab, setCurrentTab] = useState<string>('overview');
   const [isTourOpen, setIsTourOpen] = useState(false);
@@ -176,6 +178,10 @@ export default function SmartAccountingApp({
   const [commissions, setCommissions] = useState<CommissionPayout[]>(() => []);
   const [distributors, setDistributors] = useState<Distributor[]>(() => []);
   const [ledgerEntries, setLedgerEntries] = useState<LedgerEntry[]>(() => []);
+  const [accountingVouchers, setAccountingVouchers] = useState<any[]>([]);
+  const [accountingWithdrawals, setAccountingWithdrawals] = useState<any[]>([]);
+  const [accountingBatches, setAccountingBatches] = useState<any[]>([]);
+  const [accountingOrders, setAccountingOrders] = useState<any[]>([]);
   const [aiAdvices] = useState<AIAdvice[]>(INITIAL_AI_ADVICE);
 
   // 6 Modül State'leri
@@ -249,6 +255,11 @@ export default function SmartAccountingApp({
       const res = await fetch('/api/v1/integrations/accounting/sync-data');
       if (res.ok) {
         const data = await res.json();
+        setAccountingVouchers(Array.isArray(data.expense_vouchers) ? data.expense_vouchers : []);
+        setAccountingWithdrawals(Array.isArray(data.withdrawal_requests) ? data.withdrawal_requests : []);
+        setAccountingBatches(Array.isArray(data.payout_batches) ? data.payout_batches : []);
+        setAccountingOrders(Array.isArray(data.orders) ? data.orders : []);
+
         // 1. Üyelerden Bayi Listesini Güncelle
         if (Array.isArray(data.members) && data.members.length > 0) {
           const liveDistributors: Distributor[] = data.members.map((m: any, idx: number) => ({
@@ -732,6 +743,69 @@ export default function SmartAccountingApp({
 
   const pendingWithholdingCount = commissions.filter((c) => !c.isCompany && !c.isClawbacked).length;
   const refundsCount = refunds.length;
+
+  if (accountingOnly) {
+    const totalIncome = accountingOrders
+      .filter((order) => order.status === 'COMPLETED' || order.status === 'PAID')
+      .reduce((sum, order) => sum + Number(order.amount || 0), 0);
+    const totalExpenses = accountingVouchers.reduce((sum, voucher) => sum + Number(voucher.gross_amount || 0), 0);
+    const pendingWithdrawals = accountingWithdrawals.filter((withdrawal) => withdrawal.status === 'PENDING');
+
+    return (
+      <main className="min-h-screen bg-slate-50 px-4 py-6 text-slate-900 sm:px-6 lg:px-10">
+        <div className="mx-auto max-w-7xl space-y-6">
+          <header className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-widest text-emerald-700">AKN Global Group</p>
+              <h1 className="mt-1 text-2xl font-bold sm:text-3xl">Akıllı Muhasebe Paneli</h1>
+              <p className="mt-1 text-sm text-slate-500">PostgreSQL finans kayıtları · Salt okunur görünüm</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button type="button" onClick={() => void fetchLiveAccountingData()} className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold hover:bg-slate-100">Verileri Yenile</button>
+              {onReturnToWellness && <button type="button" onClick={onReturnToWellness} className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700">Ana sayfa</button>}
+            </div>
+          </header>
+          <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {[
+              ['Gelir', totalIncome],
+              ['Gider pusulası toplamı', totalExpenses],
+              ['Net gelir-gider dengesi', totalIncome - totalExpenses],
+              ['Bekleyen çekim talebi', pendingWithdrawals.reduce((sum, withdrawal) => sum + Number(withdrawal.gross_amount ?? withdrawal.amount ?? 0), 0)],
+            ].map(([label, value]) => (
+              <article key={String(label)} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                <p className="text-sm font-medium text-slate-500">{label}</p>
+                <p className="mt-2 break-words text-2xl font-bold tabular-nums">{Number(value).toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺</p>
+              </article>
+            ))}
+          </section>
+          <section className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+            <article className="min-w-0 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <h2 className="mb-4 text-lg font-bold">Yevmiye defteri</h2>
+              <div className="max-h-96 overflow-auto">
+                <table className="w-full min-w-[620px] text-left text-sm">
+                  <thead className="sticky top-0 bg-slate-100 text-xs uppercase text-slate-500"><tr><th className="p-2">Tarih</th><th className="p-2">Fiş</th><th className="p-2">Açıklama</th><th className="p-2 text-right">Borç</th><th className="p-2 text-right">Alacak</th></tr></thead>
+                  <tbody className="divide-y divide-slate-100">{ledgerEntries.map((entry) => <tr key={entry.id}><td className="p-2 whitespace-nowrap">{entry.date}</td><td className="p-2">{entry.documentNumber}</td><td className="max-w-[240px] truncate p-2">{entry.description}</td><td className="p-2 text-right tabular-nums">{entry.debitTRY.toLocaleString('tr-TR')}</td><td className="p-2 text-right tabular-nums">{entry.creditTRY.toLocaleString('tr-TR')}</td></tr>)}</tbody>
+                </table>
+                {!ledgerEntries.length && <p className="p-4 text-sm text-slate-500">Henüz yevmiye kaydı bulunmuyor.</p>}
+              </div>
+            </article>
+            <article className="min-w-0 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <h2 className="mb-4 text-lg font-bold">Gider pusulaları</h2>
+              <div className="max-h-96 space-y-2 overflow-auto">{accountingVouchers.map((voucher) => <div key={voucher.voucher_number} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-100 p-3"><div className="min-w-0"><p className="truncate text-sm font-semibold">{voucher.voucher_number} · {voucher.dealer_full_name}</p><p className="text-xs text-slate-500">{voucher.status} · {voucher.created_at?.slice(0, 10)}</p></div><p className="whitespace-nowrap text-sm font-bold tabular-nums">{Number(voucher.gross_amount || 0).toLocaleString('tr-TR')} ₺</p></div>)}{!accountingVouchers.length && <p className="text-sm text-slate-500">Henüz gider pusulası bulunmuyor.</p>}</div>
+            </article>
+            <article className="min-w-0 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <h2 className="mb-4 text-lg font-bold">Çekim talepleri</h2>
+              <div className="max-h-80 space-y-2 overflow-auto">{accountingWithdrawals.map((withdrawal) => <div key={withdrawal.id} className="flex flex-wrap justify-between gap-2 rounded-xl border border-slate-100 p-3"><div><p className="text-sm font-semibold">{withdrawal.user_full_name || withdrawal.external_user_id}</p><p className="text-xs text-slate-500">{withdrawal.status} · {withdrawal.created_at?.slice(0, 10)}</p></div><p className="whitespace-nowrap text-sm font-bold">{Number(withdrawal.net_amount ?? withdrawal.amount ?? 0).toLocaleString('tr-TR')} {withdrawal.currency || 'TRY'}</p></div>)}{!accountingWithdrawals.length && <p className="text-sm text-slate-500">Henüz çekim talebi bulunmuyor.</p>}</div>
+            </article>
+            <article className="min-w-0 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <h2 className="mb-4 text-lg font-bold">Ödeme geçmişi</h2>
+              <div className="max-h-80 space-y-2 overflow-auto">{accountingBatches.map((batch) => <div key={batch.batch_id} className="flex flex-wrap justify-between gap-2 rounded-xl border border-slate-100 p-3"><div><p className="text-sm font-semibold">{batch.batch_id}</p><p className="text-xs text-slate-500">{batch.status} · {batch.created_at?.slice(0, 10)}</p></div><p className="whitespace-nowrap text-sm font-bold">{Number(batch.total_net || 0).toLocaleString('tr-TR')} {batch.currency || 'TRY'}</p></div>)}{!accountingBatches.length && <p className="text-sm text-slate-500">Henüz tamamlanmış ödeme bulunmuyor.</p>}</div>
+            </article>
+          </section>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans selection:bg-slate-900 selection:text-white max-w-full overflow-x-hidden">

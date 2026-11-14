@@ -33,6 +33,7 @@ import {
 } from 'lucide-react';
 import { LegalContractsModal, LegalContractTab } from './components/LegalContractsModal';
 import { MedicalDisclaimerModal } from './components/MedicalDisclaimerModal';
+import { getAccountingToken } from './utils/adminSession';
 
 export type ActiveAppView = 'welcome' | 'wellness' | 'accounting';
 
@@ -391,7 +392,10 @@ export default function App() {
       {activeView === 'wellness' ? (
         <WellnessApp onOpenSmartAccounting={() => setActiveView('accounting')} />
       ) : (
-        <SmartAccountingApp onReturnToWellness={() => setActiveView('wellness')} />
+        <SmartAccountingApp
+          onReturnToWellness={() => setActiveView('wellness')}
+          accountingOnly={Boolean(getAccountingToken())}
+        />
       )}
     </div>
   );

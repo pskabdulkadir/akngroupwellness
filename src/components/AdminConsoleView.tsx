@@ -88,6 +88,7 @@ export type AdminConsoleSection =
   | 'webhooks_sql'
   | 'rest_api'
   | 'data_management'
+  | 'accounting_credentials'
   | 'feedback_tickets';
 
 interface AdminConsoleViewProps {
@@ -297,6 +298,10 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
   const [usdTryRateInput, setUsdTryRateInput] = useState('');
   const [usdTryRateMessage, setUsdTryRateMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [isSavingUsdTryRate, setIsSavingUsdTryRate] = useState(false);
+  const [accountingEmail, setAccountingEmail] = useState('');
+  const [accountingPassword, setAccountingPassword] = useState('');
+  const [accountingCredentialMessage, setAccountingCredentialMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [isSavingAccountingCredentials, setIsSavingAccountingCredentials] = useState(false);
 
   React.useEffect(() => {
     fetch('/api/v1/admin/exchange-rate', {
@@ -312,6 +317,43 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
       })
       .catch((error) => setUsdTryRateMessage({ type: 'error', text: error.message }));
   }, []);
+
+  React.useEffect(() => {
+    fetch('/api/v1/admin/accounting-credentials', {
+      headers: { Authorization: `Bearer ${getAdminToken() || ''}` },
+    })
+      .then(async (response) => {
+        const result = await response.json();
+        if (!response.ok) throw new Error(result?.message || 'Muhasebe hesabı okunamadı.');
+        setAccountingEmail(String(result?.data?.email || ''));
+      })
+      .catch((error) => setAccountingCredentialMessage({ type: 'error', text: error.message }));
+  }, []);
+
+  const handleSaveAccountingCredentials = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setIsSavingAccountingCredentials(true);
+    setAccountingCredentialMessage(null);
+    try {
+      const response = await fetch('/api/v1/admin/accounting-credentials', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${getAdminToken() || ''}`,
+        },
+        body: JSON.stringify({ email: accountingEmail, password: accountingPassword }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result?.message || 'Muhasebe bilgileri kaydedilemedi.');
+      setAccountingEmail(result.data.email);
+      setAccountingPassword('');
+      setAccountingCredentialMessage({ type: 'success', text: 'Giriş bilgileri PostgreSQL’e kaydedildi.' });
+    } catch (error: any) {
+      setAccountingCredentialMessage({ type: 'error', text: error?.message || 'Muhasebe bilgileri kaydedilemedi.' });
+    } finally {
+      setIsSavingAccountingCredentials(false);
+    }
+  };
 
   const handleSaveUsdTryRate = async () => {
     setIsSavingUsdTryRate(true);
@@ -1486,6 +1528,18 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
             <Database className="w-3.5 h-3.5" />
             <span>💾 10. Veri / Data Portalı (Yedek İndir &amp; Yükle)</span>
           </button>
+          <button
+            type="button"
+            onClick={() => openAdminSection('accounting_credentials')}
+            className={`inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-bold transition-colors cursor-pointer ${
+              adminSection === 'accounting_credentials'
+                ? 'bg-amber-600 text-white shadow-xs'
+                : 'bg-amber-100 text-amber-950 hover:bg-amber-200 border border-amber-300'
+            }`}
+          >
+            <Key className="h-3.5 w-3.5" />
+            <span>Muhasebe Giriş Bilgilerini Yönet</span>
+          </button>
         </nav>
       </div>}
       <div className="min-w-0 max-w-full space-y-6 overflow-x-auto">
@@ -1500,6 +1554,29 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
           </button>
           <span className="text-sm font-semibold text-slate-700">Yönetici Paneli</span>
         </div>
+      )}
+      {adminSection === 'accounting_credentials' && (
+        <section className="max-w-2xl space-y-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div>
+            <h3 className="text-lg font-bold text-slate-900">Muhasebe giriş bilgileri</h3>
+            <p className="mt-1 text-sm text-slate-600">Yeni şifre kaydedildiğinde mevcut muhasebe oturumları anında geçersiz olur. Şifre PostgreSQL’de açık metin olarak saklanmaz.</p>
+          </div>
+          <form onSubmit={handleSaveAccountingCredentials} className="space-y-4">
+            <label className="block space-y-1 text-sm font-semibold text-slate-700">
+              E-posta adresi
+              <input type="email" required value={accountingEmail} onChange={(event) => setAccountingEmail(event.target.value)} className="w-full rounded-lg border border-slate-300 px-3 py-2" />
+            </label>
+            <label className="block space-y-1 text-sm font-semibold text-slate-700">
+              Yeni şifre
+              <input type="password" required minLength={12} autoComplete="new-password" value={accountingPassword} onChange={(event) => setAccountingPassword(event.target.value)} className="w-full rounded-lg border border-slate-300 px-3 py-2" />
+              <span className="block text-xs font-normal text-slate-500">En az 12 karakter olmalıdır.</span>
+            </label>
+            <button type="submit" disabled={isSavingAccountingCredentials} className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">
+              {isSavingAccountingCredentials ? 'Kaydediliyor…' : 'Bilgileri Kaydet'}
+            </button>
+          </form>
+          {accountingCredentialMessage && <p role="status" className={`text-sm font-semibold ${accountingCredentialMessage.type === 'success' ? 'text-emerald-700' : 'text-red-700'}`}>{accountingCredentialMessage.text}</p>}
+        </section>
       )}
       {/* SECTION: 🚀 BÜYÜMEYİ 2-3 KATINA ÇIKARAN 5 STRATEJİK İYİLEŞTİRME ÖNERİSİ & V2.2 SİSTEM AYARLARI */}
       {adminSection === 'strategic_growth' && (
