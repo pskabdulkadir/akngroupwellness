@@ -7,7 +7,6 @@ export interface FixedUsdRate {
 }
 
 const USD_TRY_RATE_CACHE_KEY = 'admin_usd_try_rate_v1';
-const FIXED_USD_TRY_RATE = 50;
 
 function readCachedRate(): FixedUsdRate | null {
   try {
@@ -16,7 +15,7 @@ function readCachedRate(): FixedUsdRate | null {
     const parsed = JSON.parse(value);
     if (!Number.isFinite(parsed?.usd_try_rate)) return null;
     return {
-      usd_try_rate: FIXED_USD_TRY_RATE,
+      usd_try_rate: parsed.usd_try_rate,
       updated_at: typeof parsed.updated_at === 'string' ? parsed.updated_at : null,
       updated_by: typeof parsed.updated_by === 'string' ? parsed.updated_by : null,
     };
@@ -81,7 +80,7 @@ export function FixedUsdRateBanner({ rate: providedRate, loadError = false }: Fi
   return (
     <div className="flex w-fit max-w-full flex-wrap items-center justify-between gap-2 rounded-xl border border-emerald-200 bg-gradient-to-r from-emerald-50 to-teal-50 px-3 py-2 shadow-xs">
       <div className="flex items-baseline gap-2">
-        <div className="text-[10px] font-bold uppercase tracking-wide text-emerald-800">Sabit Kur</div>
+        <div className="text-[10px] font-bold uppercase tracking-wide text-emerald-800">USD/TRY Kuru</div>
         <div className="text-base font-mono font-bold text-slate-900 tabular-nums">
           {rate
             ? `1 USD = ${rate.usd_try_rate.toFixed(2)} TRY`

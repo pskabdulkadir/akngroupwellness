@@ -614,6 +614,10 @@ export async function completePaidDealerRegistration(
     dealerDetails: {
       ...existing.dealerDetails,
       companyName,
+      taxNumber: existing.dealerDetails?.taxNumber || 'Belirtilmedi',
+      taxOffice: existing.dealerDetails?.taxOffice || 'Belirtilmedi',
+      businessField: existing.dealerDetails?.businessField || '',
+      whatsapp: existing.dealerDetails?.whatsapp || existing.phone || '',
       creditsBalance,
       approvedAt: now,
     },

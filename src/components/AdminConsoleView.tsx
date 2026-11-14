@@ -76,8 +76,6 @@ import { getMemberRegionalPendingUsd, getMemberRegionalUsdBalance } from '../uti
 import { BUSINESS_RULES } from '../config/businessRules';
 import { CommissionEngineSettingsView } from './CommissionEngineSettingsView';
 
-const FIXED_USD_TRY_RATE = 50;
-
 export type AdminConsoleSection =
   | 'members'
   | 'bonuses'
@@ -295,6 +293,52 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
 }) => {
   const [adminSection, setAdminSection] = useState<AdminConsoleSection>(initialSection ?? 'members');
   const [isSectionDetailOpen, setIsSectionDetailOpen] = useState(initialSection !== undefined);
+  const [usdTryRate, setUsdTryRate] = useState(0);
+  const [usdTryRateInput, setUsdTryRateInput] = useState('');
+  const [usdTryRateMessage, setUsdTryRateMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [isSavingUsdTryRate, setIsSavingUsdTryRate] = useState(false);
+
+  React.useEffect(() => {
+    fetch('/api/v1/admin/exchange-rate', {
+      headers: { Authorization: `Bearer ${getAdminToken() || ''}` },
+    })
+      .then(async (response) => {
+        const data = await response.json();
+        if (!response.ok) throw new Error(data?.message || 'Kur ayarı okunamadı.');
+        const rate = Number(data?.data?.usd_try_rate);
+        if (!Number.isFinite(rate) || rate <= 0) throw new Error('Kur yanıtı geçersiz.');
+        setUsdTryRate(rate);
+        setUsdTryRateInput(rate.toFixed(2));
+      })
+      .catch((error) => setUsdTryRateMessage({ type: 'error', text: error.message }));
+  }, []);
+
+  const handleSaveUsdTryRate = async () => {
+    setIsSavingUsdTryRate(true);
+    setUsdTryRateMessage(null);
+    try {
+      const nextRate = Number(usdTryRateInput);
+      if (!Number.isFinite(nextRate) || nextRate <= 0) throw new Error('Geçerli ve sıfırdan büyük bir kur giriniz.');
+      const response = await fetch('/api/v1/admin/exchange-rate', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${getAdminToken() || ''}`,
+        },
+        body: JSON.stringify({ usd_try_rate: nextRate }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data?.message || 'Kur ayarı kaydedilemedi.');
+      const rate = Number(data?.data?.usd_try_rate);
+      setUsdTryRate(rate);
+      setUsdTryRateInput(rate.toFixed(2));
+      setUsdTryRateMessage({ type: 'success', text: 'Kur PostgreSQL ayarlarına kaydedildi.' });
+    } catch (error: any) {
+      setUsdTryRateMessage({ type: 'error', text: error?.message || 'Kur kaydedilemedi.' });
+    } finally {
+      setIsSavingUsdTryRate(false);
+    }
+  };
 
   const openAdminSection = (section: AdminConsoleSection) => {
     setAdminSection(section);
@@ -2200,21 +2244,41 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
       {/* SECTION 1: SİSTEM & PARAMETRE YÖNETİMİ (`POST /api/v1/admin/settings`) */}
       {adminSection === 'params' && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          <div className="lg:col-span-12 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50 to-teal-50 px-5 py-4 shadow-sm">
+          <div className="lg:col-span-12 flex flex-wrap items-end justify-between gap-4 rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50 to-teal-50 px-5 py-4 shadow-sm">
             <div>
               <div className="text-xs font-bold uppercase tracking-wide text-emerald-800">
-                Kodlarda Sabitlenen Kur
+                PostgreSQL Kur Ayarı
               </div>
               <div className="mt-1 text-xl font-mono font-bold text-slate-900 tabular-nums">
-                1 USD = {FIXED_USD_TRY_RATE.toFixed(2)} TRY
+                {usdTryRate > 0 ? `1 USD = ${usdTryRate.toFixed(2)} TRY` : 'Kur yükleniyor...'}
               </div>
             </div>
-            <div className="text-xs font-medium text-slate-600">
-              Sabit kur değişikliği yönetici panelinden yapılamaz.
+            <div className="flex flex-wrap items-end gap-2">
+              <label className="grid gap-1 text-xs font-semibold text-slate-700">
+                USD/TRY
+                <input
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  value={usdTryRateInput}
+                  onChange={(event) => setUsdTryRateInput(event.target.value)}
+                  className="w-32 rounded-lg border border-slate-300 bg-white px-3 py-2 font-mono"
+                />
+              </label>
+              <button
+                type="button"
+                onClick={handleSaveUsdTryRate}
+                disabled={isSavingUsdTryRate || !usdTryRateInput}
+                className="rounded-lg bg-emerald-700 px-4 py-2 text-xs font-bold text-white disabled:opacity-50"
+              >
+                {isSavingUsdTryRate ? 'Kaydediliyor...' : 'Kuru Kaydet'}
+              </button>
             </div>
-          </div>
-          <div className="lg:col-span-12 bg-white border border-slate-200 rounded-2xl p-6 text-sm text-slate-600">
-            Sistem işlemlerinde USD/TRY kuru sabit olarak 50.00 TRY kullanılır.
+            {usdTryRateMessage && (
+              <div className={`w-full text-xs font-semibold ${usdTryRateMessage.type === 'success' ? 'text-emerald-800' : 'text-red-700'}`}>
+                {usdTryRateMessage.text}
+              </div>
+            )}
           </div>
 
           <section className="lg:col-span-5 bg-white border border-slate-200 rounded-2xl p-6 space-y-5 shadow-2xs">

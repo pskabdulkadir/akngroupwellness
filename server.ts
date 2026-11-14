@@ -208,10 +208,9 @@ let distributionParams: SystemDistributionParameters = {
   fast_roi_bonus_percent: 15,
   career_pool_percent: 5,
 };
-const DEFAULT_USD_TRY_RATE = 50;
-const usdTryRate = DEFAULT_USD_TRY_RATE;
-const usdTryRateUpdatedAt: string | null = null;
-const usdTryRateUpdatedBy: string | null = null;
+let usdTryRate = 0;
+let usdTryRateUpdatedAt: string | null = null;
+let usdTryRateUpdatedBy: string | null = null;
 let adminAuditLogs: AdminAuditLogRecord[] = [];
 let nextAdminAuditLogId = 1;
 
@@ -424,6 +423,7 @@ function persistApplicationState() {
       right_leg_volume: member.right_leg_volume || 0,
       password_salt: credentials?.salt || null,
       password_hash: credentials?.hash || null,
+      member_data: { ...member, password: undefined },
       created_at: member.joined_at,
       updated_at: new Date().toISOString(),
     };
@@ -464,13 +464,76 @@ function persistApplicationState() {
     release_at: log.release_at || log.created_at,
     created_at: log.created_at,
   }));
+  const withdrawalRows = withdrawalRequests.map((withdrawal) => ({
+    request_id: `WDR-${withdrawal.id}`,
+    user_id: withdrawal.external_user_id,
+    amount: withdrawal.gross_amount ?? withdrawal.amount,
+    channel: withdrawal.channel || withdrawal.method,
+    iban: withdrawal.bank_details?.iban || withdrawal.payout_address || null,
+    account_holder: withdrawal.bank_details?.holder_name || withdrawal.user_full_name,
+    bank_name: withdrawal.bank_details?.bank_name || null,
+    crypto_trc20: withdrawal.bank_details?.trc20_address || null,
+    status: withdrawal.status,
+    rejection_reason: withdrawal.status === 'REJECTED' ? withdrawal.admin_note || null : null,
+    decided_by: withdrawal.status === 'PENDING' ? null : 'ADMIN',
+    decided_at: withdrawal.processed_at || null,
+    created_at: withdrawal.created_at,
+    withdrawal_data: withdrawal,
+  }));
+  const voucherRows = expenseVouchers.map((voucher) => ({
+    voucher_number: voucher.voucher_number,
+    user_id: memberIds.has(voucher.dealer_user_id) ? voucher.dealer_user_id : null,
+    gross_amount: voucher.gross_amount,
+    withholding_tax: voucher.withholding_amount,
+    net_payout: voucher.net_amount,
+    xml_content: voucher.xml_content || null,
+    status: voucher.status,
+    created_at: voucher.created_at,
+    voucher_data: voucher,
+  }));
+  const payoutBatchRows = payoutBatches.map((batch) => ({
+    id: batch.batch_id,
+    bank_code: batch.bank_name,
+    total_amount: batch.total_net,
+    total_items: batch.item_count,
+    file_content: `${batch.file_export_format}:${batch.batch_id}`,
+    status: batch.status,
+    created_at: batch.created_at,
+    batch_data: batch,
+  }));
+  const payoutBatchItemRows = payoutBatchItems.map((item) => ({
+    batch_id: item.batch_id,
+    voucher_id: item.voucher_id,
+    commission_id: item.commission_id,
+    dealer_user_id: item.dealer_user_id,
+    dealer_name: item.dealer_name,
+    iban: item.iban,
+    gross_amount: item.gross_amount,
+    withholding_amount: item.withholding_amount,
+    net_amount: item.net_amount,
+    status: item.status,
+    wallet_tx_id: item.wallet_tx_id || null,
+    created_at: item.created_at,
+    item_data: item,
+  }));
+  const journalRows = journalEntries.map((entry) => ({
+    voucher_number: entry.voucher_number,
+    entry_type: entry.source_event_type,
+    user_id: entry.source_event_id || null,
+    debit: entry.debit_amount || 0,
+    credit: entry.credit_amount || 0,
+    currency: entry.currency || 'TRY',
+    description: entry.description || '',
+    created_at: entry.created_at,
+    entry_data: entry,
+  }));
   const nextWrite = statePersistPromise.then(() =>
     withTransaction(async (client) => {
       await client.query(
-        `INSERT INTO users (user_id, full_name, email, phone, city, referral_code, sponsor_id, monoline_position, career_level, max_career_level, active_career_level, personal_volume_30d, group_volume_30d, active_direct_referrals_30d, activity_expires_at, is_active, is_locked, scan_credits, has_tax_company, tc_identity_no, assigned_leg, left_leg_volume, right_leg_volume, password_salt, password_hash, created_at, updated_at)
-         SELECT user_id, full_name, email, phone, city, referral_code, sponsor_id, monoline_position, career_level, max_career_level, active_career_level, personal_volume_30d, group_volume_30d, active_direct_referrals_30d, activity_expires_at, is_active, is_locked, scan_credits, has_tax_company, tc_identity_no, assigned_leg, left_leg_volume, right_leg_volume, password_salt, password_hash, created_at, updated_at
-         FROM jsonb_to_recordset($1::jsonb) AS x(user_id text, full_name text, email text, phone text, city text, referral_code text, sponsor_id text, monoline_position bigint, career_level integer, max_career_level integer, active_career_level integer, personal_volume_30d numeric, group_volume_30d numeric, active_direct_referrals_30d integer, activity_expires_at timestamptz, is_active boolean, is_locked boolean, scan_credits integer, has_tax_company boolean, tc_identity_no text, assigned_leg text, left_leg_volume numeric, right_leg_volume numeric, password_salt text, password_hash text, created_at timestamptz, updated_at timestamptz)
-         ON CONFLICT (user_id) DO UPDATE SET full_name = EXCLUDED.full_name, email = EXCLUDED.email, phone = EXCLUDED.phone, city = EXCLUDED.city, referral_code = EXCLUDED.referral_code, sponsor_id = EXCLUDED.sponsor_id, monoline_position = EXCLUDED.monoline_position, career_level = EXCLUDED.career_level, max_career_level = EXCLUDED.max_career_level, active_career_level = EXCLUDED.active_career_level, personal_volume_30d = EXCLUDED.personal_volume_30d, group_volume_30d = EXCLUDED.group_volume_30d, active_direct_referrals_30d = EXCLUDED.active_direct_referrals_30d, activity_expires_at = EXCLUDED.activity_expires_at, is_active = EXCLUDED.is_active, is_locked = EXCLUDED.is_locked, scan_credits = EXCLUDED.scan_credits, has_tax_company = EXCLUDED.has_tax_company, tc_identity_no = EXCLUDED.tc_identity_no, assigned_leg = EXCLUDED.assigned_leg, left_leg_volume = EXCLUDED.left_leg_volume, right_leg_volume = EXCLUDED.right_leg_volume, password_salt = EXCLUDED.password_salt, password_hash = EXCLUDED.password_hash, updated_at = EXCLUDED.updated_at`,
+        `INSERT INTO users (user_id, full_name, email, phone, city, referral_code, sponsor_id, monoline_position, career_level, max_career_level, active_career_level, personal_volume_30d, group_volume_30d, active_direct_referrals_30d, activity_expires_at, is_active, is_locked, scan_credits, has_tax_company, tc_identity_no, assigned_leg, left_leg_volume, right_leg_volume, password_salt, password_hash, member_data, created_at, updated_at)
+         SELECT user_id, full_name, email, phone, city, referral_code, sponsor_id, monoline_position, career_level, max_career_level, active_career_level, personal_volume_30d, group_volume_30d, active_direct_referrals_30d, activity_expires_at, is_active, is_locked, scan_credits, has_tax_company, tc_identity_no, assigned_leg, left_leg_volume, right_leg_volume, password_salt, password_hash, member_data, created_at, updated_at
+         FROM jsonb_to_recordset($1::jsonb) AS x(user_id text, full_name text, email text, phone text, city text, referral_code text, sponsor_id text, monoline_position bigint, career_level integer, max_career_level integer, active_career_level integer, personal_volume_30d numeric, group_volume_30d numeric, active_direct_referrals_30d integer, activity_expires_at timestamptz, is_active boolean, is_locked boolean, scan_credits integer, has_tax_company boolean, tc_identity_no text, assigned_leg text, left_leg_volume numeric, right_leg_volume numeric, password_salt text, password_hash text, member_data jsonb, created_at timestamptz, updated_at timestamptz)
+         ON CONFLICT (user_id) DO UPDATE SET full_name = EXCLUDED.full_name, email = EXCLUDED.email, phone = EXCLUDED.phone, city = EXCLUDED.city, referral_code = EXCLUDED.referral_code, sponsor_id = EXCLUDED.sponsor_id, monoline_position = EXCLUDED.monoline_position, career_level = EXCLUDED.career_level, max_career_level = EXCLUDED.max_career_level, active_career_level = EXCLUDED.active_career_level, personal_volume_30d = EXCLUDED.personal_volume_30d, group_volume_30d = EXCLUDED.group_volume_30d, active_direct_referrals_30d = EXCLUDED.active_direct_referrals_30d, activity_expires_at = EXCLUDED.activity_expires_at, is_active = EXCLUDED.is_active, is_locked = EXCLUDED.is_locked, scan_credits = EXCLUDED.scan_credits, has_tax_company = EXCLUDED.has_tax_company, tc_identity_no = EXCLUDED.tc_identity_no, assigned_leg = EXCLUDED.assigned_leg, left_leg_volume = EXCLUDED.left_leg_volume, right_leg_volume = EXCLUDED.right_leg_volume, password_salt = EXCLUDED.password_salt, password_hash = EXCLUDED.password_hash, member_data = EXCLUDED.member_data, updated_at = EXCLUDED.updated_at`,
         [JSON.stringify(userRows)]
       );
       await client.query(
@@ -506,6 +569,41 @@ function persistApplicationState() {
         [JSON.stringify(commissionRows)]
       );
       await client.query(
+        `INSERT INTO withdrawal_requests (request_id, user_id, amount, channel, iban, account_holder, bank_name, crypto_trc20, status, rejection_reason, decided_by, decided_at, created_at, withdrawal_data)
+         SELECT request_id, user_id, amount, channel, iban, account_holder, bank_name, crypto_trc20, status, rejection_reason, decided_by, decided_at, created_at, withdrawal_data
+         FROM jsonb_to_recordset($1::jsonb) AS x(request_id text, user_id text, amount numeric, channel text, iban text, account_holder text, bank_name text, crypto_trc20 text, status text, rejection_reason text, decided_by text, decided_at timestamptz, created_at timestamptz, withdrawal_data jsonb)
+         ON CONFLICT (request_id) DO UPDATE SET amount = EXCLUDED.amount, channel = EXCLUDED.channel, iban = EXCLUDED.iban, account_holder = EXCLUDED.account_holder, bank_name = EXCLUDED.bank_name, crypto_trc20 = EXCLUDED.crypto_trc20, status = EXCLUDED.status, rejection_reason = EXCLUDED.rejection_reason, decided_by = EXCLUDED.decided_by, decided_at = EXCLUDED.decided_at, withdrawal_data = EXCLUDED.withdrawal_data`,
+        [JSON.stringify(withdrawalRows)]
+      );
+      await client.query(
+        `INSERT INTO expense_vouchers (voucher_number, user_id, gross_amount, withholding_tax, net_payout, xml_content, status, created_at, voucher_data)
+         SELECT voucher_number, user_id, gross_amount, withholding_tax, net_payout, xml_content, status, created_at, voucher_data
+         FROM jsonb_to_recordset($1::jsonb) AS x(voucher_number text, user_id text, gross_amount numeric, withholding_tax numeric, net_payout numeric, xml_content text, status text, created_at timestamptz, voucher_data jsonb)
+         ON CONFLICT (voucher_number) DO UPDATE SET user_id = EXCLUDED.user_id, gross_amount = EXCLUDED.gross_amount, withholding_tax = EXCLUDED.withholding_tax, net_payout = EXCLUDED.net_payout, xml_content = EXCLUDED.xml_content, status = EXCLUDED.status, voucher_data = EXCLUDED.voucher_data`,
+        [JSON.stringify(voucherRows)]
+      );
+      await client.query(
+        `INSERT INTO payout_batches (id, bank_code, total_amount, total_items, file_content, status, created_at, batch_data)
+         SELECT id, bank_code, total_amount, total_items, file_content, status, created_at, batch_data
+         FROM jsonb_to_recordset($1::jsonb) AS x(id text, bank_code text, total_amount numeric, total_items integer, file_content text, status text, created_at timestamptz, batch_data jsonb)
+         ON CONFLICT (id) DO UPDATE SET bank_code = EXCLUDED.bank_code, total_amount = EXCLUDED.total_amount, total_items = EXCLUDED.total_items, status = EXCLUDED.status, batch_data = EXCLUDED.batch_data`,
+        [JSON.stringify(payoutBatchRows)]
+      );
+      await client.query(
+        `INSERT INTO payout_batch_items (batch_id, voucher_id, commission_id, dealer_user_id, dealer_name, iban, gross_amount, withholding_amount, net_amount, status, wallet_tx_id, created_at, item_data)
+         SELECT batch_id, voucher_id, commission_id, dealer_user_id, dealer_name, iban, gross_amount, withholding_amount, net_amount, status, wallet_tx_id, created_at, item_data
+         FROM jsonb_to_recordset($1::jsonb) AS x(batch_id text, voucher_id text, commission_id text, dealer_user_id text, dealer_name text, iban text, gross_amount numeric, withholding_amount numeric, net_amount numeric, status text, wallet_tx_id text, created_at timestamptz, item_data jsonb)
+         ON CONFLICT (batch_id, voucher_id) DO UPDATE SET commission_id = EXCLUDED.commission_id, dealer_user_id = EXCLUDED.dealer_user_id, dealer_name = EXCLUDED.dealer_name, iban = EXCLUDED.iban, gross_amount = EXCLUDED.gross_amount, withholding_amount = EXCLUDED.withholding_amount, net_amount = EXCLUDED.net_amount, status = EXCLUDED.status, wallet_tx_id = EXCLUDED.wallet_tx_id, item_data = EXCLUDED.item_data`,
+        [JSON.stringify(payoutBatchItemRows)]
+      );
+      await client.query(
+        `INSERT INTO journal_entries (voucher_number, entry_type, user_id, debit, credit, currency, description, created_at, entry_data)
+         SELECT voucher_number, entry_type, user_id, debit, credit, currency, description, created_at, entry_data
+         FROM jsonb_to_recordset($1::jsonb) AS x(voucher_number text, entry_type text, user_id text, debit numeric, credit numeric, currency text, description text, created_at timestamptz, entry_data jsonb)
+         ON CONFLICT (voucher_number) DO UPDATE SET entry_type = EXCLUDED.entry_type, user_id = EXCLUDED.user_id, debit = EXCLUDED.debit, credit = EXCLUDED.credit, currency = EXCLUDED.currency, description = EXCLUDED.description, entry_data = EXCLUDED.entry_data`,
+        [JSON.stringify(journalRows)]
+      );
+      await client.query(
         `INSERT INTO application_state (state_key, payload, updated_at)
          VALUES ('main', $1::jsonb, CURRENT_TIMESTAMP)
          ON CONFLICT (state_key) DO UPDATE SET payload = EXCLUDED.payload, updated_at = CURRENT_TIMESTAMP`,
@@ -517,13 +615,65 @@ function persistApplicationState() {
   return nextWrite;
 }
 
+async function queryMembersFromPostgres(): Promise<MonolineMember[]> {
+  const result = await pgQuery(
+    `SELECT u.*, w.wallet_data, w.balance, w.pending_balance, w.total_withdrawn, w.total_earned
+     FROM users u
+     LEFT JOIN wallets w ON w.user_id = u.user_id
+     ORDER BY u.monoline_position ASC`
+  );
+
+  return (result?.rows || []).map((row: any, index: number) => {
+    const storedMember = row.member_data && typeof row.member_data === 'object' ? row.member_data : {};
+    const storedWallets = row.wallet_data && typeof row.wallet_data === 'object' ? row.wallet_data : {};
+    const lineId = Number(row.monoline_position) || index + 1;
+    const wallets = Object.keys(storedWallets).length
+      ? { ...(storedMember.wallets || {}), ...storedWallets }
+      : {
+          ...(storedMember.wallets || {}),
+          wallet_domestic_usd: Number(row.balance) || 0,
+          pending_domestic_usd: Number(row.pending_balance) || 0,
+          total_withdrawn: Number(row.total_withdrawn) || 0,
+          total_earnings: Number(row.total_earned) || 0,
+        };
+
+    return {
+      ...storedMember,
+      id: lineId,
+      user_id: row.user_id,
+      global_line_id: lineId,
+      ref_code: row.referral_code,
+      full_name: row.full_name,
+      email: row.email,
+      phone: row.phone || '',
+      city: row.city || 'İstanbul',
+      joined_at: row.created_at ? new Date(row.created_at).toISOString() : new Date().toISOString(),
+      sponsor_id: row.sponsor_id,
+      highest_package_id: storedMember.highest_package_id || 'PKG_ALTIN_PRO',
+      session_credits: Number(row.scan_credits) || 0,
+      personal_volume: Number(row.personal_volume_30d) || 0,
+      group_volume: Number(row.group_volume_30d) || 0,
+      active_direct_referrals: Number(row.active_direct_referrals_30d) || 0,
+      career_level: Number(row.career_level) || 1,
+      max_career_level: Number(row.max_career_level) || 1,
+      active_career_level: Number(row.active_career_level) || 1,
+      wallets,
+      is_active: row.is_active !== false,
+      is_locked: Boolean(row.is_locked),
+      activity_expires_at: row.activity_expires_at ? new Date(row.activity_expires_at).toISOString() : null,
+      has_tax_company: Boolean(row.has_tax_company),
+      tc_identity_no: row.tc_identity_no || '',
+      assigned_leg: row.assigned_leg || 'AUTO',
+      left_leg_volume: Number(row.left_leg_volume) || 0,
+      right_leg_volume: Number(row.right_leg_volume) || 0,
+    } as MonolineMember;
+  });
+}
+
 async function hydrateApplicationState() {
   const stored = await readApplicationState();
   if (!stored || typeof stored !== 'object') return false;
   const state = stored as Record<string, any>;
-  if (state.exchangeRate !== undefined && Number(state.exchangeRate) !== usdTryRate) {
-    throw new Error('PostgreSQL’de kayıtlı USD/TRY kuru kodda sabitlenen 50.00 TRY ile uyuşmuyor.');
-  }
   const arrays: Record<string, (value: any[]) => void> = {
     activityLogs: (value) => (activityLogs = value),
     members: (value) => (members = value),
@@ -3937,33 +4087,52 @@ function buildUsdTryRateResponse() {
   };
 }
 
-function buildStateResponse(isAdmin: boolean = false, memberUid: string | null = null): SystemStateResponse {
+async function loadUsdTryRateFromPostgres() {
+  const result = await pgQuery(
+    `SELECT setting_value, updated_at, updated_by FROM system_settings WHERE setting_key = $1`,
+    ['USD_TRY_RATE']
+  );
+  const row = result?.rows[0];
+  const rate = Number(row?.setting_value);
+  if (!Number.isFinite(rate) || rate <= 0) {
+    throw new Error('PostgreSQL USD/TRY ayarı eksik veya geçersiz.');
+  }
+  usdTryRate = rate;
+  usdTryRateUpdatedAt = row.updated_at ? new Date(row.updated_at).toISOString() : null;
+  usdTryRateUpdatedBy = row.updated_by || 'SYSTEM';
+}
+
+function buildStateResponse(
+  isAdmin: boolean = false,
+  memberUid: string | null = null,
+  stateMembers: MonolineMember[] = members
+): SystemStateResponse {
   const activeTransactions = transactions.filter((tx) => tx.clawback_status !== 'REFUNDED');
   const totalOrdersCount = activeTransactions.length;
   const totalOrderVolume = roundCurrency(
     activeTransactions.reduce((acc, tx) => acc + tx.order_amount, 0)
   );
-  const totalSessionCreditsIssued = members.reduce((acc, m) => acc + m.session_credits, 0);
+  const totalSessionCreditsIssued = stateMembers.reduce((acc, m) => acc + m.session_credits, 0);
   const totalSponsorPaid = roundCurrency(
-    members.reduce((acc, m) => acc + m.wallets.sponsor_wallet, 0)
+    stateMembers.reduce((acc, m) => acc + m.wallets.sponsor_wallet, 0)
   );
   const totalMonolinePaid = roundCurrency(
-    members.reduce((acc, m) => acc + m.wallets.monoline_wallet, 0)
+    stateMembers.reduce((acc, m) => acc + m.wallets.monoline_wallet, 0)
   );
   const totalCareerPoolPaid = roundCurrency(
-    members.reduce((acc, m) => acc + m.wallets.career_pool_wallet, 0)
+    stateMembers.reduce((acc, m) => acc + m.wallets.career_pool_wallet, 0)
   );
   const totalInfinityPaid = roundCurrency(
-    members.reduce((acc, m) => acc + (m.wallets.infinity_wallet || 0), 0)
+    stateMembers.reduce((acc, m) => acc + (m.wallets.infinity_wallet || 0), 0)
   );
   const totalMatchingPaid = roundCurrency(
-    members.reduce((acc, m) => acc + (m.wallets.matching_wallet || 0), 0)
+    stateMembers.reduce((acc, m) => acc + (m.wallets.matching_wallet || 0), 0)
   );
   const totalFastRoiPaid = roundCurrency(
-    members.reduce((acc, m) => acc + (m.wallets.fast_roi_wallet || 0), 0)
+    stateMembers.reduce((acc, m) => acc + (m.wallets.fast_roi_wallet || 0), 0)
   );
   const totalFieldPayoutAmount = roundCurrency(
-    members.reduce((acc, m) => acc + m.wallets.total_earnings, 0)
+    stateMembers.reduce((acc, m) => acc + m.wallets.total_earnings, 0)
   );
   const companyNetProfitAmount = Math.max(
     0,
@@ -3972,16 +4141,16 @@ function buildStateResponse(isAdmin: boolean = false, memberUid: string | null =
   const companyNetProfitPercent =
     totalOrderVolume > 0 ? roundCurrency((companyNetProfitAmount / totalOrderVolume) * 100) : 40;
   const totalWithdrawnAmount = roundCurrency(
-    members.reduce((acc, m) => acc + m.wallets.total_withdrawn, 0)
+    stateMembers.reduce((acc, m) => acc + m.wallets.total_withdrawn, 0)
   );
   const pendingWithdrawals = withdrawalRequests.filter((w) => w.status === 'PENDING');
   const pendingWithdrawalsAmount = roundCurrency(
     pendingWithdrawals.reduce((acc, w) => acc + w.amount, 0)
   );
-  const activeDealersCount = members.filter((m) => m.is_active).length;
-  const expiredDealersCount = members.filter((m) => !m.is_active).length;
+  const activeDealersCount = stateMembers.filter((m) => m.is_active).length;
+  const expiredDealersCount = stateMembers.filter((m) => !m.is_active).length;
   const totalPendingClawbackBalance = roundCurrency(
-    members.reduce((acc, m) => acc + getMemberRegionalPendingUsd(m), 0)
+    stateMembers.reduce((acc, m) => acc + getMemberRegionalPendingUsd(m), 0)
   );
   const unclaimedNoYetkiAmount = roundCurrency(
     unclaimedCommissions
@@ -4023,7 +4192,7 @@ function buildStateResponse(isAdmin: boolean = false, memberUid: string | null =
   let deliveredFomoAlerts: FomoCountdownAlertRecord[] = [];
 
   if (isAdmin) {
-    deliveredMembers = members;
+    deliveredMembers = stateMembers;
     deliveredWithdrawals = withdrawalRequests;
     deliveredCommissionLogs = commissionLogs.slice(0, 150);
     deliveredWalletTransactions = walletTransactions.slice(0, 500);
@@ -4034,9 +4203,9 @@ function buildStateResponse(isAdmin: boolean = false, memberUid: string | null =
     deliveredNotifications = notificationOutbox.slice(0, 150);
     deliveredFomoAlerts = fomoCountdownAlerts.slice(0, 50);
   } else if (memberUid) {
-    const targetMember = members.find((m) => m.user_id === memberUid);
+    const targetMember = stateMembers.find((m) => m.user_id === memberUid);
     const targetId = targetMember ? targetMember.id : -1;
-    deliveredMembers = members.map((m) => (m.user_id === memberUid ? m : sanitizeMemberForPublicState(m)));
+    deliveredMembers = stateMembers.map((m) => (m.user_id === memberUid ? m : sanitizeMemberForPublicState(m)));
 
     deliveredWithdrawals = withdrawalRequests
       .filter((w) => w.external_user_id === memberUid || w.user_id === targetId)
@@ -4064,7 +4233,7 @@ function buildStateResponse(isAdmin: boolean = false, memberUid: string | null =
       .filter((f) => f.external_user_id === memberUid || f.user_id === targetId)
       .slice(0, 20);
   } else {
-    deliveredMembers = members.map(sanitizeMemberForPublicState);
+    deliveredMembers = stateMembers.map(sanitizeMemberForPublicState);
   }
 
   const deliveredSystemWallet = isAdmin
@@ -4726,8 +4895,40 @@ async function hydrateStateFromPostgres(): Promise<void> {
             created_at: row.created_at ? new Date(row.created_at).toISOString() : new Date().toISOString(),
           };
         });
+        const journalRows = await pgQuery('SELECT * FROM journal_entries ORDER BY created_at DESC, id DESC');
+        if (journalRows?.rows.length) {
+          journalEntries = journalRows.rows.map((row: any) => row.entry_data || {
+            id: Number(row.id),
+            voucher_number: row.voucher_number,
+            entry_date: row.created_at ? new Date(row.created_at).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10),
+            source_event_type: row.entry_type,
+            source_event_id: row.user_id,
+            currency: row.currency,
+            debit_amount: Number(row.debit) || 0,
+            credit_amount: Number(row.credit) || 0,
+            description: row.description,
+            reconciled: true,
+            created_at: row.created_at ? new Date(row.created_at).toISOString() : new Date().toISOString(),
+          });
+        }
+        const [voucherRows, batchRows, batchItemRows, withdrawalRows] = await Promise.all([
+          pgQuery('SELECT voucher_data FROM expense_vouchers ORDER BY created_at DESC, id DESC'),
+          pgQuery('SELECT batch_data FROM payout_batches ORDER BY created_at DESC'),
+          pgQuery('SELECT item_data FROM payout_batch_items ORDER BY created_at DESC, id DESC'),
+          pgQuery('SELECT withdrawal_data FROM withdrawal_requests ORDER BY created_at DESC, id DESC'),
+        ]);
+        const storedVouchers = (voucherRows?.rows || []).map((row: any) => row.voucher_data).filter((row: any) => row && Object.keys(row).length > 0);
+        const storedBatches = (batchRows?.rows || []).map((row: any) => row.batch_data).filter((row: any) => row && Object.keys(row).length > 0);
+        const storedBatchItems = (batchItemRows?.rows || []).map((row: any) => row.item_data).filter((row: any) => row && Object.keys(row).length > 0);
+        const storedWithdrawals = (withdrawalRows?.rows || []).map((row: any) => row.withdrawal_data).filter((row: any) => row && Object.keys(row).length > 0);
+        if (storedVouchers.length) expenseVouchers = storedVouchers;
+        if (storedBatches.length) payoutBatches = storedBatches;
+        if (storedBatchItems.length) payoutBatchItems = storedBatchItems;
+        if (storedWithdrawals.length) withdrawalRequests = storedWithdrawals;
+        nextVoucherSequence = Math.max(nextVoucherSequence, ...expenseVouchers.map((voucher) => Number(voucher.id) + 1));
+        nextPayoutBatchSequence = Math.max(nextPayoutBatchSequence, payoutBatches.length + 1);
         processedOrderIds = new Set(ordersLog.filter((order) => order.status !== 'REFUNDED').map((order) => order.order_id));
-        console.log(`[PostgreSQL-18] Yerel veritabanından ${loadedMembers.length} üye, cüzdan, sipariş ve komisyon yüklendi.`);
+        console.log(`[PostgreSQL-18] Yerel veritabanından ${loadedMembers.length} üye, cüzdan, sipariş, komisyon ve yevmiye kaydı yüklendi.`);
       }
     } catch (err: any) {
       console.error('[PostgreSQL-18 Hydration Error]:', err.message);
@@ -4741,8 +4942,9 @@ async function startServer() {
   if (!postgresReady) {
     throw new Error('PostgreSQL bağlantısı zorunludur; sunucu bellek modunda başlatılmadı.');
   }
-  await hydrateStateFromPostgres();
+  await loadUsdTryRateFromPostgres();
   await hydrateApplicationState();
+  await hydrateStateFromPostgres();
   await persistApplicationState();
 
   const app = express();
@@ -4766,7 +4968,10 @@ async function startServer() {
       if (saveStarted || res.statusCode >= 400) return sendJson(body);
       saveStarted = true;
       void persistApplicationState()
-        .then(() => sendJson(body))
+        .then(() => {
+          persistenceFailure = null;
+          sendJson(body);
+        })
         .catch((err: any) => {
           persistenceFailure = err?.message || 'PostgreSQL state write failed';
           console.error('[PostgreSQL State Persistence Error]:', persistenceFailure);
@@ -4924,25 +5129,27 @@ async function startServer() {
   });
 
   // Public quick dealer lookup by email, code, user_id, or phone
-  app.get('/api/v1/members/lookup', (req, res) => {
+  app.get('/api/v1/members/lookup', async (req, res) => {
     const q = String(req.query.q || '').trim();
     if (!q) {
       res.status(400).json({ status: 'error', message: 'Arama parametresi giriniz.' });
       return;
     }
-    const cleanLower = q.toLowerCase();
-    const cleanUpper = q.toUpperCase();
-    const found = members.find((entry) =>
-      (entry.email && entry.email.toLowerCase() === cleanLower) ||
-      (entry.ref_code && entry.ref_code.toUpperCase() === cleanUpper) ||
-      (entry.user_id && entry.user_id.toUpperCase() === cleanUpper) ||
-      (entry.phone && entry.phone.replace(/[^0-9]/g, '') === q.replace(/[^0-9]/g, '') && q.length >= 7)
-    );
-    if (!found) {
-      res.status(404).json({ status: 'error', message: 'Bayi bulunamadı.' });
-      return;
+    try {
+      const found = (await queryMembersFromPostgres()).find((entry) =>
+        entry.email?.toLowerCase() === q.toLowerCase() ||
+        entry.ref_code?.toUpperCase() === q.toUpperCase() ||
+        entry.user_id.toUpperCase() === q.toUpperCase() ||
+        (entry.phone && entry.phone.replace(/[^0-9]/g, '') === q.replace(/[^0-9]/g, '') && q.length >= 7)
+      );
+      if (!found) {
+        res.status(404).json({ status: 'error', message: 'Bayi bulunamadı.' });
+        return;
+      }
+      res.json({ status: 'success', member: sanitizeMemberForPublicState(found) });
+    } catch (err: any) {
+      res.status(503).json({ status: 'error', code: 'DATABASE_READ_FAILED', message: err?.message || 'Bayi kaydı PostgreSQL’den okunamadı.' });
     }
-    res.json({ status: 'success', member: sanitizeMemberForPublicState(found) });
   });
 
   // Alias /api/v1/auth/login for member login
@@ -5127,16 +5334,26 @@ async function startServer() {
     res.send(document.data);
   });
 
-  app.get('/api/v1/state', (req, res) => {
+  app.get('/api/v1/state', async (req, res) => {
     const authHeader = req.headers.authorization;
     const token = authHeader?.startsWith('Bearer ') ? authHeader.slice('Bearer '.length).trim() : null;
     const isAdmin = Boolean(token && verifyAdminToken(token));
     const memberUid = token ? verifyMemberToken(token) : null;
-    res.json(buildStateResponse(isAdmin, memberUid));
+    try {
+      const stateMembers = await queryMembersFromPostgres();
+      res.json(buildStateResponse(isAdmin, memberUid, stateMembers));
+    } catch (err: any) {
+      res.status(503).json({ status: 'error', code: 'DATABASE_READ_FAILED', message: err?.message || 'Üye durumu PostgreSQL’den okunamadı.' });
+    }
   });
 
-  app.get('/api/v1/admin/state', requireAdminJwt, (_req, res) => {
-    res.json(buildStateResponse(true));
+  app.get('/api/v1/admin/state', requireAdminJwt, async (_req, res) => {
+    try {
+      const stateMembers = await queryMembersFromPostgres();
+      res.json(buildStateResponse(true, null, stateMembers));
+    } catch (err: any) {
+      res.status(503).json({ status: 'error', code: 'DATABASE_READ_FAILED', message: err?.message || 'Bayi listesi PostgreSQL’den okunamadı.' });
+    }
   });
 
   app.get('/api/v1/ethics-guidelines', (_req, res) => {
@@ -5639,30 +5856,46 @@ async function startServer() {
 
   // 1. GET /api/v1/admin/stats
   // Dönen veri: Toplam üye, Küresel Hat uzunluğu, Sistem Fonu Havuz Bakiyesi, Bekleyen Ödeme Talebi Sayısı.
-  app.get('/api/v1/admin/stats', requireAdminJwt, (_req, res) => {
-    const pendingCount = withdrawalRequests.filter((w) => w.status === 'PENDING').length;
-    res.json({
-      status: 'success',
-      endpoint: 'GET /api/v1/admin/stats',
-      data: {
-        total_users: members.length,
-        global_monoline_length: members.length,
-        system_fund_balance: systemCareerFundBalance,
-        system_fund_cumulative: systemCareerFundCumulative,
-        pending_withdrawal_requests_count: pendingCount,
-        idempotent_duplicate_orders_blocked: idempotentBlockedCount,
-      },
-    });
+  app.get('/api/v1/admin/stats', requireAdminJwt, async (_req, res) => {
+    try {
+      const result = await pgQuery(
+        `SELECT
+           (SELECT COUNT(*) FROM users)::integer AS total_users,
+           (SELECT COUNT(*) FROM withdrawal_requests WHERE status = 'PENDING')::integer AS pending_withdrawal_requests_count,
+           COALESCE((SELECT system_pool_balance FROM system_wallet WHERE id = 1), 0) AS system_fund_balance,
+           COALESCE((SELECT career_pool_balance FROM system_wallet WHERE id = 1), 0) AS system_fund_cumulative`
+      );
+      const stats = result?.rows[0];
+      res.json({
+        status: 'success',
+        endpoint: 'GET /api/v1/admin/stats',
+        data: {
+          total_users: Number(stats?.total_users) || 0,
+          global_monoline_length: Number(stats?.total_users) || 0,
+          system_fund_balance: Number(stats?.system_fund_balance) || 0,
+          system_fund_cumulative: Number(stats?.system_fund_cumulative) || 0,
+          pending_withdrawal_requests_count: Number(stats?.pending_withdrawal_requests_count) || 0,
+          idempotent_duplicate_orders_blocked: idempotentBlockedCount,
+        },
+      });
+    } catch (err: any) {
+      res.status(503).json({ status: 'error', code: 'DATABASE_READ_FAILED', message: err?.message || 'Durum raporu PostgreSQL’den okunamadı.' });
+    }
   });
 
   // 2. GET /api/v1/admin/withdrawals
   // Dönen veri: Bekleyen ve tamamlanan tüm çekim talepleri.
-  app.get('/api/v1/admin/withdrawals', requireAdminJwt, (_req, res) => {
-    res.json({
-      status: 'success',
-      endpoint: 'GET /api/v1/admin/withdrawals',
-      data: withdrawalRequests,
-    });
+  app.get('/api/v1/admin/withdrawals', requireAdminJwt, async (_req, res) => {
+    try {
+      const result = await pgQuery('SELECT withdrawal_data FROM withdrawal_requests ORDER BY created_at DESC, id DESC');
+      res.json({
+        status: 'success',
+        endpoint: 'GET /api/v1/admin/withdrawals',
+        data: (result?.rows || []).map((row: any) => row.withdrawal_data).filter((row: any) => row && Object.keys(row).length > 0),
+      });
+    } catch (err: any) {
+      res.status(503).json({ status: 'error', code: 'DATABASE_READ_FAILED', message: err?.message || 'Çekim talepleri PostgreSQL’den okunamadı.' });
+    }
   });
 
   // 3. PUT /api/v1/admin/withdrawals/:id
@@ -5770,23 +6003,59 @@ async function startServer() {
     app._router.handle(req, res, () => {});
   });
 
-  app.get('/api/v1/admin/exchange-rate', requireAdminJwt, (_req, res) => {
-    res.json({ status: 'success', data: buildUsdTryRateResponse() });
+  app.get('/api/v1/admin/exchange-rate', requireAdminJwt, async (_req, res) => {
+    try {
+      await loadUsdTryRateFromPostgres();
+      res.json({ status: 'success', data: buildUsdTryRateResponse() });
+    } catch (err: any) {
+      res.status(503).json({ status: 'error', message: err?.message || 'Kur ayarı okunamadı.' });
+    }
   });
 
-  app.get('/api/v1/exchange-rate/usd-try', (_req, res) => {
-    res.json({
-      status: 'success',
-      data: { usd_try_rate: usdTryRate, updated_at: usdTryRateUpdatedAt },
-    });
+  app.get('/api/v1/exchange-rate/usd-try', async (_req, res) => {
+    try {
+      await loadUsdTryRateFromPostgres();
+      res.json({ status: 'success', data: buildUsdTryRateResponse() });
+    } catch (err: any) {
+      res.status(503).json({ status: 'error', message: err?.message || 'Kur ayarı okunamadı.' });
+    }
   });
 
-  app.post('/api/v1/admin/exchange-rate', requireAdminJwt, (_req, res) => {
-    res.status(403).json({
-      status: 'error',
-      message: 'USD/TRY kuru 50.00 TRY olarak sabitlenmiştir ve değiştirilemez.',
-      data: buildUsdTryRateResponse(),
-    });
+  app.put('/api/v1/admin/exchange-rate', requireAdminJwt, async (req, res) => {
+    const nextRate = Number(req.body?.usd_try_rate);
+    if (!Number.isFinite(nextRate) || nextRate <= 0) {
+      res.status(400).json({ status: 'error', message: 'Geçerli ve sıfırdan büyük USD/TRY kuru giriniz.' });
+      return;
+    }
+
+    const previousRate = usdTryRate;
+    const updatedAt = new Date().toISOString();
+    const adminUid = String(res.locals.adminUid || 'ADMIN-AKN-01');
+    try {
+      await withTransaction(async (client) => {
+        const result = await client.query(
+          `UPDATE system_settings
+           SET setting_value = $1::jsonb, updated_by = $2, updated_at = $3
+           WHERE setting_key = 'USD_TRY_RATE'`,
+          [JSON.stringify(nextRate), adminUid, updatedAt]
+        );
+        if (result.rowCount !== 1) throw new Error('PostgreSQL USD/TRY ayarı bulunamadı.');
+      });
+      usdTryRate = nextRate;
+      usdTryRateUpdatedAt = updatedAt;
+      usdTryRateUpdatedBy = adminUid;
+      adminAuditLogs.unshift({
+        id: nextAdminAuditLogId++,
+        action: 'USD_TRY_RATE_UPDATED',
+        admin_uid: adminUid,
+        previous_value: previousRate,
+        new_value: nextRate,
+        created_at: updatedAt,
+      });
+      res.json({ status: 'success', data: buildUsdTryRateResponse() });
+    } catch (err: any) {
+      res.status(503).json({ status: 'error', message: err?.message || 'Kur ayarı PostgreSQL’e kaydedilemedi.' });
+    }
   });
 
   // 4. POST /api/v1/admin/settings
@@ -6997,7 +7266,7 @@ async function startServer() {
       // =========================================================================
       // 3. YEREL POSTGRESQL-18 KALICI VERİ YAZIMI (Atomik Transaction ile)
       // =========================================================================
-      if (getIsPostgresAvailable()) {
+      {
         try {
           await withTransaction(async (client) => {
             await client.query(
@@ -7061,6 +7330,9 @@ async function startServer() {
           });
         } catch (dbErr: any) {
           console.error('[PostgreSQL-18 Registration Write Error]:', dbErr.message);
+          const error: any = new Error('Bayi kaydı PostgreSQL’e yazılamadı; işlem tamamlanmadı.');
+          error.statusCode = 503;
+          throw error;
         }
       }
 
@@ -11012,83 +11284,56 @@ async function startServer() {
 
   // 8. Gerçek Muhasebe ve Yevmiye Entegrasyonu Uç Noktası (Real PostgreSQL Ledger Data)
   app.get('/api/v1/integrations/accounting/sync-data', async (_req, res) => {
-    const canonicalMembers = members.map((m) => ({
-      user_id: m.user_id,
-      full_name: m.full_name,
-      email: m.email,
-      phone: m.phone,
-      country_code: m.country_code,
-      career_title: m.career_title,
-      career_level: m.career_level || 1,
-      package_id: m.highest_package_id || 'PKG_MINI_DENEME',
-      wallet_try: m.wallets.total_earnings || 0,
-      wallet_usd: getMemberRegionalUsdBalance(m),
-      wallet_domestic_usd: m.wallets.wallet_domestic_usd || 0,
-      wallet_international_usd: m.wallets.wallet_international_usd || 0,
-      wallet_try_equivalent: m.wallets.total_earnings || 0,
-      is_active: m.is_active,
-      created_at: m.joined_at,
-    }));
-
-    if (getIsPostgresAvailable()) {
-      try {
-        const [ordersRes, commRes] = await Promise.all([
-          pgQuery('SELECT * FROM orders_log ORDER BY created_at DESC LIMIT 200'),
-          pgQuery('SELECT * FROM commission_logs ORDER BY created_at DESC LIMIT 500'),
-        ]);
-        const pgOrders = ordersRes ? ordersRes.rows : [];
-        const pgComms = commRes ? commRes.rows : [];
-        return res.json({
-          status: 'success',
-          canonical_system: 'AKN_POSTGRESQL_18_LIVE_LEDGER',
-          members: canonicalMembers,
-          orders: pgOrders.length > 0 ? pgOrders : ordersLog,
-          transactions: pgComms.length > 0 ? pgComms : walletTransactions,
-          journal_entries: journalEntries,
-          expense_vouchers: expenseVouchers,
-          payout_batches: payoutBatches,
-          withdrawal_requests: withdrawalRequests,
-          timestamp: new Date().toISOString(),
-        });
-      } catch (err: any) {
-        console.warn('[PostgreSQL-18 Live Ledger Read Notice]:', err?.message);
-      }
+    try {
+      const [stateMembers, ordersRes, commRes, journalRes] = await Promise.all([
+        queryMembersFromPostgres(),
+        pgQuery('SELECT * FROM orders_log ORDER BY created_at DESC LIMIT 200'),
+        pgQuery('SELECT * FROM commission_logs ORDER BY created_at DESC LIMIT 500'),
+        pgQuery('SELECT * FROM journal_entries ORDER BY created_at DESC, id DESC LIMIT 1000'),
+      ]);
+      const canonicalMembers = stateMembers.map((m) => ({
+        user_id: m.user_id,
+        full_name: m.full_name,
+        email: m.email,
+        phone: m.phone,
+        country_code: m.country_code,
+        career_title: m.career_title,
+        career_level: m.career_level || 1,
+        package_id: m.highest_package_id || 'PKG_MINI_DENEME',
+        wallet_try: m.wallets.total_earnings || 0,
+        wallet_usd: getMemberRegionalUsdBalance(m),
+        wallet_domestic_usd: m.wallets.wallet_domestic_usd || 0,
+        wallet_international_usd: m.wallets.wallet_international_usd || 0,
+        wallet_try_equivalent: m.wallets.total_earnings || 0,
+        is_active: m.is_active,
+        created_at: m.joined_at,
+      }));
+      res.json({
+        status: 'success',
+        canonical_system: 'AKN_POSTGRESQL_18_LIVE_LEDGER',
+        members: canonicalMembers,
+        orders: ordersRes?.rows || [],
+        transactions: commRes?.rows || [],
+        journal_entries: (journalRes?.rows || []).map((row: any) => row.entry_data || {
+          id: Number(row.id),
+          voucher_number: row.voucher_number,
+          source_event_type: row.entry_type,
+          source_event_id: row.user_id,
+          debit_amount: Number(row.debit) || 0,
+          credit_amount: Number(row.credit) || 0,
+          currency: row.currency,
+          description: row.description,
+          created_at: row.created_at,
+        }),
+        expense_vouchers: (await pgQuery('SELECT voucher_data FROM expense_vouchers ORDER BY created_at DESC, id DESC'))?.rows.map((row: any) => row.voucher_data).filter((row: any) => row && Object.keys(row).length > 0) || [],
+        payout_batches: (await pgQuery('SELECT batch_data FROM payout_batches ORDER BY created_at DESC'))?.rows.map((row: any) => row.batch_data).filter((row: any) => row && Object.keys(row).length > 0) || [],
+        withdrawal_requests: (await pgQuery('SELECT withdrawal_data FROM withdrawal_requests ORDER BY created_at DESC, id DESC'))?.rows.map((row: any) => row.withdrawal_data).filter((row: any) => row && Object.keys(row).length > 0) || [],
+        timestamp: new Date().toISOString(),
+      });
+    } catch (err: any) {
+      console.error('[PostgreSQL-18 Live Ledger Read Error]:', err?.message);
+      res.status(503).json({ status: 'error', code: 'LEDGER_READ_FAILED', message: 'Muhasebe verileri PostgreSQL’den okunamadı.' });
     }
-
-    const canonicalOrders = ordersLog.map((o) => ({
-      order_id: o.order_id,
-      user_id: o.external_user_id || String(o.user_id),
-      buyer_name: o.user_full_name || o.external_user_id,
-      package_id: o.package_id || 'PKG_MINI_DENEME',
-      amount_try: o.amount,
-      amount_usd: convertTryToUsd(o.amount, usdTryRate),
-      status: o.status || 'PAID',
-      created_at: o.created_at,
-    }));
-
-    const canonicalTransactions = walletTransactions.map((tx) => ({
-      id: String(tx.id),
-      order_id: tx.order_id,
-      transaction_type: tx.transaction_type,
-      user_id: tx.external_user_id || String(tx.user_id),
-      amount: tx.amount,
-      currency: 'TRY',
-      description: tx.description,
-      created_at: tx.created_at,
-    }));
-
-    res.json({
-      status: 'success',
-      canonical_system: 'AKN_POSTGRESQL_LEDGER',
-      members: canonicalMembers,
-      orders: canonicalOrders,
-      transactions: canonicalTransactions,
-      journal_entries: journalEntries,
-      expense_vouchers: expenseVouchers,
-      payout_batches: payoutBatches,
-      withdrawal_requests: withdrawalRequests,
-      timestamp: new Date().toISOString(),
-    });
   });
 
   // ============================================================================
@@ -11126,13 +11371,11 @@ async function startServer() {
       created_at: new Date().toISOString(),
     };
 
-    journalEntries.unshift(newEntry);
-
-    if (getIsPostgresAvailable()) {
-      pgQuery(
-        `INSERT INTO journal_entries (voucher_number, entry_type, user_id, debit, credit, currency, description, created_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-         ON CONFLICT (voucher_number) DO NOTHING`,
+    await withTransaction(async (client) => {
+      await client.query(
+        `INSERT INTO journal_entries (voucher_number, entry_type, user_id, debit, credit, currency, description, created_at, entry_data)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb)
+         ON CONFLICT (voucher_number) DO UPDATE SET entry_data = EXCLUDED.entry_data`,
         [
           newEntry.voucher_number,
           newEntry.source_event_type,
@@ -11142,11 +11385,11 @@ async function startServer() {
           newEntry.currency || 'TRY',
           newEntry.description,
           newEntry.created_at,
+          JSON.stringify(newEntry),
         ]
-      ).catch((err: any) => {
-        console.warn('[PostgreSQL-18] Journal insert warning:', err?.message);
-      });
-    }
+      );
+    });
+    journalEntries.unshift(newEntry);
     return newEntry;
   }
 
@@ -11223,26 +11466,21 @@ async function startServer() {
       totalGrossGenerated += grossAmt;
       totalNetGenerated += netAmount;
 
-      // PostgreSQL-18 Kalıcı Tablosuna Yaz (expense_vouchers)
-      if (getIsPostgresAvailable()) {
-        pgQuery(
-          `INSERT INTO expense_vouchers (voucher_number, user_id, gross_amount, withholding_tax, net_payout, xml_content, status, created_at)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-           ON CONFLICT (voucher_number) DO NOTHING`,
-          [
-            newVoucher.voucher_number,
-            newVoucher.dealer_user_id,
-            newVoucher.gross_amount,
-            newVoucher.withholding_amount,
-            newVoucher.net_amount,
-            newVoucher.xml_content || null,
-            newVoucher.status || 'PENDING_APPROVAL',
-            newVoucher.created_at || nowIso,
-          ]
-        ).catch((dbErr: any) => {
-          console.warn('[PostgreSQL-18] Expense voucher insert warning:', dbErr?.message);
-        });
-      }
+      await pgQuery(
+        `INSERT INTO expense_vouchers (voucher_number, user_id, gross_amount, withholding_tax, net_payout, xml_content, status, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+         ON CONFLICT (voucher_number) DO NOTHING`,
+        [
+          newVoucher.voucher_number,
+          newVoucher.dealer_user_id,
+          newVoucher.gross_amount,
+          newVoucher.withholding_amount,
+          newVoucher.net_amount,
+          newVoucher.xml_content || null,
+          newVoucher.status || 'PENDING_APPROVAL',
+          newVoucher.created_at || nowIso,
+        ]
+      );
 
       // Çift Taraflı Yevmiye Fişi Kaydet (Double-Entry General Ledger)
       // Borç 760.01 Pazarlama & Satış Dağıtım Gideri (Brüt Tutar)
@@ -11406,40 +11644,50 @@ async function startServer() {
   }
 
   seedInitialAccountingVouchersIfNeeded();
+  await persistApplicationState();
 
   // ============================================================================
   // UÇ NOKTALAR: GİDER PUSULALARI VE RESMİ XML BELGELERİ
   // ============================================================================
-  app.get('/api/v1/accounting/vouchers', (_req, res) => {
-    res.json({
-      status: 'success',
-      count: expenseVouchers.length,
-      vouchers: expenseVouchers,
-    });
+  app.get('/api/v1/accounting/vouchers', async (_req, res) => {
+    try {
+      const result = await pgQuery('SELECT voucher_data FROM expense_vouchers ORDER BY created_at DESC, id DESC');
+      const vouchers = (result?.rows || []).map((row: any) => row.voucher_data).filter((row: any) => row && Object.keys(row).length > 0);
+      res.json({ status: 'success', count: vouchers.length, vouchers });
+    } catch (err: any) {
+      res.status(503).json({ status: 'error', code: 'DATABASE_READ_FAILED', message: err?.message || 'Gider pusulaları PostgreSQL’den okunamadı.' });
+    }
   });
 
-  app.get('/api/v1/accounting/vouchers/:id', (req, res) => {
-    const id = req.params.id;
-    const v = expenseVouchers.find((item) => item.voucher_number === id || String(item.id) === id);
-    if (!v) {
-      return res.status(404).json({ error: 'Gider pusulası bulunamadı.' });
+  app.get('/api/v1/accounting/vouchers/:id', async (req, res) => {
+    try {
+      const result = await pgQuery(
+        'SELECT voucher_data FROM expense_vouchers WHERE voucher_number = $1 OR id::text = $1 LIMIT 1',
+        [req.params.id]
+      );
+      const voucher = result?.rows[0]?.voucher_data;
+      if (!voucher || Object.keys(voucher).length === 0) return res.status(404).json({ error: 'Gider pusulası bulunamadı.' });
+      res.json({ status: 'success', voucher });
+    } catch (err: any) {
+      res.status(503).json({ status: 'error', code: 'DATABASE_READ_FAILED', message: err?.message || 'Gider pusulası PostgreSQL’den okunamadı.' });
     }
-    res.json({
-      status: 'success',
-      voucher: v,
-    });
   });
 
-  app.get('/api/v1/accounting/vouchers/:id/xml', (req, res) => {
-    const id = req.params.id;
-    const v = expenseVouchers.find((item) => item.voucher_number === id || String(item.id) === id);
-    if (!v) {
-      return res.status(404).send('Gider pusulası bulunamadı.');
+  app.get('/api/v1/accounting/vouchers/:id/xml', async (req, res) => {
+    try {
+      const result = await pgQuery(
+        'SELECT voucher_data FROM expense_vouchers WHERE voucher_number = $1 OR id::text = $1 LIMIT 1',
+        [req.params.id]
+      );
+      const voucher = result?.rows[0]?.voucher_data as ExpenseVoucherRecord | undefined;
+      if (!voucher || Object.keys(voucher).length === 0) return res.status(404).send('Gider pusulası bulunamadı.');
+      const xml = voucher.xml_content || generateOfficialGiderPusulasiXml(voucher, CANONICAL_COMPANY_PROFILE);
+      res.setHeader('Content-Type', 'application/xml; charset=utf-8');
+      res.setHeader('Content-Disposition', `inline; filename="${voucher.voucher_number}.xml"`);
+      res.send(xml);
+    } catch (err: any) {
+      res.status(503).json({ status: 'error', code: 'DATABASE_READ_FAILED', message: err?.message || 'Gider pusulası PostgreSQL’den okunamadı.' });
     }
-    const xml = v.xml_content || generateOfficialGiderPusulasiXml(v, CANONICAL_COMPANY_PROFILE);
-    res.setHeader('Content-Type', 'application/xml; charset=utf-8');
-    res.setHeader('Content-Disposition', `inline; filename="${v.voucher_number}.xml"`);
-    res.send(xml);
   });
 
   app.post('/api/v1/accounting/vouchers/generate-matured', async (_req, res) => {
@@ -11459,10 +11707,13 @@ async function startServer() {
   // ============================================================================
   // UÇ NOKTALAR: TOPLU BAYİ BANKA ÖDEMELERİ (BATCH PAYOUT ENGINE)
   // ============================================================================
-  app.get('/api/v1/accounting/payouts/pending', (_req, res) => {
-    // Ödeme bekleyen tüm hakedişleri ve gider pusulalarını listele
-    const pendingItems: PendingPayoutItem[] = expenseVouchers
-      .filter((v) => v.status === 'ISSUED' || v.status === 'QUEUED_FOR_PAYOUT')
+  app.get('/api/v1/accounting/payouts/pending', async (_req, res) => {
+    try {
+    const voucherRows = await pgQuery(
+      "SELECT voucher_data FROM expense_vouchers WHERE status IN ('ISSUED', 'QUEUED_FOR_PAYOUT') ORDER BY created_at DESC, id DESC"
+    );
+    const storedVouchers = (voucherRows?.rows || []).map((row: any) => row.voucher_data as ExpenseVoucherRecord).filter((voucher: any) => voucher && Object.keys(voucher).length > 0);
+    const pendingItems: PendingPayoutItem[] = storedVouchers
       .map((v) => ({
         commission_id: v.commission_log_id,
         voucher_number: v.voucher_number,
@@ -11490,17 +11741,19 @@ async function startServer() {
       total_net: pendingItems.reduce((acc, i) => acc + i.net_amount, 0),
       items: pendingItems,
     });
+    } catch (err: any) {
+      res.status(503).json({ status: 'error', code: 'DATABASE_READ_FAILED', message: err?.message || 'Bekleyen ödemeler PostgreSQL’den okunamadı.' });
+    }
   });
 
   // Banka Toplu Transfer Dosyası İndirme (.csv / .txt)
-  app.get('/api/v1/accounting/payouts/export-bank-file', (req, res) => {
+  app.get('/api/v1/accounting/payouts/export-bank-file', async (req, res) => {
+    try {
     const bank = ((req.query.bank as string) || 'GARANTI').toUpperCase() as 'GARANTI' | 'AKBANK' | 'ISBANK' | 'ZIRAAT';
     const rawIds = (req.query.commission_ids as string) || '';
     const selectedIds = rawIds ? rawIds.split(',') : [];
-
-    let eligibleVouchers = expenseVouchers.filter(
-      (v) => v.status === 'ISSUED' || v.status === 'QUEUED_FOR_PAYOUT'
-    );
+    const voucherRows = await pgQuery("SELECT voucher_data FROM expense_vouchers WHERE status IN ('ISSUED', 'QUEUED_FOR_PAYOUT') ORDER BY created_at DESC, id DESC");
+    let eligibleVouchers = (voucherRows?.rows || []).map((row: any) => row.voucher_data as ExpenseVoucherRecord).filter((voucher: any) => voucher && Object.keys(voucher).length > 0);
     if (selectedIds.length > 0) {
       eligibleVouchers = eligibleVouchers.filter((v) =>
         selectedIds.includes(v.commission_log_id) || selectedIds.includes(v.voucher_number)
@@ -11534,6 +11787,9 @@ async function startServer() {
     res.setHeader('Content-Type', file.mimeType);
     res.setHeader('Content-Disposition', `attachment; filename="${file.filename}"`);
     res.send(file.content);
+    } catch (err: any) {
+      res.status(503).json({ status: 'error', code: 'DATABASE_READ_FAILED', message: err?.message || 'Banka dosyası PostgreSQL’den oluşturulamadı.' });
+    }
   });
 
   // Seçilenleri Onayla ve Ödemeyi Tamamla (Atomik PostgreSQL Transaction)
@@ -11581,16 +11837,14 @@ async function startServer() {
               (member.wallets.total_withdrawn || 0) + v.net_amount
             );
 
-            if (getIsPostgresAvailable()) {
-              pgQuery(
-                `UPDATE wallets 
-                 SET balance = GREATEST(0, balance - $1),
-                     total_withdrawn = COALESCE(total_withdrawn, 0) + $1,
-                     updated_at = $2
-                 WHERE user_id = $3`,
-                [v.net_amount, nowIso, member.user_id]
-              ).catch((e: any) => console.warn('[PostgreSQL-18] Wallet payout update notice:', e.message));
-            }
+            await pgQuery(
+              `UPDATE wallets
+               SET balance = GREATEST(0, balance - $1),
+                   total_withdrawn = COALESCE(total_withdrawn, 0) + $1,
+                   updated_at = $2
+               WHERE user_id = $3`,
+              [v.net_amount, nowIso, member.user_id]
+            );
           }
 
           const txId = `TX-PAYOUT-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`;
@@ -11653,12 +11907,10 @@ async function startServer() {
             created_at: nowIso,
           });
 
-          if (getIsPostgresAvailable()) {
-            pgQuery(
-              `UPDATE expense_vouchers SET status = 'PAID' WHERE voucher_number = $1`,
-              [v.voucher_number]
-            ).catch(() => {});
-          }
+          await pgQuery(
+            `UPDATE expense_vouchers SET status = 'PAID', voucher_data = jsonb_set(voucher_data, '{status}', '"PAID"'::jsonb) WHERE voucher_number = $1`,
+            [v.voucher_number]
+          );
         }
 
         // Toplu Paket Kaydı (Payout Batch)
@@ -11679,13 +11931,19 @@ async function startServer() {
         };
         payoutBatches.unshift(newBatch);
 
-        if (getIsPostgresAvailable()) {
-          pgQuery(
-            `INSERT INTO payout_batches (id, bank_code, total_amount, total_items, file_content, status, created_at)
-             VALUES ($1, $2, $3, $4, $5, 'COMPLETED', $6)
-             ON CONFLICT (id) DO UPDATE SET status = 'COMPLETED'`,
-            [batchId, bank_name, totalNet, targetVouchers.length, `BATCH-${batchId}-${bank_name}`, nowIso]
-          ).catch(() => {});
+        await pgQuery(
+          `INSERT INTO payout_batches (id, bank_code, total_amount, total_items, file_content, status, created_at, batch_data)
+           VALUES ($1, $2, $3, $4, $5, 'COMPLETED', $6, $7::jsonb)
+           ON CONFLICT (id) DO UPDATE SET status = 'COMPLETED', batch_data = EXCLUDED.batch_data`,
+          [batchId, bank_name, totalNet, targetVouchers.length, `BATCH-${batchId}-${bank_name}`, nowIso, JSON.stringify(newBatch)]
+        );
+        for (const item of payoutBatchItems.filter((entry) => entry.batch_id === batchId)) {
+          await pgQuery(
+            `INSERT INTO payout_batch_items (batch_id, voucher_id, commission_id, dealer_user_id, dealer_name, iban, gross_amount, withholding_amount, net_amount, status, wallet_tx_id, created_at, item_data)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13::jsonb)
+             ON CONFLICT (batch_id, voucher_id) DO UPDATE SET status = EXCLUDED.status, wallet_tx_id = EXCLUDED.wallet_tx_id, item_data = EXCLUDED.item_data`,
+            [item.batch_id, item.voucher_id, item.commission_id, item.dealer_user_id, item.dealer_name, item.iban, item.gross_amount, item.withholding_amount, item.net_amount, item.status, item.wallet_tx_id || null, item.created_at, JSON.stringify(item)]
+          );
         }
       });
 
@@ -11706,12 +11964,20 @@ async function startServer() {
   });
 
   // Toplu Ödeme Geçmişi
-  app.get('/api/v1/accounting/payouts/batches', (_req, res) => {
-    res.json({
-      status: 'success',
-      batches: payoutBatches,
-      batch_items: payoutBatchItems,
-    });
+  app.get('/api/v1/accounting/payouts/batches', async (_req, res) => {
+    try {
+      const [batches, items] = await Promise.all([
+        pgQuery('SELECT batch_data FROM payout_batches ORDER BY created_at DESC'),
+        pgQuery('SELECT item_data FROM payout_batch_items ORDER BY created_at DESC, id DESC'),
+      ]);
+      res.json({
+        status: 'success',
+        batches: (batches?.rows || []).map((row: any) => row.batch_data).filter((row: any) => row && Object.keys(row).length > 0),
+        batch_items: (items?.rows || []).map((row: any) => row.item_data).filter((row: any) => row && Object.keys(row).length > 0),
+      });
+    } catch (err: any) {
+      res.status(503).json({ status: 'error', code: 'DATABASE_READ_FAILED', message: err?.message || 'Toplu ödeme geçmişi PostgreSQL’den okunamadı.' });
+    }
   });
 
   if (process.env.NODE_ENV !== 'production') {

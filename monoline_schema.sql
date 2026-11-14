@@ -48,12 +48,24 @@ CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 
 ALTER TABLE users ADD COLUMN IF NOT EXISTS password_salt TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS member_data JSONB NOT NULL DEFAULT '{}'::jsonb;
 
 CREATE TABLE IF NOT EXISTS application_state (
     state_key VARCHAR(64) PRIMARY KEY,
     payload JSONB NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS system_settings (
+    setting_key VARCHAR(100) PRIMARY KEY,
+    setting_value JSONB NOT NULL,
+    updated_by VARCHAR(100) NOT NULL DEFAULT 'SYSTEM',
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+INSERT INTO system_settings (setting_key, setting_value, updated_by)
+VALUES ('USD_TRY_RATE', '50.00'::jsonb, 'SYSTEM')
+ON CONFLICT (setting_key) DO NOTHING;
 
 -- ------------------------------------------------------------------------------
 -- 2. CÜZDANLAR VE 14 GÜNLÜK KORUMALI BAKİYE (wallets)
@@ -234,10 +246,37 @@ CREATE TABLE IF NOT EXISTS journal_entries (
     credit NUMERIC(15,2) NOT NULL DEFAULT 0.00,
     currency VARCHAR(10) NOT NULL DEFAULT 'TRY',
     description TEXT NOT NULL DEFAULT '',
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    entry_data JSONB NOT NULL DEFAULT '{}'::jsonb
 );
 
+ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS entry_data JSONB NOT NULL DEFAULT '{}'::jsonb;
 CREATE UNIQUE INDEX IF NOT EXISTS idx_journal_entries_voucher ON journal_entries(voucher_number);
+
+ALTER TABLE expense_vouchers ADD COLUMN IF NOT EXISTS voucher_data JSONB NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE payout_batches ADD COLUMN IF NOT EXISTS batch_data JSONB NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE withdrawal_requests ADD COLUMN IF NOT EXISTS withdrawal_data JSONB NOT NULL DEFAULT '{}'::jsonb;
+
+CREATE TABLE IF NOT EXISTS payout_batch_items (
+    id BIGSERIAL PRIMARY KEY,
+    batch_id VARCHAR(100) NOT NULL REFERENCES payout_batches(id) ON DELETE CASCADE,
+    voucher_id VARCHAR(100) NOT NULL,
+    commission_id VARCHAR(100) NOT NULL,
+    dealer_user_id VARCHAR(64) NOT NULL,
+    dealer_name VARCHAR(150) NOT NULL,
+    iban VARCHAR(60) NOT NULL,
+    gross_amount NUMERIC(15,2) NOT NULL,
+    withholding_amount NUMERIC(15,2) NOT NULL,
+    net_amount NUMERIC(15,2) NOT NULL,
+    status VARCHAR(30) NOT NULL,
+    wallet_tx_id VARCHAR(120),
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    item_data JSONB NOT NULL DEFAULT '{}'::jsonb,
+    UNIQUE (batch_id, voucher_id)
+);
+
+ALTER TABLE payout_batch_items ADD COLUMN IF NOT EXISTS item_data JSONB NOT NULL DEFAULT '{}'::jsonb;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_withdrawal_requests_request_id ON withdrawal_requests(request_id);
 
 -- ------------------------------------------------------------------------------
 -- 13. OTOMATİK ZAMAN DAMGASI GÜNCELLEME TRİGGER'I
