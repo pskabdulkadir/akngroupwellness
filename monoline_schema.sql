@@ -185,8 +185,11 @@ CREATE TABLE IF NOT EXISTS expense_vouchers (
     net_payout NUMERIC(15,2) NOT NULL,
     xml_content TEXT,
     status VARCHAR(50) DEFAULT 'PENDING_APPROVAL',
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+ALTER TABLE expense_vouchers ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP;
 
 -- ------------------------------------------------------------------------------
 -- 9. BANKA TRANSFER VE TOPLU ÖDEME DOSYALARI (payout_batches)
@@ -198,8 +201,11 @@ CREATE TABLE IF NOT EXISTS payout_batches (
     total_items INT NOT NULL,
     file_content TEXT NOT NULL,
     status VARCHAR(50) DEFAULT 'GENERATED',
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+ALTER TABLE payout_batches ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP;
 
 -- ------------------------------------------------------------------------------
 -- 10. ÇEKİM TALEPLERİ VE ONAYLAR (withdrawal_requests)
@@ -218,8 +224,11 @@ CREATE TABLE IF NOT EXISTS withdrawal_requests (
     rejection_reason TEXT,
     decided_by VARCHAR(64),
     decided_at TIMESTAMP WITH TIME ZONE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+ALTER TABLE withdrawal_requests ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP;
 
 -- ------------------------------------------------------------------------------
 -- 11. BİLDİRİM VE KUYRUK GÜNLÜĞÜ (notification_outbox)
@@ -247,10 +256,12 @@ CREATE TABLE IF NOT EXISTS journal_entries (
     currency VARCHAR(10) NOT NULL DEFAULT 'TRY',
     description TEXT NOT NULL DEFAULT '',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     entry_data JSONB NOT NULL DEFAULT '{}'::jsonb
 );
 
 ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS entry_data JSONB NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP;
 CREATE UNIQUE INDEX IF NOT EXISTS idx_journal_entries_voucher ON journal_entries(voucher_number);
 
 ALTER TABLE expense_vouchers ADD COLUMN IF NOT EXISTS voucher_data JSONB NOT NULL DEFAULT '{}'::jsonb;
@@ -303,3 +314,66 @@ DROP TRIGGER IF EXISTS trg_reseller_credits_updated_at ON reseller_credits;
 CREATE TRIGGER trg_reseller_credits_updated_at
 BEFORE UPDATE ON reseller_credits
 FOR EACH ROW EXECUTE FUNCTION set_updated_at_timestamp();
+
+DROP TRIGGER IF EXISTS trg_journal_entries_updated_at ON journal_entries;
+CREATE TRIGGER trg_journal_entries_updated_at
+BEFORE UPDATE ON journal_entries
+FOR EACH ROW EXECUTE FUNCTION set_updated_at_timestamp();
+
+DROP TRIGGER IF EXISTS trg_withdrawal_requests_updated_at ON withdrawal_requests;
+CREATE TRIGGER trg_withdrawal_requests_updated_at
+BEFORE UPDATE ON withdrawal_requests
+FOR EACH ROW EXECUTE FUNCTION set_updated_at_timestamp();
+
+DROP TRIGGER IF EXISTS trg_expense_vouchers_updated_at ON expense_vouchers;
+CREATE TRIGGER trg_expense_vouchers_updated_at
+BEFORE UPDATE ON expense_vouchers
+FOR EACH ROW EXECUTE FUNCTION set_updated_at_timestamp();
+
+DROP TRIGGER IF EXISTS trg_payout_batches_updated_at ON payout_batches;
+CREATE TRIGGER trg_payout_batches_updated_at
+BEFORE UPDATE ON payout_batches
+FOR EACH ROW EXECUTE FUNCTION set_updated_at_timestamp();
+
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid = 'orders_log'::regclass AND conname = 'orders_log_user_id_fkey' AND confdeltype <> 'n') THEN
+        ALTER TABLE orders_log DROP CONSTRAINT orders_log_user_id_fkey;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid = 'orders_log'::regclass AND conname = 'orders_log_user_id_fkey') THEN
+        ALTER TABLE orders_log ADD CONSTRAINT orders_log_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE SET NULL;
+    END IF;
+
+    IF EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid = 'commission_logs'::regclass AND conname = 'commission_logs_source_user_id_fkey' AND confdeltype <> 'n') THEN
+        ALTER TABLE commission_logs DROP CONSTRAINT commission_logs_source_user_id_fkey;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid = 'commission_logs'::regclass AND conname = 'commission_logs_source_user_id_fkey') THEN
+        ALTER TABLE commission_logs ADD CONSTRAINT commission_logs_source_user_id_fkey FOREIGN KEY (source_user_id) REFERENCES users(user_id) ON DELETE SET NULL;
+    END IF;
+
+    IF EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid = 'commission_logs'::regclass AND conname = 'commission_logs_target_user_id_fkey' AND confdeltype <> 'n') THEN
+        ALTER TABLE commission_logs DROP CONSTRAINT commission_logs_target_user_id_fkey;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid = 'commission_logs'::regclass AND conname = 'commission_logs_target_user_id_fkey') THEN
+        ALTER TABLE commission_logs ADD CONSTRAINT commission_logs_target_user_id_fkey FOREIGN KEY (target_user_id) REFERENCES users(user_id) ON DELETE SET NULL;
+    END IF;
+
+    IF EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid = 'expense_vouchers'::regclass AND conname = 'expense_vouchers_user_id_fkey' AND confdeltype <> 'n') THEN
+        ALTER TABLE expense_vouchers DROP CONSTRAINT expense_vouchers_user_id_fkey;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid = 'expense_vouchers'::regclass AND conname = 'expense_vouchers_user_id_fkey') THEN
+        ALTER TABLE expense_vouchers ADD CONSTRAINT expense_vouchers_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE SET NULL;
+    END IF;
+
+    IF EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid = 'withdrawal_requests'::regclass AND conname = 'withdrawal_requests_user_id_fkey' AND confdeltype <> 'n') THEN
+        ALTER TABLE withdrawal_requests DROP CONSTRAINT withdrawal_requests_user_id_fkey;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid = 'withdrawal_requests'::regclass AND conname = 'withdrawal_requests_user_id_fkey') THEN
+        ALTER TABLE withdrawal_requests ADD CONSTRAINT withdrawal_requests_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE SET NULL;
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid = 'journal_entries'::regclass AND conname = 'journal_entries_user_id_fkey') THEN
+        ALTER TABLE journal_entries ADD CONSTRAINT journal_entries_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE SET NULL;
+    END IF;
+END;
+$$;

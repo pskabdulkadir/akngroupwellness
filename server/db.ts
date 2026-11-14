@@ -23,15 +23,12 @@ const isProduction = process.env.NODE_ENV === 'production';
 const isRemotePg =
   process.env.DATABASE_SSL === 'true' ||
   (process.env.DATABASE_SSL !== 'false' &&
-    (isProduction ||
-      DATABASE_URL.includes('render.com') ||
-      DATABASE_URL.includes('dpg-') ||
-      DATABASE_URL.includes('sslmode=require')));
+    (isProduction || DATABASE_URL.includes('sslmode=require')));
 
 export const pool = new Pool({
   connectionString: DATABASE_URL,
   ssl: isRemotePg ? { rejectUnauthorized: false } : false,
-  max: 20,
+  max: process.env.VERCEL ? 2 : Number(process.env.PGPOOL_MAX || 10),
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 10000,
 });
@@ -45,7 +42,7 @@ export function getIsPostgresAvailable(): boolean {
  * Initializes the required PostgreSQL schema before the API starts.
  * Applies monoline_schema.sql automatically on first connect.
  */
-export async function initPostgresDatabase(): Promise<boolean> {
+export async function initPostgresDatabase(options: { applySchema?: boolean } = {}): Promise<boolean> {
   const maskedUrl = DATABASE_URL.replace(/:[^:@]+@/, ':****@');
   let client: PoolClient | undefined;
   let lastError: any;
@@ -75,11 +72,12 @@ export async function initPostgresDatabase(): Promise<boolean> {
 
   try {
     console.log(`[PostgreSQL-18] PostgreSQL veritabanına (${maskedUrl}) başarıyla bağlanıldı. SSL: ${isRemotePg ? 'Aktif' : 'Pasif'}`);
+    const shouldApplySchema = options.applySchema ?? !process.env.VERCEL;
     const schemaPath = path.resolve(process.cwd(), 'monoline_schema.sql');
-    if (fs.existsSync(schemaPath)) {
+    if (shouldApplySchema && fs.existsSync(schemaPath)) {
       const sql = fs.readFileSync(schemaPath, 'utf8');
       await client.query(sql);
-      console.log('[PostgreSQL-18] monoline_schema.sql üretim tabloları ve indeksleri başarıyla doğrulandı.');
+      console.log('[PostgreSQL-18] monoline_schema.sql tabloları ve indeksleri doğrulandı.');
     }
     isPostgresAvailable = true;
     return true;

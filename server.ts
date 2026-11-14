@@ -393,6 +393,7 @@ function buildPersistentState() {
 
 let statePersistPromise: Promise<void> = Promise.resolve();
 let persistenceFailure: string | null = null;
+let vercelMutationQueue: Promise<void> = Promise.resolve();
 function persistApplicationState() {
   const snapshot = buildPersistentState();
   const userRows = members.map((member) => {
@@ -5003,8 +5004,9 @@ async function hydrateStateFromPostgres(): Promise<void> {
   }
 }
 
-async function startServer() {
-  const postgresReady = await initPostgresDatabase();
+async function startServer(options: { listen?: boolean } = {}) {
+  const isVercel = Boolean(process.env.VERCEL);
+  const postgresReady = await initPostgresDatabase({ applySchema: !isVercel });
   if (!postgresReady) {
     throw new Error('PostgreSQL bağlantısı zorunludur; sunucu bellek modunda başlatılmadı.');
   }
@@ -5016,6 +5018,57 @@ async function startServer() {
 
   const app = express();
   app.use(express.json({ limit: '50mb' }));
+  app.use(async (req, res, next) => {
+    const isApiRequest = req.path.startsWith('/api/') && req.method !== 'OPTIONS';
+    if (!isVercel || !isApiRequest) {
+      next();
+      return;
+    }
+
+    const isMutation = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method);
+    const isScheduledMaintenance = req.path === '/api/v1/cron/maintenance';
+    const shouldLockState = isMutation || isScheduledMaintenance;
+    let releaseLocalQueue: (() => void) | undefined;
+    let lockClient: import('pg').PoolClient | undefined;
+    let released = false;
+    const releaseLock = async () => {
+      if (released) return;
+      released = true;
+      try {
+        if (lockClient) {
+          await lockClient.query('SELECT pg_advisory_unlock($1)', [731942105]);
+          lockClient.release();
+        }
+      } finally {
+        releaseLocalQueue?.();
+      }
+    };
+
+    try {
+      if (shouldLockState) {
+        let resolveQueue!: () => void;
+        const previousMutation = vercelMutationQueue;
+        vercelMutationQueue = new Promise<void>((resolve) => {
+          resolveQueue = resolve;
+        });
+        releaseLocalQueue = resolveQueue;
+        await previousMutation;
+        lockClient = await pool.connect();
+        await lockClient.query('SELECT pg_advisory_lock($1)', [731942105]);
+      }
+
+      await hydrateApplicationState();
+      await hydrateStateFromPostgres();
+      if (shouldLockState) {
+        res.once('finish', () => void releaseLock());
+        res.once('close', () => void releaseLock());
+      }
+      next();
+    } catch (error: any) {
+      await releaseLock();
+      res.status(503).json({ status: 'error', code: 'STATE_REFRESH_FAILED', message: error?.message || 'Supabase verisi yüklenemedi.' });
+    }
+  });
   app.use((req, res, next) => {
     if (persistenceFailure && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {
       res.status(503).json({
@@ -12106,13 +12159,36 @@ async function startServer() {
     }
   });
 
-  if (process.env.NODE_ENV !== 'production') {
+  app.get('/api/v1/cron/maintenance', async (req, res) => {
+    const cronSecret = process.env.CRON_SECRET;
+    if (!cronSecret || req.headers.authorization !== `Bearer ${cronSecret}`) {
+      res.status(401).json({ status: 'error', message: 'Cron yetkisi doğrulanamadı.' });
+      return;
+    }
+
+    try {
+      const deactivated = checkAndExpireAccountsCron('ACTIVITY_EXPIRY_CRON');
+      const releasedCommissions = releaseMaturedCommissions();
+      const processedVouchers = await processMaturedExpenseVouchers();
+      await persistApplicationState();
+      res.json({
+        status: 'success',
+        deactivated_accounts: deactivated.length,
+        released_commissions: releasedCommissions.releasedLogsCount,
+        processed_vouchers: processedVouchers,
+      });
+    } catch (err: any) {
+      res.status(503).json({ status: 'error', message: err?.message || 'Zamanlanmış bakım işlemi başarısız.' });
+    }
+  });
+
+  if (!isVercel && process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa',
     });
     app.use(vite.middlewares);
-  } else {
+  } else if (!isVercel) {
     const distPath = path.join(__dirname, 'dist');
     app.use(express.static(distPath));
     app.get('*', (_req, res) => {
@@ -12120,20 +12196,24 @@ async function startServer() {
     });
   }
 
-  // Background Cron Job: Süresi dolan hesapları, 14 günü dolan PENDING_14D komisyonları ve resmi gider pusulalarını otomatik kontrol et
-  setInterval(() => {
-    checkAndExpireAccountsCron('ACTIVITY_EXPIRY_CRON');
-    releaseMaturedCommissions();
-    processMaturedExpenseVouchers()
-      .then(() => persistApplicationState())
-      .catch((e) => console.warn('[Cron/PostgreSQL] Kalıcı kayıt hatası:', e?.message));
-  }, 30000);
+  if (!isVercel) {
+    setInterval(() => {
+      checkAndExpireAccountsCron('ACTIVITY_EXPIRY_CRON');
+      releaseMaturedCommissions();
+      processMaturedExpenseVouchers()
+        .then(() => persistApplicationState())
+        .catch((e) => console.warn('[Cron/PostgreSQL] Kalıcı kayıt hatası:', e?.message));
+    }, 30000);
+  }
 
+  if (options.listen !== false) {
+    const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`Monoline & Commission Engine running on http://0.0.0.0:${PORT} (ENV: ${process.env.NODE_ENV || 'development'})`);
+    });
+  }
 
-  const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Monoline & Commission Engine running on http://0.0.0.0:${PORT} (ENV: ${process.env.NODE_ENV || 'development'})`);
-  });
+  return app;
 }
 
-startServer();
+export const serverAppPromise = startServer({ listen: !process.env.VERCEL });
