@@ -168,19 +168,19 @@ export default function App() {
             </p>
 
             {/* Ortadaki Tek Ana Buton */}
-            <div className="flex items-center gap-4 w-full justify-center">
+            <div className="flex w-full justify-center">
               <button
                 onClick={() => setActiveView('wellness')}
                 type="button"
-                className={`group relative inline-flex items-center justify-center gap-3 px-10 py-5 text-base sm:text-lg font-bold rounded-xl transition-all duration-200 active:scale-98 cursor-pointer select-none whitespace-nowrap shadow-lg ${
+                className={`group relative inline-flex w-full max-w-md min-w-0 items-center justify-center gap-2 px-4 py-4 text-center text-base font-bold rounded-xl transition-all duration-200 active:scale-98 cursor-pointer select-none shadow-lg sm:gap-3 sm:px-8 sm:py-5 sm:text-lg ${
                   isDarkMode
                     ? 'bg-white text-slate-950 hover:bg-slate-100 shadow-white/5'
                     : 'bg-slate-900 text-white hover:bg-slate-800 shadow-slate-900/20'
                 }`}
               >
-                <Activity className="w-5 h-5 text-emerald-500" />
-                <span>AKN Wellness Uygulamasını Başlat</span>
-                <ArrowRight className="w-5 h-5 transition-transform duration-200 group-hover:translate-x-1" />
+                <Activity className="w-5 h-5 shrink-0 text-emerald-500" />
+                <span className="min-w-0 [text-wrap:balance]">AKN Wellness Uygulamasını Başlat</span>
+                <ArrowRight className="w-5 h-5 shrink-0 transition-transform duration-200 group-hover:translate-x-1" />
               </button>
             </div>
 
@@ -351,11 +351,13 @@ export default function App() {
         <div className="flex items-center gap-3">
           <button
             onClick={() => setActiveView('welcome')}
-            className="flex items-center gap-1.5 px-3 py-1 bg-white/10 hover:bg-white/20 rounded-md transition-colors font-medium text-white cursor-pointer"
+            className="flex items-center gap-1.5 px-2 py-1 bg-white/10 hover:bg-white/20 rounded-md transition-colors font-medium text-white cursor-pointer sm:px-3"
             title="Karşılama Ekranına Geri Dön"
+            aria-label="Karşılama Sayfasına Dön"
           >
-            <Home className="w-3.5 h-3.5" />
-            <span>Karşılama Sayfasına Dön</span>
+            <Home className="h-3.5 w-3.5 shrink-0" />
+            <span className="sm:hidden">Ana sayfa</span>
+            <span className="hidden sm:inline">Karşılama Sayfasına Dön</span>
           </button>
           <span className="hidden sm:inline text-slate-400">·</span>
           <span className="hidden sm:inline text-slate-300 font-medium">
@@ -365,7 +367,7 @@ export default function App() {
           </span>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-1 sm:gap-2">
           {activeView === 'wellness' ? (
             <button
               onClick={() => setActiveView('accounting')}
