@@ -1,5 +1,5 @@
 import express from 'express';
-import './server/loadEnv';
+import './server/loadEnv.js';
 import path from 'path';
 import { createHash, createHmac, randomBytes, scryptSync, timingSafeEqual } from 'crypto';
 import { fileURLToPath } from 'url';
@@ -12,25 +12,25 @@ import {
   deductResellerCreditsAtomic,
   query as pgQuery,
   readApplicationState,
-} from './server/db';
+} from './server/db.js';
 
 import {
   calculateVoucherWithholding,
   generateOfficialGiderPusulasiXml,
   generateBankBatchFile,
   CANONICAL_COMPANY_PROFILE,
-} from './src/services/expenseVoucherEngine';
-import {
+} from './src/services/expenseVoucherEngine.js';
+import type {
   ExpenseVoucherRecord,
   PayoutBatchRecord,
   PayoutBatchItemRecord,
   PendingPayoutItem,
 } from './src/types/accounting';
-import { createPaymentProvider, PaymentProviderError } from './server/paymentProviders';
+import { createPaymentProvider, PaymentProviderError } from './server/paymentProviders.js';
 import {
   DEFAULT_ETHICS_GUIDELINES_CONTENT,
   normalizeEthicsGuidelinesContent,
-} from './src/utils/ethicsGuidelinesContent';
+} from './src/utils/ethicsGuidelinesContent.js';
 import {
   convertTryToUsd,
   getMemberRegionalPendingUsd,
@@ -40,13 +40,13 @@ import {
   getPackagePriceForRegion,
   getRegionWalletKey,
   resolveMemberRegion,
-} from './src/utils/walletRegion';
+} from './src/utils/walletRegion.js';
 import {
   getPayoutChannelForRegion,
   normalizeBic,
   normalizeIban,
   validateWithdrawalPayout,
-} from './src/utils/withdrawalPayout';
+} from './src/utils/withdrawalPayout.js';
 import {
   ActivationVoucherRecord,
   MemberRegion,
@@ -87,8 +87,8 @@ import {
   WithdrawalRequestRecord,
   evaluateMemberOrganizationMetrics,
   getSubCareerCount,
-} from './src/types/monoline.ts';
-import { BUSINESS_RULES } from './src/config/businessRules';
+} from './src/types/monoline.js';
+import { BUSINESS_RULES } from './src/config/businessRules.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

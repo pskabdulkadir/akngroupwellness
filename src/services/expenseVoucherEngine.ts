@@ -8,7 +8,7 @@
  * 4. Banka Toplu EFT/FAST Transfer Dosyası Üretimi (Garanti, Akbank, İş Bankası, Ziraat)
  */
 
-import { ExpenseVoucherRecord, PendingPayoutItem } from '../types/accounting';
+import type { ExpenseVoucherRecord, PendingPayoutItem } from '../types/accounting';
 
 export interface CompanyBillingProfile {
   legalName: string;
