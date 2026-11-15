@@ -22,7 +22,7 @@ export const MedicalDisclaimerModal: React.FC<MedicalDisclaimerModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-950/95 backdrop-blur-2xl animate-fade-in select-none">
-      <div className="relative w-full max-w-lg bg-slate-900 border-2 border-rose-500/60 rounded-3xl p-6 sm:p-8 shadow-2xl shadow-rose-950/80 space-y-6 animate-scale-up">
+      <div className="relative w-full max-w-lg max-h-[calc(100dvh-2rem)] overflow-y-auto bg-slate-900 border-2 border-rose-500/60 rounded-3xl p-6 sm:p-8 shadow-2xl shadow-rose-950/80 space-y-6 animate-scale-up">
         
         <button
           type="button"
@@ -94,4 +94,3 @@ export const MedicalDisclaimerModal: React.FC<MedicalDisclaimerModalProps> = ({
 };
 
 export default MedicalDisclaimerModal;
-

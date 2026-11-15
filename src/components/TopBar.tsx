@@ -84,19 +84,19 @@ export const TopBar: React.FC<TopBarProps> = ({
       {/* 1. ÜST KADEME (Brand, Kurumsal Kimlik, Kurlar & Birincil İşlemler) */}
       <header className="w-full flex flex-wrap items-center justify-between gap-3 px-4 sm:px-6 py-2.5 bg-white border-b border-slate-100">
         {/* Sol Alan: Kurumsal Kimlik & Portala Dönüş */}
-        <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
+        <div className="flex min-w-0 max-w-full items-center gap-2.5 flex-wrap">
           <a
             href="#"
             onClick={(e) => {
               e.preventDefault();
               onTabChange('cfoReport');
             }}
-            className="text-base font-bold tracking-tight text-slate-900 whitespace-nowrap shrink-0 flex items-center gap-2"
+            className="min-w-0 max-w-full text-base font-bold tracking-tight text-slate-900 flex items-center gap-2"
           >
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 text-white flex items-center justify-center font-black text-xs tracking-wider shadow-xs border border-slate-800">
               AKN
             </div>
-            <div className="flex flex-col text-left">
+            <div className="min-w-0 flex flex-col text-left">
               <span className="font-bold text-slate-950 text-xs sm:text-sm leading-tight flex items-center gap-1.5">
                 {COMPANY_PROFILE.legalName}
               </span>
@@ -125,7 +125,7 @@ export const TopBar: React.FC<TopBarProps> = ({
         </div>
 
         {/* Sağ Alan: Kurlar, Otopilot, Yeni Satış, Sistemi Sıfırla & Profil */}
-        <div className="flex items-center gap-2 shrink-0 flex-wrap">
+        <div className="flex min-w-0 max-w-full items-center gap-2 flex-wrap">
           {/* Canlı TCMB Kurları Ticker */}
           <div className="shrink-0">
             <LiveCurrencyTicker rates={rates} onRefresh={onRefreshRates} />

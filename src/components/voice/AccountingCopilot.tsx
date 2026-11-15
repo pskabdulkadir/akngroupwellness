@@ -618,7 +618,7 @@ export const AccountingCopilot: React.FC<AccountingCopilotProps> = ({
 
       {/* Genişletilmiş Asistan Kartı (Voice Drawer Modal) */}
       {isOpen && (
-        <div className="fixed bottom-24 right-6 z-40 w-[420px] max-w-[calc(100vw-2rem)] h-[620px] bg-white rounded-2xl shadow-2xl border border-slate-300 flex flex-col overflow-hidden no-print">
+        <div className="fixed bottom-24 right-4 sm:right-6 z-40 w-[420px] max-w-[calc(100vw-2rem)] h-[620px] max-h-[calc(100dvh-7rem)] bg-white rounded-2xl shadow-2xl border border-slate-300 flex flex-col overflow-hidden no-print">
           {/* Header */}
           <div className="p-3.5 bg-slate-900 text-white flex items-center justify-between">
             <div className="flex items-center gap-2.5">

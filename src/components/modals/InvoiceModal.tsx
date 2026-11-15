@@ -43,12 +43,12 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({ invoice, onClose, co
     <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
       <div className="bg-white rounded-xl shadow-2xl border border-slate-200 w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden">
         {/* Header Bar */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-slate-50 no-print">
-          <div className="flex items-center gap-3">
-            <span className="text-sm font-semibold text-slate-900 font-mono">
+        <div className="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-6 py-4 border-b border-slate-200 bg-slate-50 no-print">
+          <div className="flex min-w-0 flex-wrap items-center gap-2 sm:gap-3">
+            <span className="text-sm font-semibold text-slate-900 font-mono break-all">
               {invoice.invoiceNumber}
             </span>
-            <span className="text-xs text-slate-500 font-mono">
+            <span className="min-w-0 break-all text-xs text-slate-500 font-mono">
               ETTN: {invoice.ettn}
             </span>
             <span className="text-xs text-slate-400">·</span>
@@ -57,7 +57,7 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({ invoice, onClose, co
             </span>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <div className="flex items-center bg-slate-200/80 p-0.5 rounded-lg text-xs font-medium">
               <button
                 onClick={() => setActiveTab('visual')}

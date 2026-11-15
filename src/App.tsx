@@ -210,20 +210,20 @@ export default function App() {
 
             {/* 1. ÖNEMLİ TIBBİ SORUMLULUK REDDİ (SAĞLIK İÇİN DEĞİLDİR UYARISI) */}
             <div className="p-4 sm:p-5 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-900 dark:text-rose-200 shadow-xs space-y-2">
-              <div className="flex items-center gap-2 text-rose-700 dark:text-rose-400 font-bold text-xs sm:text-sm">
+              <div className="flex items-start gap-2 text-rose-700 dark:text-rose-400 font-bold text-[10px] sm:text-[11px] leading-relaxed">
                 <AlertTriangle className="w-4 h-4 shrink-0 text-rose-600 dark:text-rose-400" />
                 <span>YASAL ZORUNLU BİLGİLENDİRME: TIBBİ TEŞHİS VE TEDAVİ AMACI TAŞIMAZ</span>
               </div>
-              <p className="text-[11px] sm:text-xs leading-relaxed text-rose-800/90 dark:text-rose-300/90">
+              <p className="text-[10px] sm:text-[11px] leading-relaxed text-rose-800/90 dark:text-rose-300/90">
                 AKN Group bünyesindeki Bio-Rezonans, Çakra & Letaif Analiz motorları ve frekans uygulamaları <strong>tıbbi bir cihaz veya tedavi yöntemi DEĞİLDİR</strong>. Hastalıkları teşhis, tedavi veya rehabilite etmez. Sadece bireysel farkındalık, yaşam kalitesi ve enerji dengeleme amaçlı dijital analiz yazılımıdır. Her türlü sağlık sorununuz için lütfen uzman bir <strong>doktora veya sağlık kuruluşuna</strong> başvurunuz.
               </p>
               <div className="pt-1">
                 <button
                   type="button"
                   onClick={() => setIsMedicalModalOpen(true)}
-                  className="inline-flex items-center gap-1.5 text-[11px] font-bold text-rose-700 dark:text-rose-400 hover:underline cursor-pointer"
+                  className="inline-flex max-w-full items-start gap-1.5 text-left text-[10px] sm:text-[11px] leading-relaxed font-bold text-rose-700 dark:text-rose-400 hover:underline cursor-pointer"
                 >
-                  <ShieldAlert className="w-3.5 h-3.5" />
+                  <ShieldAlert className="w-3.5 h-3.5 shrink-0" />
                   <span>Detaylı Tıbbi Sorumluluk Reddi (Medical Disclaimer) Metnini Görüntüle</span>
                 </button>
               </div>
@@ -316,7 +316,7 @@ export default function App() {
             {/* 4. GÜVENLİ ÖDEME VE ROZETLER */}
             <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-3 text-[10px] text-slate-400 border-t border-slate-200/40 dark:border-slate-800/40">
               <span>AKN Global Group Ltd. © {new Date().getFullYear()} · Tüm hakları saklıdır.</span>
-              <div className="flex items-center gap-3 font-semibold text-slate-500 dark:text-slate-400">
+              <div className="flex flex-wrap items-center justify-center gap-3 font-semibold text-slate-500 dark:text-slate-400">
                 <span className="px-2 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-[10px]">256-BIT SSL</span>
                 <span className="px-2 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-[10px]">3D SECURE</span>
                 <span className="px-2 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-[10px]">VISA</span>

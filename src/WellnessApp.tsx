@@ -986,7 +986,7 @@ export default function WellnessApp({
       )}
 
       {/* Main Content Area */}
-      <main className="flex-1 flex flex-col pb-24 lg:pb-8 transition-all duration-300">
+      <main className="flex-1 flex flex-col pb-[calc(6rem+env(safe-area-inset-bottom,0px))] lg:pb-8 transition-all duration-300">
         {activeTab === 'camera' && (
           <CameraView
             onScanComplete={handleScanComplete}
