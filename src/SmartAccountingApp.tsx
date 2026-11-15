@@ -148,6 +148,9 @@ const CLEAN_TAX_OFFICE_ACCRUALS: TaxOfficeAccrual[] = [
   },
 ];
 
+const isTestAccountingEvent = (event: any) =>
+  event?.event_data?.is_test === true || /^(ORD-SIM-|ORD-DEMO-|TEST-|SIM-)/i.test(String(event?.source_event_id || ''));
+
 export default function SmartAccountingApp({
   onReturnToWellness,
   accountingOnly = false,
@@ -183,6 +186,9 @@ export default function SmartAccountingApp({
   const [accountingBatches, setAccountingBatches] = useState<any[]>([]);
   const [accountingOrders, setAccountingOrders] = useState<any[]>([]);
   const [accountingEvents, setAccountingEvents] = useState<any[]>([]);
+  const [selectedTestEventIds, setSelectedTestEventIds] = useState<Set<string>>(new Set());
+  const [accountingDeleteMessage, setAccountingDeleteMessage] = useState<string | null>(null);
+  const [isDeletingAccountingEvents, setIsDeletingAccountingEvents] = useState(false);
   const [aiAdvices] = useState<AIAdvice[]>(INITIAL_AI_ADVICE);
 
   // 6 Modül State'leri
@@ -206,8 +212,8 @@ export default function SmartAccountingApp({
       spokenText: 'Canlı Finans Sistemi Sıfırlandı',
       parsedAction: 'INITIALIZE_CLEAN_SYSTEM',
       status: 'EXECUTED',
-      responseSpoken: 'AKN Global Group Ltd. muhasebe altyapısı sıfırlandı. Tüm sahte ve simülasyon verileri silindi, sistem 0 USD ($) bakiye ile ilk canlı siparişe hazır.',
-      auditDetails: 'Tüm test verileri silindi, canlı API entegrasyonu aktif.',
+      responseSpoken: 'Akıllı Muhasebe inceleme paneli hazır. Gerçek kayıtlar korunur; yalnızca açıkça demo veya test olarak işaretlenmiş olaylar silinebilir.',
+      auditDetails: 'Panel başlangıç durumu; veritabanı kayıtları silinmedi.',
     },
   ]);
 
@@ -215,9 +221,9 @@ export default function SmartAccountingApp({
     {
       id: 'alert-clean-init',
       type: 'DAILY_BRIEF',
-      title: 'Canlı Finans Sistemi Hazır (0 USD)',
-      message: 'Tüm test ve simülasyon verileri temizlendi. Sistem ilk gerçek sipariş ve komisyon işlemiyle canlı defteri başlatacaktır.',
-      speechText: 'AKN Global Group Ltd. muhasebe altyapısı sıfırlandı ve canlı ilk sipariş için hazır.',
+      title: 'Akıllı Muhasebe İnceleme Paneli Hazır',
+      message: 'Gerçek finans kayıtları korunur; muhasebe inceleme kuyruğuna yalnızca doğrulanmış olaylar aktarılır.',
+      speechText: 'Akıllı Muhasebe inceleme paneli hazır. Gerçek finans kayıtları korunuyor.',
       severity: 'info',
       timestamp: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
       actionTab: 'monolineReconciliation',
@@ -249,6 +255,39 @@ export default function SmartAccountingApp({
       clearInterval(interval);
     };
   }, []);
+
+  const deleteTestAccountingEvents = async (sourceEventIds?: string[]) => {
+    const deletingAllTestEvents = !sourceEventIds;
+    const confirmed = window.confirm(
+      deletingAllTestEvents
+        ? 'Yalnız açıkça demo/test olarak işaretlenmiş muhasebe inceleme olayları silinecek. Gerçek ve belirsiz kayıtlar korunacak. Devam edilsin mi?'
+        : `${sourceEventIds.length} seçili demo/test muhasebe olayı silinecek. Gerçek ve belirsiz kayıtlar korunacak. Devam edilsin mi?`
+    );
+    if (!confirmed) return;
+
+    setIsDeletingAccountingEvents(true);
+    setAccountingDeleteMessage(null);
+    try {
+      const response = await fetch('/api/v1/accounting/events', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(
+          deletingAllTestEvents
+            ? { delete_test_events: true }
+            : { source_event_ids: sourceEventIds }
+        ),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.message || 'Test kayıtları silinemedi.');
+      setSelectedTestEventIds(new Set());
+      setAccountingDeleteMessage(`${data.deleted_count || 0} demo/test kaydı silindi.`);
+      await fetchLiveAccountingData();
+    } catch (error: any) {
+      setAccountingDeleteMessage(error?.message || 'Test kayıtları silinemedi.');
+    } finally {
+      setIsDeletingAccountingEvents(false);
+    }
+  };
 
   // PostgreSQL Canlı Muhasebe ve Hakediş Verilerini Çekme
   const fetchLiveAccountingData = async () => {
@@ -555,59 +594,47 @@ export default function SmartAccountingApp({
     setVoiceLogs((prev) => [autoPilotLog, ...prev]);
   };
 
-  // Sistemi Sıfırlama (Tüm Sahte Verileri Sil ve 0 Bakiye ile Başla)
-  const handleResetToClean = () => {
-    setInvoices([]);
-    setCommissions([]);
-    setLedgerEntries([]);
-    setRefunds([]);
-    setStockMovements([]);
-    setBankAccounts(INITIAL_BANK_ACCOUNTS.map((b) => ({ ...b, balanceTRY: 0 })));
-    setBankTransactions([]);
-    setExpenses([]);
-    setPayroll([]);
-    setReconciliations([]);
-    setBaBsItems([]);
-    setWaybills([]);
-    setAccruals(CLEAN_TAX_OFFICE_ACCRUALS);
-    setDistributors(
-      INITIAL_DISTRIBUTORS.map((d) => ({
-        ...d,
-        totalEarningsTRY: 0,
-        totalStopajPaidTRY: 0,
-        currentWalletBalanceTRY: 0,
-      }))
-    );
+  // Sistemi demo/test kayıtlarından temizleyip canlı bayi kaydına hazırla
+  const handleResetToClean = async () => {
+    const response = await fetch('/api/v1/accounting/events', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ delete_test_events: true }),
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.message || 'Demo/test muhasebe olayları temizlenemedi.');
+    setAccountingEvents((events) => events.filter((event) => !isTestAccountingEvent(event)));
+    setSelectedTestEventIds(new Set());
+    await fetchLiveAccountingData();
 
     const cleanAlert: ProactiveAlert = {
       id: `alert-clean-${Date.now()}`,
       type: 'DAILY_BRIEF',
-      title: 'Sistem Sıfırlandı (Canlıya Hazır)',
-      message: 'Tüm simülasyon ve sahte veriler silindi. Ciro: 0,00 ₺. Satış simülatöründen ilk faturanızı kesebilirsiniz.',
-      speechText: 'AKN Global Group Ltd. muhasebe altyapısı başarıyla sıfırlandı.',
+      title: 'Demo/Test Olayları Temizlendi',
+      message: 'Açıkça demo/test olarak işaretlenmiş muhasebe olayları silindi; gerçek ve belirsiz finans kayıtları korundu.',
+      speechText: 'Demo ve test muhasebe olayları temizlendi. Gerçek kayıtlar korundu.',
       severity: 'info',
       timestamp: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
-      actionTab: 'simulator',
-      actionLabel: 'Yeni Satış Yap',
+      actionTab: 'monolineReconciliation',
+      actionLabel: 'Bayi kayıtlarını görüntüle',
       dismissed: false,
     };
-    setProactiveAlerts([cleanAlert]);
+    setProactiveAlerts((alerts) => [cleanAlert, ...alerts]);
 
     const cleanLog: VoiceCommandLog = {
       id: `log-clean-${Date.now()}`,
       timestamp: new Date().toLocaleString('tr-TR'),
-      user: 'Ece Yılmaz (CFO)',
-      spokenText: 'Sistemi sıfırla ve tüm verileri sil',
-      parsedAction: 'RESET_SYSTEM_TO_CLEAN',
+      user: 'Yönetici',
+      spokenText: 'Demo/test muhasebe olaylarını temizle',
+      parsedAction: 'DELETE_TEST_ACCOUNTING_EVENTS',
       status: 'EXECUTED',
-      responseSpoken: 'Tüm test verileri silindi, veritabanı 0 TL bakiye ile canlıya alındı.',
-      auditDetails: 'Yönetici onayı ile sistem sıfırlandı.',
+      responseSpoken: 'Demo/test muhasebe olayları silindi; gerçek ve belirsiz kayıtlar korundu.',
+      auditDetails: 'Yalnızca işaretli test olayları silindi.',
     };
-    setVoiceLogs([cleanLog]);
+    setVoiceLogs((logs) => [cleanLog, ...logs]);
 
     try {
       localStorage.removeItem('akn_demo_mode_active');
-      localStorage.setItem('akn_system_is_clean', 'true');
     } catch {
       // ignore
     }
@@ -651,6 +678,7 @@ export default function SmartAccountingApp({
   const refundsCount = refunds.length;
 
   if (accountingOnly) {
+    const testAccountingEvents = accountingEvents.filter(isTestAccountingEvent);
     const totalIncome = accountingOrders
       .filter((order) => order.status === 'COMPLETED' || order.status === 'PAID')
       .reduce((sum, order) => sum + Number(order.amount || 0), 0);
@@ -688,24 +716,80 @@ export default function SmartAccountingApp({
             <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
               <div>
                 <h2 className="text-lg font-bold">Bayi kayıtları ve alışverişler · inceleme kuyruğu</h2>
-                <p className="mt-1 text-sm text-slate-600">Sipariş ve komisyon olayları anında alındı. Vergi/stopaj ve resmi fatura sınıflandırması mali müşavir incelemesine kadar beklemededir; bu kayıtlar yevmiyeye veya gelir toplamına dahil değildir.</p>
+                <p className="mt-1 text-sm text-slate-600">Vergi/stopaj ve resmi fatura sınıflandırması mali müşavir incelemesine kadar beklemededir; bu kayıtlar yevmiyeye veya gelir toplamına dahil değildir.</p>
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedTestEventIds(new Set(testAccountingEvents.map((event) => event.source_event_id)))}
+                    disabled={!testAccountingEvents.length || isDeletingAccountingEvents}
+                    className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold disabled:opacity-50"
+                  >
+                    Demo/Test kayıtlarını seç ({testAccountingEvents.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void deleteTestAccountingEvents(Array.from(selectedTestEventIds))}
+                    disabled={!selectedTestEventIds.size || isDeletingAccountingEvents}
+                    className="rounded-lg border border-rose-300 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-800 disabled:opacity-50"
+                  >
+                    Seçilileri sil ({selectedTestEventIds.size})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void deleteTestAccountingEvents()}
+                    disabled={!testAccountingEvents.length || isDeletingAccountingEvents}
+                    className="rounded-lg bg-rose-700 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+                  >
+                    Tüm demo/test olaylarını sil
+                  </button>
+                  {accountingDeleteMessage && <span role="status" className="text-xs text-slate-600">{accountingDeleteMessage}</span>}
+                </div>
               </div>
               <span className="rounded-full border border-amber-300 bg-white px-3 py-1 text-xs font-bold text-amber-800">{accountingEvents.length} kayıt</span>
             </div>
             <div className="max-h-96 space-y-2 overflow-auto">
-              {accountingEvents.map((event) => (
+              {accountingEvents.map((event) => {
+                const isTestEvent = isTestAccountingEvent(event);
+                return (
                 <article key={event.source_event_id} className="grid grid-cols-1 gap-2 rounded-xl border border-amber-100 bg-white p-3 sm:grid-cols-[1fr_auto] sm:items-center">
-                  <div className="min-w-0">
+                  <div className="flex min-w-0 items-start gap-3">
+                    {isTestEvent && (
+                      <input
+                        type="checkbox"
+                        aria-label={`${event.source_event_id} demo/test kaydını seç`}
+                        checked={selectedTestEventIds.has(event.source_event_id)}
+                        onChange={(e) => setSelectedTestEventIds((current) => {
+                          const next = new Set(current);
+                          if (e.target.checked) next.add(event.source_event_id);
+                          else next.delete(event.source_event_id);
+                          return next;
+                        })}
+                        className="mt-1"
+                      />
+                    )}
+                    <div className="min-w-0">
                     <p className="truncate text-sm font-semibold">{event.event_data?.customer_name || event.source_event_id} · {event.event_data?.package_name || event.event_type}</p>
                     <p className="text-xs text-slate-500">{event.source_event_id} · {event.event_data?.payment_method || 'Ödeme yöntemi kaydedilmemiş'} · {event.created_at?.slice(0, 10)}</p>
                     <p className="mt-1 text-xs font-medium text-amber-800">Vergi/stopaj: inceleme bekliyor · Fatura: taslak gerekli · Muhasebe: {event.accounting_status === 'FRAUD_REVIEW' ? 'risk incelemesi' : 'sınıflandırma bekliyor'}</p>
+                    {isTestEvent && (
+                      <button
+                        type="button"
+                        onClick={() => void deleteTestAccountingEvents([event.source_event_id])}
+                        disabled={isDeletingAccountingEvents}
+                        className="mt-2 text-xs font-semibold text-rose-700 underline disabled:opacity-50"
+                      >
+                        Bu test kaydını sil
+                      </button>
+                    )}
+                  </div>
                   </div>
                   <div className="text-left sm:text-right">
                     <p className="text-sm font-bold tabular-nums">{Number(event.amount || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2 })} {event.currency || 'USD'}</p>
                     <p className="text-xs text-slate-500">Komisyon: {Number(event.event_data?.commission_amount || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2 })} {event.currency || 'USD'} · {event.event_data?.commission_status || 'beklemede'}</p>
                   </div>
                 </article>
-              ))}
+                );
+              })}
               {!accountingEvents.length && <p className="rounded-xl bg-white p-4 text-sm text-slate-500">Henüz muhasebe incelemesi bekleyen sipariş yok.</p>}
             </div>
           </section>
@@ -921,9 +1005,7 @@ export default function SmartAccountingApp({
         onClose={() => setIsResetModalOpen(false)}
         onResetToClean={handleResetToClean}
         onRestoreDemo={handleRestoreDemo}
-        invoicesCount={invoices.length}
-        commissionsCount={commissions.length}
-        totalGrossRevenueTRY={summary.totalGrossRevenueTRY}
+        testEventsCount={accountingEvents.filter(isTestAccountingEvent).length}
       />
 
       {/* Modals */}

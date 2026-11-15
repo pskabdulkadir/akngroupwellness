@@ -2755,6 +2755,7 @@ function processOrderCommission(payload: OrderCommissionPayload): CommissionTran
         package_name: normalizedPkg ? PACKAGES[normalizedPkg].name : String(payload.package_id || 'Özel Sipariş'),
         payment_method: payload.payment_method || 'NOT_PROVIDED',
         order_type: payload.order_type || 'STANDARD_ORDER',
+        is_test: /^(ORD-SIM-|ORD-DEMO-|TEST-|SIM-)/i.test(orderId),
         commission_amount: roundCurrency(commissionLogs
           .filter((log) => log.order_id === orderId && log.type !== 'SYSTEM_POOL')
           .reduce((sum, log) => sum + Number(log.amount || 0), 0)),
@@ -11821,6 +11822,7 @@ async function startServer(options: { listen?: boolean } = {}) {
           source_system: String(source_system || 'EXTERNAL_ACCOUNTING_SOURCE'),
           source_event_type: String(source_event_type || 'ORDER_PAYMENT_CONFIRMED'),
           idempotency_key: idempotencyKey,
+          is_test: payload.is_test === true || /^(ORD-SIM-|ORD-DEMO-|TEST-|SIM-)/i.test(eventId),
           commission_status: 'NEEDS_REVIEW',
         },
       };
@@ -11837,6 +11839,38 @@ async function startServer(options: { listen?: boolean } = {}) {
       });
     } catch (error: any) {
       return res.status(500).json({ error: error.message || 'Entegrasyon olay işleme hatası' });
+    }
+  });
+
+  app.delete('/api/v1/accounting/events', requireAccountingOrAdmin, async (req, res) => {
+    try {
+      const requestedIds = Array.isArray(req.body?.source_event_ids)
+        ? Array.from(new Set(req.body.source_event_ids.map((id: unknown) => String(id).trim()).filter(Boolean)))
+        : [];
+      const deleteAllTestEvents = req.body?.delete_test_events === true;
+      if (!deleteAllTestEvents && requestedIds.length === 0) {
+        return res.status(400).json({ status: 'error', message: 'Silinecek demo/test muhasebe olayı seçilmedi.' });
+      }
+
+      const isTestEvent = (event: (typeof accountingEvents)[number]) =>
+        event.event_data.is_test === true || /^(ORD-SIM-|ORD-DEMO-|TEST-|SIM-)/i.test(event.source_event_id);
+      const deletableIds = accountingEvents
+        .filter((event) => isTestEvent(event) && (deleteAllTestEvents || requestedIds.includes(event.source_event_id)))
+        .map((event) => event.source_event_id);
+
+      if (deletableIds.length > 0) {
+        await pgQuery('DELETE FROM accounting_events WHERE source_event_id = ANY($1::text[])', [deletableIds]);
+        const deletedEvents = accountingEvents.filter((event) => deletableIds.includes(event.source_event_id));
+        deletedEvents.forEach((event) => {
+          const idempotencyKey = event.event_data.idempotency_key;
+          if (typeof idempotencyKey === 'string') processedEventIdempotencyKeys.delete(idempotencyKey);
+        });
+        accountingEvents = accountingEvents.filter((event) => !deletableIds.includes(event.source_event_id));
+      }
+
+      return res.json({ status: 'success', deleted_count: deletableIds.length });
+    } catch (error: any) {
+      return res.status(503).json({ status: 'error', code: 'ACCOUNTING_EVENT_DELETE_FAILED', message: error?.message || 'Demo/test olayları silinemedi.' });
     }
   });
 

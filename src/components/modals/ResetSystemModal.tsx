@@ -15,11 +15,9 @@ import { SpeechEngine } from '../../services/voiceAssistant';
 interface ResetSystemModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onResetToClean: () => void;
+  onResetToClean: () => void | Promise<void>;
   onRestoreDemo: () => void;
-  invoicesCount: number;
-  commissionsCount: number;
-  totalGrossRevenueTRY: number;
+  testEventsCount: number;
 }
 
 export const ResetSystemModal: React.FC<ResetSystemModalProps> = ({
@@ -27,29 +25,30 @@ export const ResetSystemModal: React.FC<ResetSystemModalProps> = ({
   onClose,
   onResetToClean,
   onRestoreDemo,
-  invoicesCount,
-  commissionsCount,
-  totalGrossRevenueTRY,
+  testEventsCount,
 }) => {
   const [confirmed, setConfirmed] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [activeAction, setActiveAction] = useState<'clean' | 'demo' | null>(null);
+  const [resetError, setResetError] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
-  const handleExecuteCleanReset = () => {
+  const handleExecuteCleanReset = async () => {
     if (!confirmed) return;
     setResetting(true);
     setActiveAction('clean');
+    setResetError(null);
 
-    setTimeout(() => {
-      onResetToClean();
-      setResetting(false);
-      SpeechEngine.speak(
-        'AKN Global Group Ltd. muhasebe altyapısı başarıyla sıfırlandı. Tüm sahte veriler silindi, sistem canlıya yüzde yüz hazır olarak sıfır TL bakiye ile açıldı.'
-      );
+    try {
+      await onResetToClean();
+      SpeechEngine.speak('Demo ve test muhasebe olayları temizlendi. Gerçek kayıtlar korunarak sistem yeni bayi kayıtları için hazır.');
       onClose();
-    }, 700);
+    } catch (error: any) {
+      setResetError(error?.message || 'Demo/test kayıtları temizlenemedi.');
+    } finally {
+      setResetting(false);
+    }
   };
 
   const handleExecuteRestoreDemo = () => {
@@ -97,16 +96,12 @@ export const ResetSystemModal: React.FC<ResetSystemModalProps> = ({
           {/* Active Data Overview Box */}
           <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between text-xs">
             <div>
-              <span className="text-slate-500 block">Şu An Sistemde Bulunan Veriler:</span>
-              <p className="font-bold text-slate-900 mt-0.5">
-                {invoicesCount} Adet Fatura · {commissionsCount} Bayi Hakedişi
-              </p>
+              <span className="text-slate-500 block">Silinebilir demo/test inceleme olayları:</span>
+              <p className="font-bold text-slate-900 mt-0.5">{testEventsCount} kayıt</p>
             </div>
             <div className="text-right">
-              <span className="text-slate-500 block">Kayıtlı Ciro:</span>
-              <p className="font-bold font-mono text-slate-900 mt-0.5">
-                {totalGrossRevenueTRY.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺
-              </p>
+              <span className="text-slate-500 block">Gerçek ve belirsiz kayıtlar:</span>
+              <p className="font-bold font-mono text-emerald-700 mt-0.5">Korunur</p>
             </div>
           </div>
 
@@ -116,13 +111,12 @@ export const ResetSystemModal: React.FC<ResetSystemModalProps> = ({
               <ShieldAlert className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
               <div>
                 <h3 className="text-sm font-bold text-red-950">
-                  Tüm Sahte ve Simülasyon Verilerini Temizle (Canlıya Hazır 0 Modu)
+                  Demo/Test Muhasebe Olaylarını Temizle
                 </h3>
                 <p className="text-xs text-red-800/80 leading-relaxed mt-1">
-                  Tüm simülasyon faturalarını, bayi komisyonlarını, clawback/iade kayıtlarını, stok
-                  ve banka hareketlerini sıfırlar. Cironuz <strong>0,00 ₺</strong> olur ve şirket
-                  resmî unvanı ile vergi dairesi ayarlarınız korunarak sistem sıfırdan canlı satışa
-                  başlar.
+                  Yalnız açıkça demo veya test olarak işaretlenmiş muhasebe inceleme olayları silinir.
+                  Gerçek ya da kaynağı belirsiz faturalar, ödemeler, hakedişler ve yevmiye kayıtları korunur.
+                  Sistem yeni bayi kayıtlarıyla devam eder.
                 </p>
               </div>
             </div>
@@ -135,8 +129,10 @@ export const ResetSystemModal: React.FC<ResetSystemModalProps> = ({
                 onChange={(e) => setConfirmed(e.target.checked)}
                 className="w-4 h-4 rounded text-red-600 focus:ring-red-500 border-red-300"
               />
-              <span>Tüm test kayıtlarının temizlenmesini ve bilançonun 0 ₺ olmasını onaylıyorum.</span>
+              <span>Yalnız demo/test muhasebe olaylarının kalıcı olarak silinmesini onaylıyorum.</span>
             </label>
+
+            {resetError && <p role="alert" className="text-xs font-semibold text-rose-800">{resetError}</p>}
 
             <button
               onClick={handleExecuteCleanReset}
@@ -151,7 +147,7 @@ export const ResetSystemModal: React.FC<ResetSystemModalProps> = ({
               <span>
                 {resetting && activeAction === 'clean'
                   ? 'Sistem Sıfırlanıyor...'
-                  : 'Tüm Verileri Temizle ve Sistemi Sıfırla (0 TL)'}
+                  : 'Demo/Test Olaylarını Sil ve Yeni Bayi Kaydına Hazırla'}
               </span>
             </button>
           </div>

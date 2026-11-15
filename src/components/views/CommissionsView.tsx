@@ -136,19 +136,41 @@ export const CommissionsView: React.FC<CommissionsViewProps> = ({
   };
 
   // Banka İçin Toplu Transfer Dosyası İndir (.csv)
-  const handleDownloadBankFile = () => {
+  const handleDownloadBankFile = async () => {
     if (selectedIds.size === 0) {
       setActionErrorMsg('Lütfen dosyaya eklenecek en az bir bayi hakedişi seçin.');
       return;
     }
-    const idsParam = Array.from(selectedIds).join(',');
-    const downloadUrl = `/api/v1/accounting/payouts/export-bank-file?bank=${selectedBank}&commission_ids=${encodeURIComponent(
-      idsParam
-    )}`;
-    window.open(downloadUrl, '_blank');
-    setActionSuccessMsg(
-      `${selectedBank} formatında toplu ödeme dosyası başarıyla indirildi. Banka kurumsal internet şubesine yüklenebilir.`
-    );
+    setIsLoading(true);
+    setActionErrorMsg(null);
+    setActionSuccessMsg(null);
+    try {
+      const idsParam = Array.from(selectedIds).join(',');
+      const downloadUrl = `/api/v1/accounting/payouts/export-bank-file?bank=${selectedBank}&commission_ids=${encodeURIComponent(
+        idsParam
+      )}`;
+      const response = await fetch(downloadUrl);
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error.message || error.error || 'Banka ödeme dosyası indirilemedi.');
+      }
+
+      const disposition = response.headers.get('Content-Disposition') || '';
+      const filename = disposition.match(/filename="?([^";]+)"?/i)?.[1] || `toplu_odeme_${selectedBank}.csv`;
+      const objectUrl = URL.createObjectURL(await response.blob());
+      const link = document.createElement('a');
+      link.href = objectUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+      setActionSuccessMsg(`${selectedBank} formatında toplu ödeme dosyası indirildi.`);
+    } catch (error: any) {
+      setActionErrorMsg(error?.message || 'Banka ödeme dosyası indirilemedi.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // Seçilenleri Onayla ve Ödemeyi Tamamla (Atomik PostgreSQL Transaction)
@@ -384,7 +406,7 @@ export const CommissionsView: React.FC<CommissionsViewProps> = ({
 
               <button
                 onClick={handleDownloadBankFile}
-                disabled={selectedIds.size === 0}
+                disabled={selectedIds.size === 0 || isLoading}
                 className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 rounded-lg shadow-2xs transition-colors disabled:opacity-50"
               >
                 <Download className="w-3.5 h-3.5" />
