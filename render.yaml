@@ -6,16 +6,41 @@ services:
     region: frankfurt
     buildCommand: npm install && npm run build
     startCommand: npm start
+    healthCheckPath: /api/health
     envVars:
       - key: NODE_ENV
         value: production
+      - key: NODE_VERSION
+        value: 22.14.0
       - key: DATABASE_URL
         sync: false
       - key: DATABASE_SSL
         value: "true"
+      - key: PGPOOL_MAX
+        value: "10"
+      - key: APP_URL
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_PUBLISHABLE_KEY
+        sync: false
+      - key: VITE_SUPABASE_URL
+        sync: false
+      - key: VITE_SUPABASE_PUBLISHABLE_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: ACCOUNTING_EMAIL
+        sync: false
+      - key: ACCOUNTING_PASSWORD
+        sync: false
+      - key: ADMIN_EMAIL
+        sync: false
       - key: ADMIN_PASSWORD
         sync: false
       - key: ADMIN_JWT_SECRET
         generateValue: true
       - key: MEMBER_JWT_SECRET
+        generateValue: true
+      - key: CRON_SECRET
         generateValue: true
