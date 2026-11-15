@@ -651,7 +651,7 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({ isOpen, onClose 
                     <span>Hesap ve Bayi Paneli (Monoline 7 Nefis MLM - USD)</span>
                   </div>
                   <p className="text-xs text-slate-300 leading-relaxed">
-                    Giriş yaptıktan sonra menüdeki <strong>Bayi Paneli</strong> alanını açın. Sistemimiz <strong>%100 ABD Doları (USD)</strong> para birimiyle çalışan <strong>Küresel Tek Hat (Monoline) 7 Derinlik</strong> kazanç mimarisine sahiptir. Buradan 15 kademeli seans kredi paketlerinizi yönetebilir, %20 Direkt Sponsor ve %25 Monoline derinlik kazançlarınızı anlık USD cüzdanınızda takip edebilir, bakiye transferlerinizi ve çekim taleplerinizi güvenle gerçekleştirebilirsiniz.
+                    Giriş yaptıktan sonra menüdeki <strong>Bayi Paneli</strong> alanını açın. Sistemimiz <strong>%100 ABD Doları (USD)</strong> para birimiyle çalışan <strong>Küresel Tek Hat (Monoline) 7 Derinlik</strong> kazanç mimarisine sahiptir. Buradan 14 kademeli seans kredi paketinizi yönetebilir; her paket alımında seçtiğiniz paketin kredisinin üzerine 32 seans kredisi paket alım bonusu otomatik eklenir. %20 Direkt Sponsor ve %25 Monoline derinlik kazançlarınızı anlık USD cüzdanınızda takip edebilir, bakiye transferlerinizi ve çekim taleplerinizi güvenle gerçekleştirebilirsiniz.
                   </p>
                 </div>
               </div>

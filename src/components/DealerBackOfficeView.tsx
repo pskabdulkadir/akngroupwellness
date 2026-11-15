@@ -2582,10 +2582,10 @@ export const DealerBackOfficeView: React.FC<DealerBackOfficeViewProps> = ({
               <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 space-y-3 text-xs text-emerald-950">
                 <div className="flex items-center justify-between gap-2">
                   <span className="font-bold">
-                    🎁 İlk Bayi Kaydı Hoşgeldin Bonusu: Yeni bayiye bir defaya mahsus 32 + 32 = 64 Seans Kredisi otomatik tanımlanır!
+                    🎁 Paket alımında, seçilen paketin kredilerine ek +32 seans kredisi bonusu tanımlanır.
                   </span>
                   <span className="px-2 py-0.5 rounded bg-emerald-600 text-white font-mono text-[10px] font-bold shrink-0">
-                    32+32 KREDİ
+                    +32 KREDİ
                   </span>
                 </div>
                 <p className="text-[11px] text-emerald-900">
@@ -3162,7 +3162,7 @@ export const DealerBackOfficeView: React.FC<DealerBackOfficeViewProps> = ({
                         {FREKANS_PACKAGES.map((pkg) => (
                           <option key={pkg.id} value={pkg.id}>
                             {pkg.name} — {pkg.defaultPrice.toLocaleString('tr-TR')} $ (Yeni Bayiye +
-                            {pkg.sessionCredits} Seans Kredisi + 32+32 Hoşgeldin Kredisi)
+                            {pkg.sessionCredits} Seans Kredisi + 32 Paket Alım Bonusu)
                           </option>
                         ))}
                       </select>

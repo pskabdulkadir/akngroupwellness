@@ -699,9 +699,9 @@ export async function mirrorMonolineStateBackToFrekans(
           unlockedDepth: m.unlocked_depth,
           isActive: m.is_active,
           activityExpiresAt: m.activity_expires_at,
-          welcomeBonusGranted: Boolean(m.welcome_bonus_granted || (r as any).welcomeBonusGranted || true),
-          welcomeBonusCredits: m.welcome_bonus_credits || (r as any).welcomeBonusCredits || 64,
-          welcomeBonusBreakdown: '32+32',
+          welcomeBonusGranted: Boolean(m.welcome_bonus_granted || (r as any).welcomeBonusGranted),
+          welcomeBonusCredits: m.welcome_bonus_credits || (r as any).welcomeBonusCredits || 0,
+          welcomeBonusBreakdown: m.welcome_bonus_granted ? '+32' : '',
         };
       }
       return r;

@@ -303,10 +303,10 @@ export const TechnicalReportModal: React.FC<TechnicalReportModalProps> = ({
               <div className="p-4 rounded-2xl bg-slate-950/60 border border-amber-500/40 space-y-1.5">
                 <div className="font-bold text-amber-300 text-xs flex items-center gap-1.5">
                   <Crown className="w-4 h-4 text-amber-400" />
-                  <span>14. 🏢 Bayi Back-Office &amp; 13 Kredi Havuzu Paketi</span>
+                  <span>14. 🏢 Bayi Back-Office &amp; 14 Kredi Havuzu Paketi</span>
                 </div>
                 <p className="text-xs text-slate-400">
-                  32 Seans Kredisinden 5.000 Enterprise Seans Kredisine kadar 13 resmi alışveriş paketi, Nefs-i Emmâre’den Nefs-i Kâmile’ye 7 kariyer mertebesi ve IBAN / TRC-20 çekim yönetimi.
+                  96 Seans Kredisinden 15.000 Enterprise Seans Kredisine kadar 14 resmi alışveriş paketi, Nefs-i Emmâre’den Nefs-i Kâmile’ye 7 kariyer mertebesi ve IBAN / TRC-20 çekim yönetimi.
                 </p>
               </div>
             </div>

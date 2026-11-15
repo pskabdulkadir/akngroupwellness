@@ -2814,11 +2814,11 @@ CREATE TABLE notification_outbox (
                     3. B2C SEANS DEĞERİ (PERAKENDE KALDIRAÇ)
                   </div>
                   <div className="text-2xl font-extrabold text-indigo-200">
-                    64 Seans × 500 $ = 32.000 $
+                    {FREKANS_PACKAGES[0].sessionCredits + 32} Seans × 500 $ = {((FREKANS_PACKAGES[0].sessionCredits + 32) * 500).toLocaleString('tr-TR')} $
                   </div>
                   <p className="font-sans text-indigo-100 text-[11px] leading-relaxed">
-                    5.000 $ başlangıç paketindeki 64 seans kredisi danışanlara uygulandığında{' '}
-                    <strong>32.000 $ Sıcak Perakende Geliri</strong> sağlar (Sıfır Mağduriyet).
+                    Mini Başlangıç paketinin {FREKANS_PACKAGES[0].sessionCredits} paket kredisi ve +32 alım bonusu danışan seanslarında kullanıldığında{' '}
+                    <strong>{((FREKANS_PACKAGES[0].sessionCredits + 32) * 500).toLocaleString('tr-TR')} $ brüt perakende geliri</strong> potansiyeli oluşturur.
                   </p>
                 </div>
               </div>

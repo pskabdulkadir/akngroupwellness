@@ -40,14 +40,14 @@ export const DEFAULT_DEALER_PACKAGES: DealerPackage[] = [
   {
     id: 'pkg-5k',
     name: 'Mini Deneme',
-    scanCredits: 32,
+    scanCredits: 96,
     price: 101,
     priceText: '$101',
     badge: 'MİNİ DENEME',
     targetAudience: 'Sistemi düşük bütçeyle denemek isteyen bireysel kullanıcı ve uygulayıcılar.',
-    unitCostText: '$3.16 / Seans Maliyeti',
+    unitCostText: '$1.05 / Seans Maliyeti',
     features: [
-      '32 Adet Tam Biyo-Rezonans & Çakra Seans Kredisi',
+      '96 Adet Tam Biyo-Rezonans & Çakra Seans Kredisi',
       'Süre Sınırı Yok (Kredileriniz Asla Yanmaz)',
       'Temel Aura ve Frekans Analiz Modülleri',
       'Web & Mobil Uyumlu Arayüz',
@@ -57,14 +57,14 @@ export const DEFAULT_DEALER_PACKAGES: DealerPackage[] = [
   {
     id: 'pkg-10k',
     name: 'Bronz Başlangıç',
-    scanCredits: 70,
+    scanCredits: 210,
     price: 201,
     priceText: '$201',
     badge: 'BAŞLANGIÇ & BİREYSEL',
     targetAudience: 'Sisteme yeni adım atan bireysel terapist ve danışmanlar.',
-    unitCostText: '$2.87 / Seans Maliyeti',
+    unitCostText: '$0.96 / Seans Maliyeti',
     features: [
-      '70 Adet Tam Biyo-Rezonans & Çakra Seans Kredisi',
+      '210 Adet Tam Biyo-Rezonans & Çakra Seans Kredisi',
       'Süre Sınırı Yok (Kredileriniz Asla Yanmaz)',
       'Tam Yetkili Bayi Paneli & Danışan Kaydı',
       'Özel Davet Linki & Referans Kodu (?ref=)',
@@ -74,14 +74,14 @@ export const DEFAULT_DEALER_PACKAGES: DealerPackage[] = [
   {
     id: 'pkg-15k',
     name: 'Gümüş Standart',
-    scanCredits: 115,
+    scanCredits: 345,
     price: 302,
     priceText: '$302',
     badge: 'STANDART TERAPİST',
     targetAudience: 'Düzenli danışan alan bireysel koçlar ve bio-enerji uygulayıcıları.',
-    unitCostText: '$2.63 / Seans Maliyeti',
+    unitCostText: '$0.88 / Seans Maliyeti',
     features: [
-      '115 Adet Tam Biyo-Rezonans & Çakra Seans Kredisi',
+      '345 Adet Tam Biyo-Rezonans & Çakra Seans Kredisi',
       'Süre Sınırı Yok (Kredileriniz Asla Yanmaz)',
       'Organ, Çakra ve Meridyen Raporlama',
       'Danışan Takip Modülü',
@@ -91,14 +91,14 @@ export const DEFAULT_DEALER_PACKAGES: DealerPackage[] = [
   {
     id: 'pkg-20k',
     name: 'Gümüş Plus',
-    scanCredits: 160,
+    scanCredits: 480,
     price: 402,
     priceText: '$402',
     badge: 'TERAPİST & PRATİSYEN',
     targetAudience: 'Düzenli seans yapan holistik sağlık koçları ve pratisyenler.',
-    unitCostText: '$2.51 / Seans Maliyeti',
+    unitCostText: '$0.84 / Seans Maliyeti',
     features: [
-      '160 Adet Tam Biyo-Rezonans & Çakra Seans Kredisi',
+      '480 Adet Tam Biyo-Rezonans & Çakra Seans Kredisi',
       'Süre Sınırı Yok (Kredileriniz Asla Yanmaz)',
       'Detaylı Organ, Çakra ve Letaif Analiz Raporları',
       'Danışan Kayıt & Takip Sistemi',
@@ -108,14 +108,14 @@ export const DEFAULT_DEALER_PACKAGES: DealerPackage[] = [
   {
     id: 'pkg-25k',
     name: 'Altın Danışman',
-    scanCredits: 215,
+    scanCredits: 645,
     price: 503,
     priceText: '$503',
     badge: 'DANIŞMAN & KOÇ',
     targetAudience: 'Genişleyen danışan tabanına sahip profesyonel terapistler.',
-    unitCostText: '$2.34 / Seans Maliyeti',
+    unitCostText: '$0.78 / Seans Maliyeti',
     features: [
-      '215 Adet Tam Biyo-Rezonans & Çakra Seans Kredisi',
+      '645 Adet Tam Biyo-Rezonans & Çakra Seans Kredisi',
       'Süre Sınırı Yok (Kredileriniz Asla Yanmaz)',
       'Gelişmiş PDF Rapor Dışa Aktarma',
       'Özel Frekans Listeleri & Protokoller',
@@ -125,15 +125,15 @@ export const DEFAULT_DEALER_PACKAGES: DealerPackage[] = [
   {
     id: 'pkg-30k',
     name: 'Altın Pro',
-    scanCredits: 270,
+    scanCredits: 810,
     price: 603,
     priceText: '$603',
     badge: 'EN POPÜLER & F/P',
     popular: true,
     targetAudience: 'Yoğun danışan kabul eden profesyonel terapistler ve merkezler.',
-    unitCostText: '$2.23 / Seans Maliyeti',
+    unitCostText: '$0.74 / Seans Maliyeti',
     features: [
-      '270 Adet Tam Biyo-Rezonans Seans Kredisi',
+      '810 Adet Tam Biyo-Rezonans Seans Kredisi',
       'Süre Sınırı Yok (Kredileriniz Asla Yanmaz)',
       'Gelişmiş PDF Rapor Dışa Aktarma & Arşivleme',
       'Özel Frekans Listeleri & Özel Protokol Tanımlama',
@@ -144,14 +144,14 @@ export const DEFAULT_DEALER_PACKAGES: DealerPackage[] = [
   {
     id: 'pkg-50k',
     name: 'Platin Klinik',
-    scanCredits: 500,
+    scanCredits: 1500,
     price: 1005,
     priceText: '$1.005',
     badge: 'UZMAN KLİNİK',
     targetAudience: 'Geniş danışan portföyüne sahip klinikler ve bio-frekans merkezleri.',
-    unitCostText: '$2.01 / Seans Maliyeti',
+    unitCostText: '$0.67 / Seans Maliyeti',
     features: [
-      '500 Adet Tam Biyo-Rezonans Seans Kredisi',
+      '1500 Adet Tam Biyo-Rezonans Seans Kredisi',
       'Süre Sınırı Yok (Kredileriniz Asla Yanmaz)',
       'Çoklu Terapist ve Danışan Yönetim Desteği',
       'Özel Alt Bayilik (Sub-dealer) Oluşturma Yetkisi',
@@ -161,14 +161,14 @@ export const DEFAULT_DEALER_PACKAGES: DealerPackage[] = [
   {
     id: 'pkg-60k',
     name: 'Safir Kurumsal',
-    scanCredits: 650,
+    scanCredits: 1950,
     price: 1206,
     priceText: '$1.206',
     badge: 'SAFİR KURUMSAL',
     targetAudience: 'Çoklu seans odası bulunan sağlıklı yaşam ve holistik merkezler.',
-    unitCostText: '$1.86 / Seans Maliyeti',
+    unitCostText: '$0.62 / Seans Maliyeti',
     features: [
-      '650 Adet Tam Biyo-Rezonans Seans Kredisi',
+      '1950 Adet Tam Biyo-Rezonans Seans Kredisi',
       'Süre Sınırı Yok (Kredileriniz Asla Yanmaz)',
       'Grup Aura Senkronizasyonu & Çoklu Tarama',
       'Özel Kurumsal Logo ve Rapor Başlığı Entegrasyonu',
@@ -178,14 +178,14 @@ export const DEFAULT_DEALER_PACKAGES: DealerPackage[] = [
   {
     id: 'pkg-70k',
     name: 'Zümrüt Master',
-    scanCredits: 800,
+    scanCredits: 2400,
     price: 1407,
     priceText: '$1.407',
     badge: 'ZÜMRÜT MASTER',
     targetAudience: 'Bölgesel sağlık merkezleri ve uzman klinik ağları.',
-    unitCostText: '$1.76 / Seans Maliyeti',
+    unitCostText: '$0.59 / Seans Maliyeti',
     features: [
-      '800 Adet Tam Biyo-Rezonans Seans Kredisi',
+      '2400 Adet Tam Biyo-Rezonans Seans Kredisi',
       'Süre Sınırı Yok (Kredileriniz Asla Yanmaz)',
       'Gelişmiş AI Biyo-Rezonans ve Frekans Öneri Modülü',
       'Limitsiz Danışan Geçmişi ve Otomatik Seans Takibi',
@@ -195,14 +195,14 @@ export const DEFAULT_DEALER_PACKAGES: DealerPackage[] = [
   {
     id: 'pkg-80k',
     name: 'Yakut Elit',
-    scanCredits: 950,
+    scanCredits: 2850,
     price: 1608,
     priceText: '$1.608',
     badge: 'YAKUT ELİT',
     targetAudience: 'Yüksek hacimli estetik, wellness ve bioenerji merkezleri.',
-    unitCostText: '$1.69 / Seans Maliyeti',
+    unitCostText: '$0.56 / Seans Maliyeti',
     features: [
-      '950 Adet Tam Biyo-Rezonans Seans Kredisi',
+      '2850 Adet Tam Biyo-Rezonans Seans Kredisi',
       'Süre Sınırı Yok (Kredileriniz Asla Yanmaz)',
       'Gelişmiş Organ Grafikleri & 3D Biyo-Aura Simülatörü',
       'Alt Terapist Kullanıcı Yetkilendirme Sistemi',
@@ -212,14 +212,14 @@ export const DEFAULT_DEALER_PACKAGES: DealerPackage[] = [
   {
     id: 'pkg-90k',
     name: 'Titanyum Entegre',
-    scanCredits: 1100,
+    scanCredits: 3300,
     price: 1809,
     priceText: '$1.809',
     badge: 'TİTANYUM ENTEGRE',
     targetAudience: 'Entegre ve fonksiyonel tıp hekimleri ile hastane departmanları.',
-    unitCostText: '$1.64 / Seans Maliyeti',
+    unitCostText: '$0.55 / Seans Maliyeti',
     features: [
-      '1.100 Adet Tam Biyo-Rezonans Seans Kredisi',
+      '3.300 Adet Tam Biyo-Rezonans Seans Kredisi',
       'Süre Sınırı Yok (Kredileriniz Asla Yanmaz)',
       'Tüm Kuantum Frekans Veritabanı ve Letaif Haritaları',
       'Özel Veri Entegrasyon Protokolleri',
@@ -229,14 +229,14 @@ export const DEFAULT_DEALER_PACKAGES: DealerPackage[] = [
   {
     id: 'pkg-100k',
     name: 'Elmas Bölge',
-    scanCredits: 1300,
+    scanCredits: 3900,
     price: 2010,
     priceText: '$2.010',
     badge: 'BÖLGE DİSTRİBÜTÖRÜ',
     targetAudience: 'İl ve bölge distribütörleri, franchise temsilcileri.',
-    unitCostText: '$1.55 / Seans Maliyeti',
+    unitCostText: '$0.52 / Seans Maliyeti',
     features: [
-      '1.300 Adet Tam Biyo-Rezonans Seans Kredisi',
+      '3.900 Adet Tam Biyo-Rezonans Seans Kredisi',
       'Süre Sınırı Yok (Kredileriniz Asla Yanmaz)',
       'Alt Bayi Açma & Alt Bayilere Kredi Dağıtım Havuzu',
       'Bölge Temsilciliği ve Öncelikli Danışan Yönlendirme Hakkı',
@@ -246,14 +246,14 @@ export const DEFAULT_DEALER_PACKAGES: DealerPackage[] = [
   {
     id: 'pkg-200k',
     name: 'Master Franchise',
-    scanCredits: 3000,
+    scanCredits: 9000,
     price: 4021,
     priceText: '$4.021',
     badge: 'MASTER FRANCHISE',
     targetAudience: 'Çok şubeli sağlık grupları, franchise ağları ve master organizasyonlar.',
-    unitCostText: '$1.34 / Seans Maliyeti',
+    unitCostText: '$0.45 / Seans Maliyeti',
     features: [
-      '3.000 Adet Tam Biyo-Rezonans Seans Kredisi',
+      '9.000 Adet Tam Biyo-Rezonans Seans Kredisi',
       'Süre Sınırı Yok (Kredileriniz Asla Yanmaz)',
       'Sınırsız Şube ve Alt Bayi Ağı Kurma İmkanı',
       'Özel Marka (Whitelabel Görünüm) & Rapor Özelleştirmesi',
@@ -263,14 +263,14 @@ export const DEFAULT_DEALER_PACKAGES: DealerPackage[] = [
   {
     id: 'pkg-300k',
     name: 'Enterprise Mega',
-    scanCredits: 5000,
+    scanCredits: 15000,
     price: 6031,
     priceText: '$6.031',
     badge: 'ENTERPRISE MEGA AĞ',
     targetAudience: 'Ulusal ve uluslararası sağlık ağları, yatırımcılar ve holdingler.',
-    unitCostText: '$1.21 / Seans Maliyeti',
+    unitCostText: '$0.40 / Seans Maliyeti',
     features: [
-      '5.000 Adet Tam Biyo-Rezonans Seans Kredisi',
+      '15.000 Adet Tam Biyo-Rezonans Seans Kredisi',
       'Süre Sınırı Yok (Kredileriniz Asla Yanmaz)',
       'Merkezi Kredi ve Bayi Yönetim Platformu',
       'Tüm Gelecek Modül ve Veri Güncellemelerine Ömür Boyu Erişim',
@@ -362,80 +362,10 @@ const STORAGE_COMMISSIONS_KEY = 'aurabio_commissions_directory_v1';
 const STORAGE_CREDIT_LOGS_KEY = 'aurabio_credit_logs_directory_v1';
 const STORAGE_ACTIVE_RESELLER_SESSION_KEY = 'aurabio_active_reseller_session_v1';
 const STORAGE_CACHED_REFERRAL_CODE_KEY = 'aurabio_stored_referral_code_v1';
-const STORAGE_DEALER_PACKAGES_KEY = 'aurabio_dealer_packages_v3';
-const STORAGE_WELCOME_BONUS_REGISTRY_KEY = 'aurabio_welcome_bonus_claimed_v1';
+const STORAGE_DEALER_PACKAGES_KEY = 'aurabio_dealer_packages_v4';
 
-// İLK BAYİ KAYDI SİSTEME HOŞGELDİN BONUSU (BİR DEFAYA MAHSUS OTOMATİK 32 + 32 = 64 KREDİ)
-export const WELCOME_BONUS_BASE_CREDITS = 32;
-export const WELCOME_BONUS_EXTRA_CREDITS = 32;
-export const WELCOME_BONUS_TOTAL_CREDITS = WELCOME_BONUS_BASE_CREDITS + WELCOME_BONUS_EXTRA_CREDITS; // 64 Seans Kredisi
-export const WELCOME_BONUS_LABEL = '32+32 (64 Seans Kredisi)';
-
-function getClaimedWelcomeBonusSet(): Set<string> {
-  if (typeof window === 'undefined') return new Set();
-  try {
-    const raw = localStorage.getItem(STORAGE_WELCOME_BONUS_REGISTRY_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) {
-        return new Set(parsed.map((v: any) => String(v || '').trim().toLowerCase()).filter(Boolean));
-      }
-    }
-  } catch {
-    // ignore
-  }
-  return new Set();
-}
-
-export function hasClaimedWelcomeBonus(email?: string, phone?: string, uid?: string): boolean {
-  const claimed = getClaimedWelcomeBonusSet();
-  const cleanEmail = (email || '').trim().toLowerCase();
-  const cleanPhone = (phone || '').replace(/[^0-9]/g, '');
-  const cleanUid = (uid || '').trim().toLowerCase();
-
-  if (cleanUid && claimed.has(`uid:${cleanUid}`)) return true;
-  if (cleanEmail && claimed.has(`email:${cleanEmail}`)) return true;
-  if (cleanPhone && cleanPhone.length >= 10 && claimed.has(`phone:${cleanPhone}`)) return true;
-
-  // Also check existing local resellers to see if any record with this email/phone already received welcome bonus
-  try {
-    const existing = getLocalResellers();
-    const match = existing.find(r => {
-      const rEmail = (r.email || '').trim().toLowerCase();
-      const rPhone = (r.phone || '').replace(/[^0-9]/g, '');
-      return (
-        (cleanUid && r.uid && r.uid.toLowerCase() === cleanUid) ||
-        (cleanEmail && rEmail === cleanEmail) ||
-        (cleanPhone && cleanPhone.length >= 10 && rPhone === cleanPhone)
-      );
-    });
-    if (match && match.welcomeBonusGranted) {
-      return true;
-    }
-  } catch {
-    // ignore
-  }
-
-  return false;
-}
-
-export function markWelcomeBonusClaimed(email?: string, phone?: string, uid?: string): void {
-  if (typeof window === 'undefined') return;
-  try {
-    const claimed = getClaimedWelcomeBonusSet();
-    const cleanEmail = (email || '').trim().toLowerCase();
-    const cleanPhone = (phone || '').replace(/[^0-9]/g, '');
-    const cleanUid = (uid || '').trim().toLowerCase();
-
-    if (cleanUid) claimed.add(`uid:${cleanUid}`);
-    if (cleanEmail) claimed.add(`email:${cleanEmail}`);
-    if (cleanPhone && cleanPhone.length >= 10) claimed.add(`phone:${cleanPhone}`);
-
-    localStorage.setItem(STORAGE_WELCOME_BONUS_REGISTRY_KEY, JSON.stringify(Array.from(claimed)));
-  } catch {
-    // ignore
-  }
-}
+// Her paket alımına eklenen sabit bonus (sunucudaki WELCOME_BONUS_CREDITS ile aynı kural)
+export const PACKAGE_PURCHASE_BONUS_CREDITS = 32;
 
 /**
  * Get all stored local credit transaction logs
@@ -912,6 +842,16 @@ export function subscribeToDealerPackages(onUpdate: (pkgs: DealerPackage[]) => v
 }
 
 /**
+ * Paket kredisi + her alımda sabit paket alım bonusu
+ */
+export function getPackagePurchaseCredits(packageId: string): number {
+  const pkg =
+    getDealerPackages().find(p => p.id === packageId) ||
+    DEFAULT_DEALER_PACKAGES.find(p => p.id === packageId);
+  return (pkg?.scanCredits ?? 0) + PACKAGE_PURCHASE_BONUS_CREDITS;
+}
+
+/**
  * Purchase / Apply Dealer Package and top-up credits to Reseller / Dealer account
  */
 export async function purchaseDealerPackage(
@@ -924,6 +864,7 @@ export async function purchaseDealerPackage(
     if (!pkg) {
       return { success: false, message: 'Bayilik paketi bulunamadı.', creditsAdded: 0, newTotalCredits: 0 };
     }
+    const creditsToAdd = pkg.scanCredits + PACKAGE_PURCHASE_BONUS_CREDITS;
 
     // 1. Update Reseller if exists (APTOMIC: balance + purchase audit log in one transaction,
     //    so a concurrent scan deduction can never be overwritten/lost)
@@ -944,7 +885,7 @@ export async function purchaseDealerPackage(
           const snap = await transaction.get(resellerDocRef);
           const existing = snap.exists() ? (snap.data() as Reseller) : reseller;
           const cur = existing && Number.isFinite(existing.creditsBalance) ? existing.creditsBalance! : 0;
-          const newVal = cur + pkg.scanCredits;
+          const newVal = cur + creditsToAdd;
           const nowIso = new Date().toISOString();
 
           if (snap.exists()) {
@@ -963,10 +904,10 @@ export async function purchaseDealerPackage(
             resellerId: reseller.uid,
             resellerName: targetName,
             type: 'purchase',
-            amount: pkg.scanCredits,
+            amount: creditsToAdd,
             previousBalance: cur,
             newBalance: newVal,
-            description: `${pkg.name} Satın Alımı (+${pkg.scanCredits} Seans Kredisi)`,
+            description: `${pkg.name} Satın Alımı (+${creditsToAdd} Seans Kredisi)`,
             performedBy: 'Bayi Paket Satın Alımı',
             createdAt: nowIso
           });
@@ -977,7 +918,7 @@ export async function purchaseDealerPackage(
         resellerPrevCredits = outcome.prev;
       } catch (txErr) {
         console.warn('Firestore purchase transaction unavailable, using local fallback:', txErr);
-        const fallbackReseller = { ...reseller, creditsBalance: (reseller.creditsBalance || 0) + pkg.scanCredits, dealerPackageId: pkg.id, updatedAt: new Date().toISOString() };
+        const fallbackReseller = { ...reseller, creditsBalance: (reseller.creditsBalance || 0) + creditsToAdd, dealerPackageId: pkg.id, updatedAt: new Date().toISOString() };
         newResellerCredits = fallbackReseller.creditsBalance;
         resellerPrevCredits = reseller.creditsBalance || 0;
         allResellers[rIdx] = fallbackReseller;
@@ -1010,11 +951,11 @@ export async function purchaseDealerPackage(
       user = await fetchMemberProfile(resellerOrUserId);
     }
 
-    let finalUserCredits = newResellerCredits || pkg.scanCredits;
+    let finalUserCredits = newResellerCredits || creditsToAdd;
 
     if (user) {
       const curCredits = user.creditsBalance || 0;
-      finalUserCredits = curCredits + pkg.scanCredits;
+      finalUserCredits = curCredits + creditsToAdd;
 
       const updatedUser: UserMember = {
         ...user,
@@ -1057,10 +998,10 @@ export async function purchaseDealerPackage(
           resellerId: finalUid,
           resellerName: finalName,
           type: 'purchase',
-          amount: pkg.scanCredits,
+          amount: creditsToAdd,
           previousBalance: resellerPrevCredits,
           newBalance: newResellerCredits,
-          description: `${pkg.name} Satın Alımı (+${pkg.scanCredits} Seans Kredisi)`,
+          description: `${pkg.name} Satın Alımı (+${creditsToAdd} Seans Kredisi)`,
           performedBy: 'Bayi Paket Satın Alımı',
           createdAt: new Date().toISOString()
         });
@@ -1072,10 +1013,10 @@ export async function purchaseDealerPackage(
         resellerId: targetUid || user?.uid || resellerOrUserId,
         resellerName: targetName || user?.fullName || 'Yetkili Bayi',
         type: 'purchase',
-        amount: pkg.scanCredits,
-        previousBalance: Math.max(0, newResellerCredits - pkg.scanCredits),
+        amount: creditsToAdd,
+        previousBalance: Math.max(0, newResellerCredits - creditsToAdd),
         newBalance: finalUserCredits,
-        description: `${pkg.name} Satın Alımı (+${pkg.scanCredits} Seans Kredisi)`,
+        description: `${pkg.name} Satın Alımı (+${creditsToAdd} Seans Kredisi)`,
         performedBy: 'Bayi Paket Satın Alımı'
       });
     }
@@ -1107,8 +1048,8 @@ export async function purchaseDealerPackage(
 
     return {
       success: true,
-      message: `${pkg.name} başarıyla aktive edildi! Hesabınıza ${pkg.scanCredits} Adet Tarama & Seans kredisi tanımlandı.`,
-      creditsAdded: pkg.scanCredits,
+      message: `${pkg.name} başarıyla aktive edildi! Hesabınıza ${creditsToAdd} Adet Tarama & Seans kredisi tanımlandı.`,
+      creditsAdded: creditsToAdd,
       newTotalCredits: finalUserCredits
     };
   } catch (err: any) {
@@ -1945,7 +1886,7 @@ export async function getAllResellers(): Promise<Reseller[]> {
                 ? u.creditsBalance
                 : typeof u.session_credits === 'number'
                 ? u.session_credits
-                : WELCOME_BONUS_TOTAL_CREDITS,
+                : 0,
             dealerPackageId: u.dealerPackageId || 'pkg-5k',
             bankInfo: {
               bankName: u.dealerDetails?.bankInfo?.bankName || '',
@@ -1983,7 +1924,7 @@ export async function getAllResellers(): Promise<Reseller[]> {
             phone: m.dealerDetails?.whatsapp || m.phone,
             referralCode: code,
             commissionRate: m.dealerDetails?.commissionRate || (m.role === 'admin' ? 30 : 20),
-            creditsBalance: m.creditsBalance !== undefined ? m.creditsBalance : WELCOME_BONUS_TOTAL_CREDITS,
+            creditsBalance: m.creditsBalance !== undefined ? m.creditsBalance : 0,
             dealerPackageId: m.dealerPackageId || 'pkg-5k',
             bankInfo: {
               bankName: m.dealerDetails?.bankInfo?.bankName || '',
@@ -2398,7 +2339,7 @@ export async function ensureUniqueReferralCodesForAll(): Promise<{ fixedDealersC
             phone: m.dealerDetails?.whatsapp || m.phone,
             referralCode: dealerCode,
             commissionRate: m.dealerDetails?.commissionRate || 20,
-            creditsBalance: m.creditsBalance !== undefined ? m.creditsBalance : WELCOME_BONUS_TOTAL_CREDITS,
+            creditsBalance: m.creditsBalance !== undefined ? m.creditsBalance : 0,
             dealerPackageId: m.dealerPackageId || 'pkg-5k',
             bankInfo: {
               bankName: m.dealerDetails?.bankInfo?.bankName || '',
@@ -2548,12 +2489,6 @@ export async function getOrCreateResellerForUser(user: UserMember): Promise<Rese
   const finalCode = user.dealerDetails?.referralCode?.trim().toUpperCase() 
     || generateUniqueReferralCode('AURA-BAYI', existingCodes);
 
-  const alreadyClaimedBonus = hasClaimedWelcomeBonus(userEmail, user.phone, fallbackUid);
-  const initialWelcomeCredits =
-    user.creditsBalance !== undefined
-      ? user.creditsBalance
-      : WELCOME_BONUS_TOTAL_CREDITS; // 32 + 32 = 64 Seans Kredisi (Bir Defaya Mahsus Hoşgeldin Bonusu)
-
   const nowIso = new Date().toISOString();
 
   const newReseller: Reseller = {
@@ -2564,12 +2499,8 @@ export async function getOrCreateResellerForUser(user: UserMember): Promise<Rese
     referralCode: finalCode,
     referredByCode: (user.referredByCode || '').trim().toUpperCase(),
     commissionRate: user.dealerDetails?.commissionRate || 20,
-    creditsBalance: initialWelcomeCredits,
+    creditsBalance: user.creditsBalance ?? 0,
     dealerPackageId: user.dealerPackageId || 'pkg-5k',
-    welcomeBonusGranted: true,
-    welcomeBonusCredits: WELCOME_BONUS_TOTAL_CREDITS,
-    welcomeBonusBreakdown: '32+32',
-    welcomeBonusGrantedAt: nowIso,
     bankInfo: {
       bankName: user.dealerDetails?.bankInfo?.bankName || '',
       accountHolder: user.dealerDetails?.bankInfo?.accountHolder || user.fullName,
@@ -2583,22 +2514,7 @@ export async function getOrCreateResellerForUser(user: UserMember): Promise<Rese
     totalReferredUsers: 0,
     createdAt: user.createdAt || nowIso,
     updatedAt: nowIso,
-    notes: 'İlk bayi kaydı — Bir defaya mahsus 32+32 (64) Hoşgeldin Bonusu Kredisi otomatik tanımlandı.',
   };
-
-  if (!alreadyClaimedBonus) {
-    markWelcomeBonusClaimed(userEmail, user.phone, fallbackUid);
-    recordCreditTransaction({
-      resellerId: fallbackUid,
-      resellerName: newReseller.resellerName,
-      type: 'bonus',
-      amount: WELCOME_BONUS_TOTAL_CREDITS,
-      previousBalance: 0,
-      newBalance: initialWelcomeCredits,
-      description: `🎁 İlk Bayi Kaydı Sisteme Hoşgeldin Bonusu (Bir Defaya Mahsus 32+32 = ${WELCOME_BONUS_TOTAL_CREDITS} Seans Kredisi Otomatik Tanımlandı)`,
-      performedBy: 'Sistem Otomatik Hoşgeldin Bonusu',
-    }).catch(() => {});
-  }
 
   // Save to local and Firestore
   const updatedList = [newReseller, ...all.filter(r => r.uid !== user.uid)];
@@ -2886,13 +2802,10 @@ export async function registerNewReseller(data: {
     const uid = (data.customUid || '').trim() || ('RESELLER-' + Math.random().toString(36).substring(2, 8).toUpperCase());
     const nowIso = new Date().toISOString();
 
-    // İLK BAYİ KAYDI HOŞGELDİN BONUSU (BİR DEFAYA MAHSUS 32 + 32 = 64 SEANS KREDİSİ)
-    const alreadyClaimedBonus = hasClaimedWelcomeBonus(cleanEmail, cleanPhone, uid);
-    const welcomeBonusToGrant = !alreadyClaimedBonus ? WELCOME_BONUS_TOTAL_CREDITS : 0;
     const finalInitialCredits =
       typeof data.initialCredits === 'number' && data.initialCredits > 0
         ? data.initialCredits
-        : welcomeBonusToGrant;
+        : getPackagePurchaseCredits('pkg-5k');
 
     const newReseller: Reseller = {
       uid,
@@ -2904,10 +2817,6 @@ export async function registerNewReseller(data: {
       commissionRate: data.commissionRate !== undefined ? data.commissionRate : 20, // default 20%
       creditsBalance: finalInitialCredits,
       dealerPackageId: 'pkg-5k',
-      welcomeBonusGranted: !alreadyClaimedBonus || finalInitialCredits >= WELCOME_BONUS_TOTAL_CREDITS,
-      welcomeBonusCredits: WELCOME_BONUS_TOTAL_CREDITS,
-      welcomeBonusBreakdown: '32+32',
-      welcomeBonusGrantedAt: nowIso,
       bankInfo: {
         bankName: data.bankInfo?.bankName || '',
         accountHolder: data.bankInfo?.accountHolder || cleanName,
@@ -2921,14 +2830,8 @@ export async function registerNewReseller(data: {
       totalReferredUsers: 0,
       createdAt: nowIso,
       updatedAt: nowIso,
-      notes:
-        data.notes ||
-        `İlk bayi kaydı — Bir defaya mahsus 32+32 (${WELCOME_BONUS_TOTAL_CREDITS} Kredi) Hoşgeldin Bonusu otomatik tanımlandı.`,
+      notes: data.notes || '',
     };
-
-    if (!alreadyClaimedBonus) {
-      markWelcomeBonusClaimed(cleanEmail, cleanPhone, uid);
-    }
 
     // Save locally
     const updatedList = [newReseller, ...all];
@@ -2972,17 +2875,16 @@ export async function registerNewReseller(data: {
       saveToLocalMembersDirectory(newMemberDoc);
     } catch {}
 
-    // Record welcome bonus credit transaction log
     if (finalInitialCredits > 0) {
       await recordCreditTransaction({
         resellerId: uid,
         resellerName: cleanName,
-        type: 'bonus',
+        type: 'purchase',
         amount: finalInitialCredits,
         previousBalance: 0,
         newBalance: finalInitialCredits,
-        description: `🎁 İlk Bayi Kaydı Sisteme Hoşgeldin Bonusu (Bir Defaya Mahsus 32+32 = ${finalInitialCredits} Seans Kredisi Otomatik Tanımlandı)`,
-        performedBy: 'Sistem Otomatik Hoşgeldin Bonusu',
+        description: `Bayi Kaydı Paket Satın Alımı (+${finalInitialCredits} Seans Kredisi, paket alım bonusu dahil)`,
+        performedBy: 'Bayi Kaydı',
       });
     }
 
@@ -3008,9 +2910,7 @@ export async function registerNewReseller(data: {
 
     return {
       success: true,
-      message: !alreadyClaimedBonus
-        ? `Bayilik kaydınız başarıyla oluşturuldu! 🎁 Sisteme Hoşgeldin Bonusu olarak bir defaya mahsus 32+32 (Toplam ${WELCOME_BONUS_TOTAL_CREDITS}) Seans Kredisi hesabınıza otomatik tanımlandı. Özel Davet Kodunuz: ${finalCode}`
-        : `Bayilik kaydınız başarıyla oluşturuldu! Özel Davet Kodunuz: ${finalCode}`,
+      message: `Bayilik kaydınız başarıyla oluşturuldu! Özel Davet Kodunuz: ${finalCode}`,
       reseller: newReseller
     };
   } catch (err: any) {

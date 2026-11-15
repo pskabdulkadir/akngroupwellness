@@ -909,9 +909,7 @@ function awardFastStartBonusIfQualified(sponsor: MonolineMember) {
 }
 
 let activityLogs: ActivityLogRecord[] = [];
-const WELCOME_BONUS_BASE_CREDITS = 32;
-const WELCOME_BONUS_EXTRA_CREDITS = 32;
-const WELCOME_BONUS_TOTAL_CREDITS = WELCOME_BONUS_BASE_CREDITS + WELCOME_BONUS_EXTRA_CREDITS; // 32 + 32 = 64 Seans Kredisi
+const WELCOME_BONUS_CREDITS = 32;
 
 function createFutureExpiryIso(): string {
   return new Date(Date.now() + ACTIVITY_PERIOD_DAYS * 86400000).toISOString();
@@ -940,6 +938,18 @@ function logActivityEvent(params: {
     is_active_after: params.member.is_active,
     description: params.description,
     created_at: new Date().toISOString(),
+  });
+}
+
+function grantPackagePurchaseBonus(member: MonolineMember) {
+  member.welcome_bonus_granted = true;
+  member.welcome_bonus_credits = WELCOME_BONUS_CREDITS;
+  logActivityEvent({
+    member,
+    action_type: 'WELCOME_BONUS_GRANTED',
+    previous_expires_at: member.activity_expires_at || null,
+    new_expires_at: member.activity_expires_at || null,
+    description: `🎁 Paket Alım Bonusu: ${member.full_name} hesabına paket alımı için ${WELCOME_BONUS_CREDITS} Seans Kredisi otomatik tanımlandı.`,
   });
 }
 
@@ -1837,22 +1847,10 @@ function processOrderCommission(payload: OrderCommissionPayload): CommissionTran
     creditsAdded = 0;
   } else if (normalizedPkg) {
     const pkgDef = PACKAGES[normalizedPkg];
-    creditsAdded = pkgDef.sessionCredits;
-    // İlk bayi kaydı oluşturan bayilere bir defaya mahsus sisteme hoşgeldin bonusu olarak 32+32 = 64 kredi tanımlanır
-    if (isInitialRegistrationSync && !buyer.welcome_bonus_granted) {
-      creditsAdded = Math.max(creditsAdded, WELCOME_BONUS_TOTAL_CREDITS);
-      buyer.welcome_bonus_granted = true;
-      buyer.welcome_bonus_credits = WELCOME_BONUS_TOTAL_CREDITS;
-      logActivityEvent({
-        member: buyer,
-        action_type: 'WELCOME_BONUS_GRANTED',
-        previous_expires_at: buyer.activity_expires_at || null,
-        new_expires_at: buyer.activity_expires_at || null,
-        description: `🎁 İlk Bayi Kaydı Hoşgeldin Bonusu: ${buyer.full_name} hesabına bir defaya mahsus 32+32 (Toplam ${WELCOME_BONUS_TOTAL_CREDITS}) Seans Kredisi otomatik tanımlandı.`,
-      });
-    }
+    creditsAdded = pkgDef.sessionCredits + WELCOME_BONUS_CREDITS;
     if (!skipCreditAddition) {
       buyer.session_credits += creditsAdded;
+      grantPackagePurchaseBonus(buyer);
     }
 
     const currentPrice = buyer.highest_package_id
@@ -1863,11 +1861,6 @@ function processOrderCommission(payload: OrderCommissionPayload): CommissionTran
     }
   } else {
     creditsAdded = Math.max(1, Math.round(amount / 125));
-    if (isInitialRegistrationSync && !buyer.welcome_bonus_granted) {
-      creditsAdded = Math.max(creditsAdded, WELCOME_BONUS_TOTAL_CREDITS);
-      buyer.welcome_bonus_granted = true;
-      buyer.welcome_bonus_credits = WELCOME_BONUS_TOTAL_CREDITS;
-    }
     if (!skipCreditAddition) {
       buyer.session_credits += creditsAdded;
     }
@@ -4890,8 +4883,8 @@ async function hydrateStateFromPostgres(): Promise<void> {
             is_active: row.is_active !== false,
             is_locked: Boolean(row.is_locked),
             activity_expires_at: row.activity_expires_at ? new Date(row.activity_expires_at).toISOString() : createFutureExpiryIso(),
-            welcome_bonus_granted: true,
-            welcome_bonus_credits: 64,
+            welcome_bonus_granted: false,
+            welcome_bonus_credits: 0,
             tc_identity_no: row.tc_identity_no || '',
             has_tax_company: Boolean(row.has_tax_company),
             last_login_ip: `176.240.10.${lineId}`,
@@ -5205,8 +5198,8 @@ async function startServer(options: { listen?: boolean } = {}) {
             is_active: data.is_active !== false,
             is_locked: Boolean(data.is_locked),
             activity_expires_at: createFutureExpiryIso(),
-            welcome_bonus_granted: true,
-            welcome_bonus_credits: 64,
+            welcome_bonus_granted: false,
+            welcome_bonus_credits: 0,
             tc_identity_no: data.tc_identity_no || '',
             has_tax_company: Boolean(data.has_tax_company),
             last_login_ip: `176.240.10.${lineId}`,
@@ -7299,7 +7292,7 @@ async function startServer(options: { listen?: boolean } = {}) {
             const initialCreditsVal =
               typeof fm.creditsBalance === 'number' && fm.creditsBalance > 0
                 ? fm.creditsBalance
-                : WELCOME_BONUS_TOTAL_CREDITS;
+                : 0;
             existing = {
               id: nextLineId,
               user_id: uid,
@@ -7348,17 +7341,10 @@ async function startServer(options: { listen?: boolean } = {}) {
               is_active: fm.isAllowed !== false,
               is_locked: false,
               activity_expires_at: createFutureExpiryIso(),
-              welcome_bonus_granted: true,
-              welcome_bonus_credits: WELCOME_BONUS_TOTAL_CREDITS,
+              welcome_bonus_granted: false,
+              welcome_bonus_credits: 0,
             };
             members.push(existing);
-            logActivityEvent({
-              member: existing,
-              action_type: 'WELCOME_BONUS_GRANTED',
-              previous_expires_at: existing.activity_expires_at,
-              new_expires_at: existing.activity_expires_at,
-              description: `🎁 İlk Bayi Kaydı Hoşgeldin Bonusu: ${existing.full_name} hesabına bir defaya mahsus 32+32 (Toplam ${WELCOME_BONUS_TOTAL_CREDITS}) Seans Kredisi otomatik tanımlandı.`,
-            });
           } else {
             if (fm.fullName) existing.full_name = String(fm.fullName).trim();
             if (email) existing.email = email;
@@ -7630,11 +7616,9 @@ async function startServer(options: { listen?: boolean } = {}) {
       const effectiveCredits =
         isCallingAdmin && typeof session_credits === 'number' && session_credits >= 0
           ? Math.round(session_credits)
-          : isPendingPayment
-            ? 0
-            : skip_initial_order
-              ? WELCOME_BONUS_TOTAL_CREDITS
-              : (PACKAGES[pkgKey]?.sessionCredits ?? 32);
+          : skip_initial_order && !isPendingPayment
+            ? (PACKAGES[pkgKey]?.sessionCredits ?? 0) + WELCOME_BONUS_CREDITS
+            : 0;
 
       let finalLeg: 'LEFT' | 'RIGHT' = 'LEFT';
       if (assigned_leg === 'LEFT' || assigned_leg === 'RIGHT') {
@@ -7711,7 +7695,7 @@ async function startServer(options: { listen?: boolean } = {}) {
         is_locked: isPendingPayment,
         activity_expires_at: createFutureExpiryIso(),
         welcome_bonus_granted: !isPendingPayment && Boolean(skip_initial_order),
-        welcome_bonus_credits: !isPendingPayment && skip_initial_order ? WELCOME_BONUS_TOTAL_CREDITS : 0,
+        welcome_bonus_credits: !isPendingPayment && skip_initial_order ? WELCOME_BONUS_CREDITS : 0,
         tc_identity_no:
           tc_identity_no ||
           req.body?.tc_identity_no ||
@@ -7760,13 +7744,7 @@ async function startServer(options: { listen?: boolean } = {}) {
         commissionTx = null;
       } else if (skip_initial_order) {
         creditsOwnedByServer.add(newMember.user_id);
-        logActivityEvent({
-          member: newMember,
-          action_type: 'WELCOME_BONUS_GRANTED',
-          previous_expires_at: newMember.activity_expires_at,
-          new_expires_at: newMember.activity_expires_at,
-          description: `🎁 İlk Bayi Kaydı Hoşgeldin Bonusu: ${newMember.full_name} hesabına bir defaya mahsus 32+32 (Toplam ${WELCOME_BONUS_TOTAL_CREDITS}) Seans Kredisi otomatik tanımlandı.`,
-        });
+        grantPackagePurchaseBonus(newMember);
         recalculateAllCareers('MANUAL_ADMIN');
       } else {
         commissionTx = processOrderCommission({

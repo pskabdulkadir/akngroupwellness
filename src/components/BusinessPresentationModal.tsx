@@ -184,8 +184,12 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
   // Telegram Share Link
   const tgShareLink = `https://t.me/share/url?url=${encodeURIComponent(fullShareUrl)}&text=${encodeURIComponent('AuraBio Frekans & Monoline 7 Nefis MLM Dijital İş Sunumu ve Tanıtım Kataloğu (v6.0 Enterprise)')}`;
 
+  const selectedCalculatorPackage =
+    FREKANS_PACKAGES.find((pkg) => pkg.defaultPrice === calcAvgPackagePrice) || FREKANS_PACKAGES[0];
+  const unitSessionCost =
+    selectedCalculatorPackage.defaultPrice / selectedCalculatorPackage.sessionCredits;
+
   // Multi-Way Earnings Calculations (v6.0 Enterprise)
-  const unitSessionCost = 100; // Ortalama birim seans maliyeti (~Altın Pro Paket seviyesi)
   const monthlySessionRevenue = calcClientsPerMonth * calcPricePerSession;
   const monthlySessionCost = calcClientsPerMonth * unitSessionCost;
   const monthlySessionProfit = monthlySessionRevenue - monthlySessionCost;
@@ -261,7 +265,7 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
                   Resmi İş Sunum Raporu &amp; Dijital Tanıtım Kataloğu
                 </span>
                 <span className="px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 font-bold text-[10px] border border-amber-500/40">
-                  15 Kredi Paketi · Monoline 7 Nefis MLM
+                  14 Kredi Paketi · Monoline 7 Nefis MLM
                 </span>
                 {activeReferralCode && (
                   <span className="px-2 py-0.5 rounded-md bg-emerald-950 text-emerald-300 font-mono text-[10px] font-bold border border-emerald-500/40 flex items-center gap-1">
@@ -271,7 +275,7 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
                 )}
               </div>
               <h2 className="text-base sm:text-lg font-black text-slate-100 mt-1">
-                Kuantum Biyo-Rezonans, 16 Bütüncül Teknoloji, 15 Bayi Paketi &amp; Monoline 7 Nefis MLM Kataloğu
+                Kuantum Biyo-Rezonans, 16 Bütüncül Teknoloji, 14 Bayi Paketi &amp; Monoline 7 Nefis MLM Kataloğu
               </h2>
             </div>
           </div>
@@ -773,7 +777,7 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
                     onClick={() => setActiveSection('packages')}
                     className="px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold cursor-pointer border border-slate-700"
                   >
-                    15 Bayi Paketini İncele
+                    14 Bayi Paketini İncele
                   </button>
                 </div>
               </div>
@@ -919,7 +923,7 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
                   </div>
                   <h4 className="text-sm font-black text-slate-100">1. Danışan Seans Başı %1000'e Varan Perakende Kâr</h4>
                   <p className="text-xs text-slate-400 leading-relaxed">
-                    15 kademeli seans kredi paketlerinde birim seans maliyetiniz <strong>$1.31 – $3.14</strong> seviyesine düşerken, danışanlarınıza uygulayacağınız seansları <strong>$30 – $70</strong> arasında ücretlendirerek doğrudan perakende kâr sağlarsınız.
+                    14 kademeli seans kredi paketlerinde birim seans maliyetiniz <strong>$0.40 – $1.05</strong> seviyesine düşerken, danışanlarınıza uygulayacağınız seansları <strong>$30 – $70</strong> arasında ücretlendirerek doğrudan perakende kâr sağlarsınız.
                   </p>
                   <div className="p-2.5 rounded-xl bg-amber-950/40 border border-amber-500/30 text-[11px] font-bold text-amber-300">
                     Örn: 30 Seans x $30 = $905 Aylık Seans Geliri
@@ -1176,7 +1180,7 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
                   <div className="space-y-1">
                     <h4 className="text-sm font-bold text-slate-100">14 Resmi Paketten Seçim Yapın &amp; Seans Kredisi Yükleyin</h4>
                     <p className="text-xs text-slate-400 leading-relaxed">
-                      Bayi Back-Office içerisindeki <strong>14 Resmi Alışveriş Paketi</strong> sekmesinden 32 krediden 5.000 krediye kadar bütçenize uygun paketi seçin. BDDK uyumlu 3D Secure Sanal POS, Havale/EFT veya Kripto (USDT TRC-20) ile ödemenizi tamamlayın; krediniz anında havuzunuza aktarılır.
+                      Bayi Back-Office içerisindeki <strong>14 Resmi Alışveriş Paketi</strong> sekmesinden 96 krediden 15.000 krediye kadar bütçenize uygun paketi seçin. Her paket alımında seçtiğiniz paketin kredisinin üzerine 32 seans kredisi bonus eklenir. BDDK uyumlu 3D Secure Sanal POS, Havale/EFT veya Kripto (USDT TRC-20) ile ödemenizi tamamlayın; krediniz anında havuzunuza aktarılır.
                     </p>
                   </div>
                 </div>
@@ -1394,7 +1398,7 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
                       <span className="text-xs font-mono font-bold text-slate-200">{formatUsd(monthlySessionRevenue)}</span>
                     </div>
                     <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-                      <span className="text-xs text-slate-400">Tahmini Kredi Maliyeti (~{formatUsd(unitSessionCost, 2)}/Seans):</span>
+                      <span className="text-xs text-slate-400">{selectedCalculatorPackage.name} Birim Kredi Maliyeti ({formatUsd(unitSessionCost, 2)}/Seans):</span>
                       <span className="text-xs font-mono font-bold text-rose-400">-{formatUsd(monthlySessionCost)}</span>
                     </div>
                     <div className="flex items-center justify-between border-b border-slate-800 pb-2">
@@ -1485,10 +1489,10 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
                     <span>Resmi Bayilik Seans Kredisi Havuzu &amp; Monoline Alışveriş Paketleri</span>
                   </div>
                   <h3 className="text-xl sm:text-2xl font-black text-white leading-tight">
-                    32 Seans Kredisinden 5.000 Seans Kredisine 14 Resmi Paket
+                    96 Seans Kredisinden 15.000 Seans Kredisine 14 Resmi Paket
                   </h3>
                   <p className="text-xs sm:text-sm text-slate-300 leading-relaxed max-w-3xl">
-                    Paket satın alındığında seans kredileri anında havuzunuza yüklenir. Baz dağıtım %20 direkt sponsor, %25 yedi derinlik ve %5 sistem fonudur; ek V2.2 bonusları ayrıca hesaplanır.
+                    Paket satın alındığında seans kredileri anında havuzunuza yüklenir ve her alımda paket kredisine ek olarak 32 seans kredisi bonus tanımlanır. Baz dağıtım %20 direkt sponsor, %25 yedi derinlik ve %5 sistem fonudur; ek V2.2 bonusları ayrıca hesaplanır.
                   </p>
                 </div>
 

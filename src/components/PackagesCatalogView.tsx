@@ -747,7 +747,7 @@ export const PackagesCatalogView: React.FC<PackagesCatalogViewProps> = ({
                   OTOMATİK WEBHOOK & KREDİ ENTEGRASYONU
                 </div>
                 <div className="text-sm font-semibold text-white">
-                  32 Seans Kredisinden 999.999 Ömür Boyu Seans Kredisine Kadar 15 Kademe
+                  96 Seans Kredisinden 15.000 Seans Kredisine Kadar 14 Kademe
                 </div>
               </div>
             </div>

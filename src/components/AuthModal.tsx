@@ -701,7 +701,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               <div className="p-2.5 rounded-xl bg-emerald-950/80 border border-emerald-500/50 flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2 text-emerald-300 text-[11px] font-bold">
                   <Coins className="w-4 h-4 text-emerald-400 shrink-0" />
-                  <span>🎁 İlk Bayi Kaydı Hoşgeldin Bonusu: 32 + 32 = 64 Seans Kredisi</span>
+                  <span>🎁 Paket alımında paket kredilerine ek +32 seans kredisi bonusu</span>
                 </div>
                 <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-[9px] font-black text-emerald-200 shrink-0">
                   Bir Defaya Mahsus Otomatik
