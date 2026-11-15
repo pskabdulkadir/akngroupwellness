@@ -307,9 +307,9 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
 
     if (
       isPendingDealerRegistration &&
-      (cartItems.length !== 1 || cartItems[0].packageId !== user.selectedPackage || cartItems[0].quantity !== 1)
+      (cartItems.length !== 1 || cartItems[0].quantity !== 1)
     ) {
-      setPosError('Yeni bayi kaydında yalnızca seçilen başlangıç paketiyle devam edilebilir.');
+      setPosError('Yeni bayi kaydında tek bir bayi paketi seçerek devam edebilirsiniz.');
       return;
     }
 
@@ -363,7 +363,10 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
         if (
           !settlementResponse.ok ||
           settlement.status !== 'success' ||
-          Number(settlement.transaction?.session_credits_added) !== 64 ||
+          Number(settlement.transaction?.session_credits_added) !== Math.max(
+            dealerPackages.find((pkg) => pkg.id === cartItems[0].packageId)?.scanCredits || 0,
+            64
+          ) ||
           typeof settlement.member_token !== 'string'
         ) {
           throw new Error(
@@ -372,7 +375,11 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
         }
         saveMemberWalletToken(settlement.member_token);
         orderUser = await completePaidDealerRegistration(
-          user,
+          {
+            ...user,
+            selectedPackage: cartItems[0].packageId,
+            dealerPackageId: cartItems[0].packageId,
+          },
           Number(settlement.transaction.session_credits_added)
         );
         onDealerRegistrationPaid?.(orderUser);
@@ -657,9 +664,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
             {isDealerUser ? (
               // DEALER PACKAGES ONLY
-              dealerPackages
-                .filter((pkg) => !isPendingDealerRegistration || pkg.id === user.selectedPackage)
-                .map((pkg) => {
+              dealerPackages.map((pkg) => {
                 const qtyInCart = cart[pkg.id] || 0;
 
                 return (
@@ -720,9 +725,17 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                     {/* Add / Quantity Controls */}
                     <div className="mt-4 pt-3 border-t border-slate-850">
                       {isPendingDealerRegistration ? (
-                        <div className="text-center text-xs font-semibold text-amber-300">
-                          Ödeme onayında toplam 64 kredi tanımlanır
-                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setCart({ [pkg.id]: 1 })}
+                          className={`w-full py-2 rounded-xl text-xs font-bold transition-all ${
+                            qtyInCart === 1
+                              ? 'bg-amber-500 text-slate-950'
+                              : 'bg-slate-800 text-slate-300 hover:bg-amber-600 hover:text-slate-950'
+                          }`}
+                        >
+                          {qtyInCart === 1 ? 'Seçildi' : 'Bu Paketi Seç'}
+                        </button>
                       ) : qtyInCart === 0 ? (
                         <button
                           type="button"

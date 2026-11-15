@@ -1077,7 +1077,7 @@ export async function registerMember(
       isApproved: !isPendingDealerRegistration,
       expiryDate: null,
       selectedPackage: effectiveStarterPkg,
-      dealerPackageId: 'pkg-5k',
+      dealerPackageId: effectiveStarterPkg,
       creditsBalance: isPendingDealerRegistration ? 0 : initialCredits,
       welcomeBonusGranted: !isPendingDealerRegistration && !alreadyClaimedBonus,
       welcomeBonusCredits: isPendingDealerRegistration ? 0 : initialCredits,

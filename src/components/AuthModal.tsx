@@ -41,7 +41,8 @@ import { formatUsd } from '../utils/currency';
 import { 
   Reseller, 
   DealerPackage,
-  DEFAULT_DEALER_PACKAGES,
+  getDealerPackages,
+  subscribeToDealerPackages,
   getActiveResellers, 
   getResellerByCode, 
   detectReferralCodeFromUrlOnly,
@@ -137,7 +138,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   // Dealer Application Specific State (AKN Global Spec)
   const [isDealerRequested, setIsDealerRequested] = useState<boolean>(initialIsDealer);
   const [membershipPackages, setMembershipPackages] = useState<MembershipPackage[]>(() => getMembershipPackages());
-  const [dealerPackages] = useState<DealerPackage[]>(DEFAULT_DEALER_PACKAGES);
+  const [dealerPackages, setDealerPackages] = useState<DealerPackage[]>(() => getDealerPackages());
   const [selectedPackageId, setSelectedPackageId] = useState<string>('pkg-5k');
 
   const [dealerCompanyName, setDealerCompanyName] = useState<string>('');
@@ -189,7 +190,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     const unsubMember = subscribeToMembershipPackages((pkgs) => {
       if (pkgs && pkgs.length > 0) setMembershipPackages(pkgs);
     });
-    return () => unsubMember();
+    const unsubDealer = subscribeToDealerPackages((pkgs) => {
+      if (pkgs && pkgs.length > 0) setDealerPackages(pkgs);
+    });
+    return () => {
+      unsubMember();
+      unsubDealer();
+    };
   }, []);
 
   // Load and check referral and mode on modal open
@@ -1083,14 +1090,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               <div className="flex items-center justify-between">
                 <label className="text-[11px] font-bold text-amber-300 flex items-center gap-1.5">
                   <Briefcase className="w-3.5 h-3.5 text-amber-400" />
-                  <span>Bayilik Başlangıç Paketi ve Kredi Havuzu:</span>
+                  <span>Bayi Paketi ve Kredi Havuzu:</span>
                   <span className="text-rose-400 text-xs">*</span>
                 </label>
                 <span className="text-[10px] text-amber-400 font-semibold">(Bayi Seans Kredisi)</span>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                {dealerPackages.filter((pkg) => !isDealerRequested || pkg.id === 'pkg-5k').map((pkg) => {
+                {dealerPackages.map((pkg) => {
                   const isSelected = selectedPackageId === pkg.id;
                   const regionalPackage = getRegionalDealerPackage(pkg);
                   return (

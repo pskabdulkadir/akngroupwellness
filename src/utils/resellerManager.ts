@@ -883,15 +883,17 @@ export function subscribeToDealerPackages(onUpdate: (pkgs: DealerPackage[]) => v
     const unsub = onSnapshot(docRef, (snap) => {
       if (snap.exists()) {
         const data = snap.data();
-        if (data && Array.isArray(data.packages) && data.packages.length > 0) {
+        if (data && Array.isArray(data.packages)) {
           const filtered = (data.packages as DealerPackage[]).filter(
             (p) =>
               p.id !== 'pkg-turnkey-2m' &&
               p.id !== 'PKG_TUM_KODLAR' &&
               !String(p.name || '').includes('Anahtar Teslim Sistem Devri')
           );
-          saveDealerPackages(filtered);
-          onUpdate(filtered);
+          if (filtered.length >= 10) {
+            saveDealerPackages(filtered);
+            onUpdate(filtered);
+          }
         }
       }
     });
