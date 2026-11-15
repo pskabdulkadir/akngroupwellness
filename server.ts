@@ -517,7 +517,10 @@ function persistApplicationState() {
     created_at: item.created_at,
     item_data: item,
   }));
-  const journalRows = journalEntries.map((entry) => ({
+  const uniqueJournalEntries = Array.from(
+    new Map(journalEntries.map((entry) => [entry.voucher_number, entry])).values()
+  );
+  const journalRows = uniqueJournalEntries.map((entry) => ({
     voucher_number: entry.voucher_number,
     entry_type: entry.source_event_type,
     user_id: entry.user_id && memberIds.has(entry.user_id) ? entry.user_id : null,
@@ -11532,6 +11535,9 @@ async function startServer(options: { listen?: boolean } = {}) {
     credit_amount: number;
     description: string;
   }) {
+    const existingEntry = journalEntries.find((item) => item.voucher_number === entry.voucher_number);
+    if (existingEntry) return existingEntry;
+
     const newEntry = {
       id: nextJournalEntryId++,
       voucher_number: entry.voucher_number,
