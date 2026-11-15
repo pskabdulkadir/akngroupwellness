@@ -3,7 +3,6 @@ import './server/loadEnv.js';
 import path from 'path';
 import { createHash, createHmac, randomBytes, scryptSync, timingSafeEqual } from 'crypto';
 import { fileURLToPath } from 'url';
-import { createServer as createViteServer } from 'vite';
 import {
   pool,
   initPostgresDatabase,
@@ -12183,6 +12182,7 @@ async function startServer(options: { listen?: boolean } = {}) {
   });
 
   if (!isVercel && process.env.NODE_ENV !== 'production') {
+    const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa',
