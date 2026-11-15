@@ -297,7 +297,8 @@ let journalEntries: Array<{
   entry_date: string;
   source_event_type: string;
   source_event_id: string;
-  currency: string;
+  user_id?: string | null;
+  currency?: string;
   debit_account_code: string;
   debit_account_name: string;
   debit_amount: number;
@@ -519,7 +520,7 @@ function persistApplicationState() {
   const journalRows = journalEntries.map((entry) => ({
     voucher_number: entry.voucher_number,
     entry_type: entry.source_event_type,
-    user_id: entry.source_event_id || null,
+    user_id: entry.user_id && memberIds.has(entry.user_id) ? entry.user_id : null,
     debit: entry.debit_amount || 0,
     credit: entry.credit_amount || 0,
     currency: entry.currency || 'TRY',
@@ -11537,6 +11538,7 @@ async function startServer(options: { listen?: boolean } = {}) {
       entry_date: entry.entry_date || new Date().toISOString().split('T')[0],
       source_event_type: entry.source_event_type,
       source_event_id: entry.source_event_id,
+      user_id: entry.user_id && members.some((member) => member.user_id === entry.user_id) ? entry.user_id : null,
       currency: entry.currency || 'TRY',
       debit_account_code: entry.debit_account_code,
       debit_account_name: entry.debit_account_name,
@@ -11557,7 +11559,7 @@ async function startServer(options: { listen?: boolean } = {}) {
         [
           newEntry.voucher_number,
           newEntry.source_event_type,
-          newEntry.source_event_id,
+          newEntry.user_id,
           newEntry.debit_amount || 0,
           newEntry.credit_amount || 0,
           newEntry.currency || 'TRY',
@@ -11574,6 +11576,42 @@ async function startServer(options: { listen?: boolean } = {}) {
   // ============================================================================
   // MUHASEBE MOTORU: 14 GÜNLÜK YASAL SÜRESİ DOLAN HAKEDİŞLER İÇİN OTOMATİK GİDER PUSULASI
   // ============================================================================
+  async function postExpenseVoucherJournalEntries(voucher: ExpenseVoucherRecord) {
+    await postDoubleEntryJournal({
+      voucher_number: `YEV-GDP-${voucher.voucher_number}`,
+      source_event_type: 'EXPENSE_VOUCHER_ISSUED',
+      source_event_id: voucher.voucher_number,
+      user_id: voucher.dealer_user_id,
+      currency: 'TRY',
+      debit_account_code: '760.01',
+      debit_account_name: 'Pazarlama ve Satış Dağıtım Komisyon Giderleri',
+      debit_amount: voucher.gross_amount,
+      credit_account_code: voucher.withholding_amount > 0 ? '360.01' : '320.01',
+      credit_account_name: voucher.withholding_amount > 0
+        ? 'Ödenecek Gelir Vergisi Stopajı (GVK 94/10-b)'
+        : 'Satıcılar / Bayi Cari Borçları',
+      credit_amount: voucher.withholding_amount > 0 ? voucher.withholding_amount : voucher.net_amount,
+      description: `Otomatik Gider Pusulası Tanzimi: ${voucher.voucher_number} - Bayi: ${voucher.dealer_full_name}`,
+    });
+
+    if (voucher.withholding_amount > 0) {
+      await postDoubleEntryJournal({
+        voucher_number: `YEV-BAYI-NET-${voucher.voucher_number}`,
+        source_event_type: 'EXPENSE_VOUCHER_NET_ACCRUAL',
+        source_event_id: voucher.voucher_number,
+        user_id: voucher.dealer_user_id,
+        currency: 'TRY',
+        debit_account_code: '760.01',
+        debit_account_name: 'Pazarlama ve Satış Dağıtım Komisyon Giderleri (Net Pay)',
+        debit_amount: 0,
+        credit_account_code: '320.01',
+        credit_account_name: 'Satıcılar / Bayi Cari Hakediş Hesabı (Net Ödenecek)',
+        credit_amount: voucher.net_amount,
+        description: `Gider Pusulası Net Bayi Hakedişi Tahakkuku: ${voucher.voucher_number} - Bayi: ${voucher.dealer_full_name}`,
+      });
+    }
+  }
+
   async function processMaturedExpenseVouchers(options?: { order_id?: string }) {
     const nowMs = Date.now();
     let generatedCount = 0;
@@ -11590,10 +11628,13 @@ async function startServer(options: { listen?: boolean } = {}) {
 
       const commLogId = String(log.id);
       // İdempotency Kontrolü: Aynı komisyon için iki kez gider pusulası üretilemez!
-      const alreadyExists = expenseVouchers.some(
+      const existingVoucher = expenseVouchers.find(
         (v) => v.commission_log_id === commLogId || v.source_event_id === `EV-COMM-${commLogId}`
       );
-      if (alreadyExists) continue;
+      if (existingVoucher) {
+        await postExpenseVoucherJournalEntries(existingVoucher);
+        continue;
+      }
 
       const member = members.find(
         (m) => m.id === log.target_user_id || m.user_id === log.target_external_id
@@ -11660,39 +11701,7 @@ async function startServer(options: { listen?: boolean } = {}) {
         ]
       );
 
-      // Çift Taraflı Yevmiye Fişi Kaydet (Double-Entry General Ledger)
-      // Borç 760.01 Pazarlama & Satış Dağıtım Gideri (Brüt Tutar)
-      // Alacak 360.01 Ödenecek Gelir Vergisi Stopajı (%20 Stopaj Tutarı - Bireysellerde)
-      // Alacak 320.01 Bayi Cari Hakediş Hesabı (Net Tutar)
-      await postDoubleEntryJournal({
-        voucher_number: `YEV-GDP-${voucherNumber}`,
-        source_event_type: 'EXPENSE_VOUCHER_ISSUED',
-        source_event_id: voucherNumber,
-        currency: 'TRY',
-        debit_account_code: '760.01',
-        debit_account_name: 'Pazarlama ve Satış Dağıtım Komisyon Giderleri',
-        debit_amount: grossAmt,
-        credit_account_code: withholdingAmount > 0 ? '360.01' : '320.01',
-        credit_account_name: withholdingAmount > 0 ? 'Ödenecek Gelir Vergisi Stopajı (GVK 94/10-b)' : 'Satıcılar / Bayi Cari Borçları',
-        credit_amount: withholdingAmount > 0 ? withholdingAmount : netAmount,
-        description: `Otomatik Gider Pusulası Tanzimi: ${voucherNumber} - Bayi: ${newVoucher.dealer_full_name}`,
-      });
-
-      if (withholdingAmount > 0) {
-        await postDoubleEntryJournal({
-          voucher_number: `YEV-BAYI-NET-${voucherNumber}`,
-          source_event_type: 'EXPENSE_VOUCHER_NET_ACCRUAL',
-          source_event_id: voucherNumber,
-          currency: 'TRY',
-          debit_account_code: '760.01',
-          debit_account_name: 'Pazarlama ve Satış Dağıtım Komisyon Giderleri (Net Pay)',
-          debit_amount: 0,
-          credit_account_code: '320.01',
-          credit_account_name: 'Satıcılar / Bayi Cari Hakediş Hesabı (Net Ödenecek)',
-          credit_amount: netAmount,
-          description: `Gider Pusulası Net Bayi Hakedişi Tahakkuku: ${voucherNumber}`,
-        });
-      }
+      await postExpenseVoucherJournalEntries(newVoucher);
     }
 
     return {
@@ -12058,6 +12067,7 @@ async function startServer(options: { listen?: boolean } = {}) {
             voucher_number: `YEV-PAYOUT-${v.voucher_number}`,
             source_event_type: 'DEALER_BANK_PAYOUT_SETTLED',
             source_event_id: v.voucher_number,
+            user_id: v.dealer_user_id,
             currency: 'TRY',
             debit_account_code: '320.01',
             debit_account_name: 'Satıcılar / Bayi Cari Borçları',
