@@ -89,6 +89,26 @@ CREATE TABLE IF NOT EXISTS wallets (
 
 ALTER TABLE wallets ADD COLUMN IF NOT EXISTS wallet_data JSONB NOT NULL DEFAULT '{}'::jsonb;
 
+CREATE TABLE IF NOT EXISTS admin_wallet_adjustments (
+    id BIGSERIAL PRIMARY KEY,
+    request_id UUID,
+    user_id VARCHAR(64) REFERENCES users(user_id) ON DELETE SET NULL,
+    admin_user_id VARCHAR(64) NOT NULL,
+    region VARCHAR(20) NOT NULL CHECK (region IN ('DOMESTIC', 'INTERNATIONAL')),
+    direction VARCHAR(10) NOT NULL CHECK (direction IN ('CREDIT', 'DEBIT')),
+    amount NUMERIC(15,2) NOT NULL CHECK (amount > 0),
+    balance_before NUMERIC(15,2) NOT NULL,
+    balance_after NUMERIC(15,2) NOT NULL,
+    reason TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+ALTER TABLE admin_wallet_adjustments ADD COLUMN IF NOT EXISTS request_id UUID;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_admin_wallet_adjustments_request_id
+    ON admin_wallet_adjustments(request_id) WHERE request_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_admin_wallet_adjustments_user_created
+    ON admin_wallet_adjustments(user_id, created_at DESC);
+
 -- ------------------------------------------------------------------------------
 -- 3. SİSTEM VE DEVİR HAVUZU CÜZDANI (system_wallet)
 -- ------------------------------------------------------------------------------

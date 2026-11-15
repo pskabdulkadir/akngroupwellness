@@ -394,9 +394,13 @@ function buildPersistentState() {
 let statePersistPromise: Promise<void> = Promise.resolve();
 let persistenceFailure: string | null = null;
 let vercelMutationQueue: Promise<void> = Promise.resolve();
+function uniqueRowsBy<T>(rows: T[], keyFor: (row: T) => string): T[] {
+  return Array.from(new Map(rows.map((row) => [keyFor(row), row])).values());
+}
+
 function persistApplicationState() {
   const snapshot = buildPersistentState();
-  const userRows = members.map((member) => {
+  const userRows = uniqueRowsBy(members.map((member) => {
     const credentials = memberCredentials.get(member.user_id);
     return {
       user_id: member.user_id,
@@ -428,8 +432,8 @@ function persistApplicationState() {
       created_at: member.joined_at,
       updated_at: new Date().toISOString(),
     };
-  });
-  const walletRows = members.map((member) => ({
+  }), (row) => row.user_id);
+  const walletRows = uniqueRowsBy(members.map((member) => ({
     user_id: member.user_id,
     balance: (member.wallets.wallet_domestic_usd || 0) + (member.wallets.wallet_international_usd || 0),
     pending_balance: (member.wallets.pending_domestic_usd || 0) + (member.wallets.pending_international_usd || 0),
@@ -443,9 +447,9 @@ function persistApplicationState() {
     bank_name: member.bank_details?.bank_name || '',
     crypto_trc20: member.bank_details?.trc20_address || '',
     wallet_data: member.wallets,
-  }));
+  })), (row) => row.user_id);
   const memberIds = new Set(members.map((member) => member.user_id));
-  const orderRows = ordersLog.map((order) => ({
+  const orderRows = uniqueRowsBy(ordersLog.map((order) => ({
     order_id: order.order_id,
     user_id: memberIds.has(order.external_user_id) ? order.external_user_id : null,
     package_id: order.package_id,
@@ -453,8 +457,8 @@ function persistApplicationState() {
     status: order.status,
     payment_method: order.payment_method || 'CREDIT_CARD',
     created_at: order.created_at,
-  }));
-  const commissionRows = commissionLogs.map((log) => ({
+  })), (row) => row.order_id);
+  const commissionRows = uniqueRowsBy(commissionLogs.map((log) => ({
     order_id: log.order_id,
     source_user_id: memberIds.has(log.source_external_id) ? log.source_external_id : null,
     target_user_id: log.target_user_id && memberIds.has(log.target_external_id) ? log.target_external_id : null,
@@ -466,8 +470,8 @@ function persistApplicationState() {
     status: log.status || log.clawback_status || 'RELEASED',
     release_at: log.release_at || log.created_at,
     created_at: log.created_at,
-  }));
-  const withdrawalRows = withdrawalRequests.map((withdrawal) => ({
+  })), (row) => JSON.stringify([row.order_id, row.type, row.depth_level ?? 0, row.target_user_id ?? 'SYSTEM']));
+  const withdrawalRows = uniqueRowsBy(withdrawalRequests.map((withdrawal) => ({
     request_id: `WDR-${withdrawal.id}`,
     user_id: withdrawal.external_user_id,
     amount: withdrawal.gross_amount ?? withdrawal.amount,
@@ -482,8 +486,8 @@ function persistApplicationState() {
     decided_at: withdrawal.processed_at || null,
     created_at: withdrawal.created_at,
     withdrawal_data: withdrawal,
-  }));
-  const voucherRows = expenseVouchers.map((voucher) => ({
+  })), (row) => row.request_id);
+  const voucherRows = uniqueRowsBy(expenseVouchers.map((voucher) => ({
     voucher_number: voucher.voucher_number,
     user_id: memberIds.has(voucher.dealer_user_id) ? voucher.dealer_user_id : null,
     gross_amount: voucher.gross_amount,
@@ -493,8 +497,8 @@ function persistApplicationState() {
     status: voucher.status,
     created_at: voucher.created_at,
     voucher_data: voucher,
-  }));
-  const payoutBatchRows = payoutBatches.map((batch) => ({
+  })), (row) => row.voucher_number);
+  const payoutBatchRows = uniqueRowsBy(payoutBatches.map((batch) => ({
     id: batch.batch_id,
     bank_code: batch.bank_name,
     total_amount: batch.total_net,
@@ -503,8 +507,8 @@ function persistApplicationState() {
     status: batch.status,
     created_at: batch.created_at,
     batch_data: batch,
-  }));
-  const payoutBatchItemRows = payoutBatchItems.map((item) => ({
+  })), (row) => row.id);
+  const payoutBatchItemRows = uniqueRowsBy(payoutBatchItems.map((item) => ({
     batch_id: item.batch_id,
     voucher_id: item.voucher_id,
     commission_id: item.commission_id,
@@ -518,10 +522,8 @@ function persistApplicationState() {
     wallet_tx_id: item.wallet_tx_id || null,
     created_at: item.created_at,
     item_data: item,
-  }));
-  const uniqueJournalEntries = Array.from(
-    new Map(journalEntries.map((entry) => [entry.voucher_number, entry])).values()
-  );
+  })), (row) => JSON.stringify([row.batch_id, row.voucher_id]));
+  const uniqueJournalEntries = uniqueRowsBy(journalEntries, (entry) => entry.voucher_number);
   const journalRows = uniqueJournalEntries.map((entry) => ({
     voucher_number: entry.voucher_number,
     entry_type: entry.source_event_type,
@@ -5025,6 +5027,11 @@ async function startServer(options: { listen?: boolean } = {}) {
   if (!postgresReady) {
     throw new Error('PostgreSQL bağlantısı zorunludur; sunucu bellek modunda başlatılmadı.');
   }
+  await pgQuery(`
+    INSERT INTO system_wallet (id, system_pool_balance, unclaimed_pool_balance, career_pool_balance)
+    VALUES (1, 0, 0, 0)
+    ON CONFLICT (id) DO NOTHING
+  `);
   await ensureAccountingCredentials();
   await loadUsdTryRateFromPostgres();
   await hydrateApplicationState();
@@ -5547,6 +5554,324 @@ async function startServer(options: { listen?: boolean } = {}) {
       res.json(buildStateResponse(true, null, stateMembers));
     } catch (err: any) {
       res.status(503).json({ status: 'error', code: 'DATABASE_READ_FAILED', message: err?.message || 'Bayi listesi PostgreSQL’den okunamadı.' });
+    }
+  });
+
+  app.get('/api/v1/admin/dealers', requireAdminJwt, async (req, res) => {
+    const search = String(req.query.search || '').trim().slice(0, 120);
+    const status = String(req.query.status || 'all');
+    if (!['all', 'active', 'inactive', 'locked'].includes(status)) {
+      res.status(400).json({ status: 'error', message: 'Geçersiz bayi durum filtresi.' });
+      return;
+    }
+    const page = Math.max(1, Number.parseInt(String(req.query.page || '1'), 10) || 1);
+    const pageSize = Math.min(100, Math.max(1, Number.parseInt(String(req.query.pageSize || '25'), 10) || 25));
+    const searchPattern = search ? `%${search}%` : '';
+    try {
+      const countResult = await pgQuery(
+        `SELECT COUNT(*)::int AS total FROM users u
+         WHERE ($1 = '' OR concat_ws(' ', u.user_id, u.full_name, u.email, u.phone, u.referral_code) ILIKE $2)
+           AND ($3 = 'all' OR ($3 = 'active' AND u.is_active = TRUE AND u.is_locked = FALSE)
+             OR ($3 = 'inactive' AND u.is_active = FALSE) OR ($3 = 'locked' AND u.is_locked = TRUE))`,
+        [searchPattern, searchPattern, status]
+      );
+      const rows = await pgQuery(
+        `SELECT u.user_id, u.full_name, u.email, u.phone, u.city, u.referral_code, u.sponsor_id,
+                u.monoline_position, u.career_level, u.max_career_level, u.active_career_level,
+                u.personal_volume_30d, u.group_volume_30d, u.active_direct_referrals_30d,
+                u.activity_expires_at, u.is_active, u.is_locked, u.scan_credits, u.assigned_leg,
+                u.left_leg_volume, u.right_leg_volume, u.created_at,
+                COALESCE(u.member_data->>'role', CASE WHEN u.member_data->>'dealerStatus' = 'approved' THEN 'dealer' ELSE 'member' END) AS role,
+                u.member_data - ARRAY['password', 'passwordHash', 'password_hash', 'password_salt', 'two_factor']::text[] AS profile,
+                sponsor.full_name AS sponsor_name,
+                COALESCE(w.balance, 0) AS wallet_balance, COALESCE(w.pending_balance, 0) AS wallet_pending_balance,
+                COALESCE(NULLIF(w.wallet_data->>'wallet_domestic_usd', '')::numeric, w.balance, 0) AS wallet_domestic_balance,
+                COALESCE(NULLIF(w.wallet_data->>'wallet_international_usd', '')::numeric, 0) AS wallet_international_balance,
+                COALESCE(w.total_earned, 0) AS wallet_total_earned, COALESCE(w.total_withdrawn, 0) AS wallet_total_withdrawn,
+                COALESCE(w.direct_sponsor_earnings, 0) AS wallet_sponsor_earnings,
+                COALESCE(w.unilevel_earnings, 0) AS wallet_unilevel_earnings,
+                COALESCE(w.monoline_incentive_earnings, 0) AS wallet_monoline_earnings
+         FROM users u
+         LEFT JOIN users sponsor ON sponsor.user_id = u.sponsor_id
+         LEFT JOIN wallets w ON w.user_id = u.user_id
+         WHERE ($1 = '' OR concat_ws(' ', u.user_id, u.full_name, u.email, u.phone, u.referral_code) ILIKE $2)
+           AND ($3 = 'all' OR ($3 = 'active' AND u.is_active = TRUE AND u.is_locked = FALSE)
+             OR ($3 = 'inactive' AND u.is_active = FALSE) OR ($3 = 'locked' AND u.is_locked = TRUE))
+         ORDER BY u.monoline_position NULLS LAST, u.created_at DESC
+         LIMIT $4 OFFSET $5`,
+        [searchPattern, searchPattern, status, pageSize, (page - 1) * pageSize]
+      );
+      res.json({ status: 'success', dealers: rows?.rows || [], total: Number(countResult?.rows[0]?.total) || 0, page, pageSize });
+    } catch (err: any) {
+      res.status(503).json({ status: 'error', message: err?.message || 'Bayi listesi PostgreSQL’den okunamadı.' });
+    }
+  });
+
+  app.get('/api/v1/admin/dealers/:id', requireAdminJwt, async (req, res) => {
+    try {
+      const result = await pgQuery(
+        `SELECT u.user_id, u.full_name, u.email, u.phone, u.city, u.referral_code, u.sponsor_id,
+                u.monoline_position, u.career_level, u.max_career_level, u.active_career_level,
+                u.personal_volume_30d, u.group_volume_30d, u.active_direct_referrals_30d,
+                u.activity_expires_at, u.is_active, u.is_locked, u.scan_credits, u.assigned_leg,
+                u.left_leg_volume, u.right_leg_volume, u.created_at,
+                COALESCE(u.member_data->>'role', CASE WHEN u.member_data->>'dealerStatus' = 'approved' THEN 'dealer' ELSE 'member' END) AS role,
+                u.member_data - ARRAY['password', 'passwordHash', 'password_hash', 'password_salt', 'two_factor']::text[] AS profile,
+                sponsor.full_name AS sponsor_name, hierarchy.upline,
+                COALESCE(w.balance, 0) AS wallet_balance, COALESCE(w.pending_balance, 0) AS wallet_pending_balance,
+                COALESCE(NULLIF(w.wallet_data->>'wallet_domestic_usd', '')::numeric, w.balance, 0) AS wallet_domestic_balance,
+                COALESCE(NULLIF(w.wallet_data->>'wallet_international_usd', '')::numeric, 0) AS wallet_international_balance,
+                COALESCE(w.total_earned, 0) AS wallet_total_earned, COALESCE(w.total_withdrawn, 0) AS wallet_total_withdrawn,
+                COALESCE(w.direct_sponsor_earnings, 0) AS wallet_sponsor_earnings,
+                COALESCE(w.unilevel_earnings, 0) AS wallet_unilevel_earnings,
+                COALESCE(w.monoline_incentive_earnings, 0) AS wallet_monoline_earnings
+         FROM users u
+         LEFT JOIN users sponsor ON sponsor.user_id = u.sponsor_id
+         LEFT JOIN LATERAL (
+           WITH RECURSIVE chain(user_id, full_name, sponsor_id, depth, path) AS (
+             SELECT s.user_id, s.full_name, s.sponsor_id, 1, ARRAY[s.user_id] FROM users s WHERE s.user_id = u.sponsor_id
+             UNION ALL
+             SELECT s.user_id, s.full_name, s.sponsor_id, chain.depth + 1, chain.path || s.user_id
+             FROM chain JOIN users s ON s.user_id = chain.sponsor_id
+             WHERE chain.depth < 25 AND NOT s.user_id = ANY(chain.path)
+           ) SELECT COALESCE(jsonb_agg(jsonb_build_object('user_id', user_id, 'full_name', full_name, 'depth', depth) ORDER BY depth), '[]'::jsonb) AS upline FROM chain
+         ) hierarchy ON TRUE
+         LEFT JOIN wallets w ON w.user_id = u.user_id
+         WHERE u.user_id = $1`,
+        [req.params.id]
+      );
+      if (!result?.rows[0]) {
+        res.status(404).json({ status: 'error', message: 'Bayi veya üye bulunamadı.' });
+        return;
+      }
+      res.json({ status: 'success', dealer: result.rows[0] });
+    } catch (err: any) {
+      res.status(503).json({ status: 'error', message: err?.message || 'Bayi ayrıntıları okunamadı.' });
+    }
+  });
+
+  app.get('/api/v1/admin/dealers/:id/wallet-adjustments', requireAdminJwt, async (req, res) => {
+    try {
+      const result = await pgQuery(
+        `SELECT id, admin_user_id, region, direction, amount, balance_before, balance_after, reason, created_at
+         FROM admin_wallet_adjustments WHERE user_id = $1 ORDER BY created_at DESC LIMIT 50`,
+        [req.params.id]
+      );
+      res.json({ status: 'success', adjustments: result?.rows || [] });
+    } catch (err: any) {
+      res.status(503).json({ status: 'error', message: err?.message || 'Cüzdan işlem geçmişi okunamadı.' });
+    }
+  });
+
+  app.post('/api/v1/admin/dealers/:id/wallet-adjustments', requireAdminJwt, async (req, res) => {
+    const direction = req.body?.direction;
+    const region = req.body?.region;
+    const amount = Number(req.body?.amount);
+    const reason = typeof req.body?.reason === 'string' ? req.body.reason.trim() : '';
+    const requestId = typeof req.body?.request_id === 'string' ? req.body.request_id : '';
+    const amountCents = Math.round(amount * 100);
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(requestId) || !['CREDIT', 'DEBIT'].includes(direction) || !['DOMESTIC', 'INTERNATIONAL'].includes(region) || !Number.isSafeInteger(amountCents) || amountCents <= 0 || amountCents > 100000000 || reason.length < 10 || reason.length > 300) {
+      res.status(400).json({ status: 'error', message: 'Yön, bölge, tutar veya açıklama geçersiz.' });
+      return;
+    }
+
+    const amountValue = amountCents / 100;
+    const walletKey = region === 'DOMESTIC' ? 'wallet_domestic_usd' : 'wallet_international_usd';
+    try {
+      const adjustment = await withTransaction(async (client) => {
+        const userResult = await client.query('SELECT user_id FROM users WHERE user_id = $1 FOR UPDATE', [req.params.id]);
+        if (!userResult.rowCount) throw Object.assign(new Error('Bayi veya üye bulunamadı.'), { statusCode: 404 });
+        const walletResult = await client.query('SELECT * FROM wallets WHERE user_id = $1 FOR UPDATE', [req.params.id]);
+        if (!walletResult.rowCount) throw Object.assign(new Error('Bayi cüzdan kaydı bulunamadı.'), { statusCode: 404 });
+        const walletRow = walletResult.rows[0];
+        const replayResult = await client.query('SELECT * FROM admin_wallet_adjustments WHERE request_id = $1', [requestId]);
+        const replay = replayResult.rows[0];
+        if (replay) {
+          const sameRequest = replay.user_id === req.params.id && replay.direction === direction && replay.region === region && Number(replay.amount) === amountValue && replay.reason === reason;
+          if (!sameRequest) throw Object.assign(new Error('Bu istek kimliği başka bir cüzdan işlemi için kullanılmış.'), { statusCode: 409 });
+          return { ...replay, region_balance: Number(replay.balance_after), balance: Number(walletRow.balance) || 0, duplicate: true };
+        }
+        const walletData = walletRow.wallet_data && typeof walletRow.wallet_data === 'object' ? walletRow.wallet_data : {};
+        const storedRegionBalance = Number(walletData[walletKey]);
+        const balanceBefore = Math.round((Number.isFinite(storedRegionBalance) ? storedRegionBalance : region === 'DOMESTIC' ? Number(walletRow.balance) || 0 : 0) * 100) / 100;
+        const delta = direction === 'CREDIT' ? amountValue : -amountValue;
+        const balanceAfter = Math.round((balanceBefore + delta) * 100) / 100;
+        if (balanceAfter < 0) throw Object.assign(new Error('Cüzdanda bu tutarı düşmek için yeterli bakiye yok.'), { statusCode: 422 });
+        const updatedWalletData = { ...walletData, [walletKey]: balanceAfter };
+        const totalBalance = Math.round((Number(walletRow.balance) + delta) * 100) / 100;
+        await client.query(
+          'UPDATE wallets SET balance = $1, wallet_data = $2::jsonb, updated_at = CURRENT_TIMESTAMP WHERE user_id = $3',
+          [totalBalance, JSON.stringify(updatedWalletData), req.params.id]
+        );
+        const logResult = await client.query(
+          `INSERT INTO admin_wallet_adjustments (request_id, user_id, admin_user_id, region, direction, amount, balance_before, balance_after, reason)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id, created_at`,
+          [requestId, req.params.id, String(res.locals.adminUid), region, direction, amountValue, balanceBefore, balanceAfter, reason]
+        );
+        return { ...logResult.rows[0], admin_user_id: String(res.locals.adminUid), region, direction, amount: amountValue, reason, balance_before: balanceBefore, balance_after: balanceAfter, region_balance: balanceAfter, balance: totalBalance };
+      });
+      members = await queryMembersFromPostgres();
+      await persistApplicationState();
+      res.json({ status: 'success', adjustment, message: 'Cüzdan düzeltmesi kaydedildi ve denetim günlüğüne işlendi.' });
+    } catch (err: any) {
+      res.status(err.statusCode || 500).json({ status: 'error', message: err?.message || 'Cüzdan düzeltmesi kaydedilemedi.' });
+    }
+  });
+
+  app.put('/api/v1/admin/dealers/:id', requireAdminJwt, async (req, res) => {
+    const allowedFields = new Set([
+      'full_name', 'phone', 'city', 'role', 'is_active', 'is_locked',
+      'sponsor_id', 'assigned_leg', 'monoline_position',
+    ]);
+    const input = req.body && typeof req.body === 'object' && !Array.isArray(req.body) ? req.body : {};
+    const fields = Object.keys(input);
+    if (!fields.length || fields.some((field) => !allowedFields.has(field))) {
+      res.status(400).json({ status: 'error', message: 'Güncelleme alanı eksik veya izin verilmeyen bir alan içeriyor.' });
+      return;
+    }
+
+    const updates: Record<string, string | boolean | null> = {};
+    for (const field of ['full_name', 'phone', 'city'] as const) {
+      if (input[field] === undefined) continue;
+      if (typeof input[field] !== 'string') {
+        res.status(400).json({ status: 'error', message: `${field} metin olmalıdır.` });
+        return;
+      }
+      const value = input[field].trim();
+      const maxLength = field === 'full_name' ? 150 : field === 'phone' ? 50 : 80;
+      if (value.length > maxLength || (field === 'full_name' && value.length < 2)) {
+        res.status(400).json({ status: 'error', message: `${field} değeri geçersiz.` });
+        return;
+      }
+      updates[field] = value || null;
+    }
+    if (input.role !== undefined) {
+      if (!['customer', 'member', 'dealer'].includes(input.role)) {
+        res.status(400).json({ status: 'error', message: 'Rol customer, member veya dealer olmalıdır.' });
+        return;
+      }
+      updates.role = input.role;
+    }
+    for (const field of ['is_active', 'is_locked'] as const) {
+      if (input[field] !== undefined) {
+        if (typeof input[field] !== 'boolean') {
+          res.status(400).json({ status: 'error', message: `${field} doğru/yanlış olmalıdır.` });
+          return;
+        }
+        updates[field] = input[field];
+      }
+    }
+    if (input.sponsor_id !== undefined) {
+      if (input.sponsor_id !== null && typeof input.sponsor_id !== 'string') {
+        res.status(400).json({ status: 'error', message: 'Sponsor kullanıcı kimliği geçersiz.' });
+        return;
+      }
+      updates.sponsor_id = typeof input.sponsor_id === 'string' ? input.sponsor_id.trim() || null : null;
+    }
+    if (input.assigned_leg !== undefined) {
+      if (!['LEFT', 'RIGHT', 'AUTO'].includes(input.assigned_leg)) {
+        res.status(400).json({ status: 'error', message: 'Kol tercihi LEFT, RIGHT veya AUTO olmalıdır.' });
+        return;
+      }
+      updates.assigned_leg = input.assigned_leg;
+    }
+    const requestedPosition = input.monoline_position === undefined ? null : Number(input.monoline_position);
+    if (requestedPosition !== null && (!Number.isSafeInteger(requestedPosition) || requestedPosition < 1)) {
+      res.status(400).json({ status: 'error', message: 'Monoline sırası pozitif bir tam sayı olmalıdır.' });
+      return;
+    }
+
+    try {
+      await withTransaction(async (client) => {
+        const targetResult = await client.query('SELECT user_id, monoline_position FROM users WHERE user_id = $1 FOR UPDATE', [req.params.id]);
+        const target = targetResult.rows[0];
+        if (!target) throw Object.assign(new Error('Bayi veya üye bulunamadı.'), { statusCode: 404 });
+
+        if (updates.sponsor_id) {
+          if (updates.sponsor_id === req.params.id) throw Object.assign(new Error('Kullanıcı kendisinin sponsoru olamaz.'), { statusCode: 400 });
+          const sponsor = await client.query('SELECT user_id FROM users WHERE user_id = $1', [updates.sponsor_id]);
+          if (!sponsor.rowCount) throw Object.assign(new Error('Seçilen sponsor bulunamadı.'), { statusCode: 400 });
+          const descendants = await client.query(
+            `WITH RECURSIVE descendants(user_id) AS (
+               SELECT user_id FROM users WHERE sponsor_id = $1
+               UNION
+               SELECT u.user_id FROM users u JOIN descendants d ON u.sponsor_id = d.user_id
+             ) SELECT 1 FROM descendants WHERE user_id = $2 LIMIT 1`,
+            [req.params.id, updates.sponsor_id]
+          );
+          if (descendants.rowCount) throw Object.assign(new Error('Alt ekipteki bir kullanıcı sponsor yapılamaz.'), { statusCode: 400 });
+        }
+
+        const sqlColumns: Record<string, string> = {
+          full_name: 'full_name', phone: 'phone', city: 'city',
+          is_active: 'is_active', is_locked: 'is_locked', sponsor_id: 'sponsor_id', assigned_leg: 'assigned_leg',
+        };
+        const columns = Object.keys(updates).filter((field) => field !== 'role');
+        if (columns.length) {
+          const assignments = columns.map((field, index) => `${sqlColumns[field]} = $${index + 1}`);
+          await client.query(
+            `UPDATE users SET ${assignments.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE user_id = $${columns.length + 1}`,
+            [...columns.map((field) => updates[field]), req.params.id]
+          );
+        }
+        if (updates.role) {
+          await client.query(
+            `UPDATE users SET member_data = jsonb_set(COALESCE(member_data, '{}'::jsonb), '{role}', to_jsonb($1::text), true), updated_at = CURRENT_TIMESTAMP WHERE user_id = $2`,
+            [updates.role, req.params.id]
+          );
+        }
+
+        if (requestedPosition !== null && requestedPosition !== Number(target.monoline_position)) {
+          const countResult = await client.query('SELECT COUNT(*)::int AS total FROM users');
+          if (requestedPosition > Number(countResult.rows[0].total)) {
+            throw Object.assign(new Error('Monoline sırası kayıtlı kullanıcı aralığında olmalıdır.'), { statusCode: 400 });
+          }
+          const positionResult = await client.query('SELECT user_id FROM users WHERE monoline_position = $1 FOR UPDATE', [requestedPosition]);
+          const occupant = positionResult.rows[0];
+          if (occupant) {
+            const maxResult = await client.query('SELECT COALESCE(MAX(monoline_position), 0) + 1 AS temp FROM users');
+            const temporaryPosition = Number(maxResult.rows[0].temp);
+            await client.query('UPDATE users SET monoline_position = $1 WHERE user_id = $2', [temporaryPosition, req.params.id]);
+            await client.query('UPDATE users SET monoline_position = $1 WHERE user_id = $2', [target.monoline_position, occupant.user_id]);
+          }
+          await client.query('UPDATE users SET monoline_position = $1, updated_at = CURRENT_TIMESTAMP WHERE user_id = $2', [requestedPosition, req.params.id]);
+        }
+      });
+
+      members = await queryMembersFromPostgres();
+      const result = await pgQuery(
+        `SELECT u.user_id, u.full_name, u.email, u.phone, u.city, u.referral_code, u.sponsor_id,
+                u.monoline_position, u.career_level, u.max_career_level, u.active_career_level,
+                u.personal_volume_30d, u.group_volume_30d, u.active_direct_referrals_30d,
+                u.activity_expires_at, u.is_active, u.is_locked, u.scan_credits, u.assigned_leg,
+                u.left_leg_volume, u.right_leg_volume, u.created_at,
+                COALESCE(u.member_data->>'role', CASE WHEN u.member_data->>'dealerStatus' = 'approved' THEN 'dealer' ELSE 'member' END) AS role,
+                u.member_data - ARRAY['password', 'passwordHash', 'password_hash', 'password_salt', 'two_factor']::text[] AS profile,
+                sponsor.full_name AS sponsor_name, hierarchy.upline,
+                COALESCE(w.balance, 0) AS wallet_balance, COALESCE(w.pending_balance, 0) AS wallet_pending_balance,
+                COALESCE(NULLIF(w.wallet_data->>'wallet_domestic_usd', '')::numeric, w.balance, 0) AS wallet_domestic_balance,
+                COALESCE(NULLIF(w.wallet_data->>'wallet_international_usd', '')::numeric, 0) AS wallet_international_balance,
+                COALESCE(w.total_earned, 0) AS wallet_total_earned, COALESCE(w.total_withdrawn, 0) AS wallet_total_withdrawn,
+                COALESCE(w.direct_sponsor_earnings, 0) AS wallet_sponsor_earnings,
+                COALESCE(w.unilevel_earnings, 0) AS wallet_unilevel_earnings,
+                COALESCE(w.monoline_incentive_earnings, 0) AS wallet_monoline_earnings
+         FROM users u LEFT JOIN users sponsor ON sponsor.user_id = u.sponsor_id
+         LEFT JOIN LATERAL (
+           WITH RECURSIVE chain(user_id, full_name, sponsor_id, depth, path) AS (
+             SELECT s.user_id, s.full_name, s.sponsor_id, 1, ARRAY[s.user_id] FROM users s WHERE s.user_id = u.sponsor_id
+             UNION ALL
+             SELECT s.user_id, s.full_name, s.sponsor_id, chain.depth + 1, chain.path || s.user_id
+             FROM chain JOIN users s ON s.user_id = chain.sponsor_id
+             WHERE chain.depth < 25 AND NOT s.user_id = ANY(chain.path)
+           ) SELECT COALESCE(jsonb_agg(jsonb_build_object('user_id', user_id, 'full_name', full_name, 'depth', depth) ORDER BY depth), '[]'::jsonb) AS upline FROM chain
+         ) hierarchy ON TRUE
+         LEFT JOIN wallets w ON w.user_id = u.user_id WHERE u.user_id = $1`,
+        [req.params.id]
+      );
+      res.json({ status: 'success', dealer: result?.rows[0] });
+    } catch (err: any) {
+      const statusCode = err.statusCode || (err.code === '23505' ? 409 : 500);
+      res.status(statusCode).json({ status: 'error', message: err?.message || 'Bayi bilgileri kaydedilemedi.' });
     }
   });
 
@@ -11531,6 +11856,7 @@ async function startServer(options: { listen?: boolean } = {}) {
   // ============================================================================
   async function postDoubleEntryJournal(entry: {
     voucher_number: string;
+    user_id?: string | null;
     entry_date?: string;
     source_event_type: string;
     source_event_id: string;
@@ -11552,7 +11878,7 @@ async function startServer(options: { listen?: boolean } = {}) {
       entry_date: entry.entry_date || new Date().toISOString().split('T')[0],
       source_event_type: entry.source_event_type,
       source_event_id: entry.source_event_id,
-      user_id: entry.user_id && members.some((member) => member.user_id === entry.user_id) ? entry.user_id : null,
+      user_id: null as string | null,
       currency: entry.currency || 'TRY',
       debit_account_code: entry.debit_account_code,
       debit_account_name: entry.debit_account_name,
@@ -11566,6 +11892,10 @@ async function startServer(options: { listen?: boolean } = {}) {
     };
 
     await withTransaction(async (client) => {
+      const memberResult = entry.user_id
+        ? await client.query('SELECT user_id FROM users WHERE user_id = $1 FOR KEY SHARE', [entry.user_id])
+        : null;
+      newEntry.user_id = memberResult?.rows[0]?.user_id || null;
       await client.query(
         `INSERT INTO journal_entries (voucher_number, entry_type, user_id, debit, credit, currency, description, created_at, entry_data)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb)
@@ -11701,7 +12031,7 @@ async function startServer(options: { listen?: boolean } = {}) {
 
       await pgQuery(
         `INSERT INTO expense_vouchers (voucher_number, user_id, gross_amount, withholding_tax, net_payout, xml_content, status, created_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+         VALUES ($1, (SELECT user_id FROM users WHERE user_id = $2), $3, $4, $5, $6, $7, $8)
          ON CONFLICT (voucher_number) DO NOTHING`,
         [
           newVoucher.voucher_number,

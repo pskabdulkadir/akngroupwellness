@@ -131,6 +131,7 @@ import {
 } from '../utils/invoiceManager';
 import { DealerDetails, ScanResult } from '../types';
 import { ResellerDetailModal } from './ResellerDetailModal';
+import { AdminDealerManagementTab } from './AdminDealerManagementTab';
 import { DigitalInvoiceModal } from './DigitalInvoiceModal';
 import { CampaignsManagerAdminTab } from './CampaignsManagerAdminTab';
 import { SiteContentAdminTab } from './SiteContentAdminTab';
@@ -157,10 +158,11 @@ interface AdminPanelModalProps {
 
 export const ADMIN_SESSION_KEY = 'aurabio_admin_session_v1';
 export const ADMIN_TAB_KEY = 'aurabio_admin_tab_v1';
-const ADMIN_TABS = ['organization_tree', 'members', 'packages', 'resellers', 'dealers', 'devices', 'invoices', 'campaigns', 'scans', 'monoline_sql', 'site_content', 'ethics_guidelines'] as const;
+const ADMIN_TABS = ['organization_tree', 'dealer_management', 'members', 'packages', 'resellers', 'dealers', 'devices', 'invoices', 'campaigns', 'scans', 'monoline_sql', 'site_content', 'ethics_guidelines'] as const;
 type AdminTab = typeof ADMIN_TABS[number];
 const ADMIN_MODULE_LINKS: { id: Exclude<AdminTab, 'monoline_sql'>; label: string; icon: React.ComponentType<{ className?: string }>; color: string }[] = [
   { id: 'organization_tree', label: 'Unilevel & Monoline Ağaç Yönetimi', icon: GitBranch, color: 'emerald' },
+  { id: 'dealer_management', label: 'Bayi ve Üye Yönetimi', icon: Users, color: 'cyan' },
   { id: 'members', label: 'Üye & Ödeme Onayları', icon: Users, color: 'emerald' },
   { id: 'packages', label: 'Dinamik Paket Yönetimi', icon: Package, color: 'teal' },
   { id: 'resellers', label: 'Bayi & Komisyon Yönetimi', icon: Building2, color: 'cyan' },
@@ -2266,6 +2268,8 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
                 </button>
               </div>
             )}
+
+            {adminTab === 'dealer_management' && <AdminDealerManagementTab />}
 
             {/* TAB 0: UNILEVEL & MONOLINE AĞAÇ VE ORGANİZASYON YÖNETİMİ */}
             {adminTab === 'organization_tree' && (
