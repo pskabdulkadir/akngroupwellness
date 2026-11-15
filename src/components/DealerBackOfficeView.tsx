@@ -2151,10 +2151,10 @@ export const DealerBackOfficeView: React.FC<DealerBackOfficeViewProps> = ({
                     onClick={() => onReleasePendingBalance(member.user_id)}
                     className="text-xs font-semibold text-slate-900 underline hover:text-emerald-700 cursor-pointer"
                   >
-                    [Yönetici] Aktar →
+                    [Yönetici] Vadesi Gelenleri Aktar →
                   </button>
                 ) : (
-                  '14 günlük cayma koruması devrede'
+                  'Sponsor, Unilevel ve Monoline kazançları 14 gün sonunda cüzdana aktarılır.'
                 )
               ) : (
                 'Tüm hakedişler çekilebilir bakiyede'
@@ -2172,7 +2172,7 @@ export const DealerBackOfficeView: React.FC<DealerBackOfficeViewProps> = ({
               <span className="text-sm font-normal text-indigo-700">$</span>
             </div>
             <div className="text-[11px] text-indigo-700 font-mono">
-              7 Derinlik Dikey Sponsor Ekip Kazancı
+              Toplam hakediş; 14 gün bekleyen tutarlar dahil
             </div>
           </div>
 
@@ -2186,7 +2186,7 @@ export const DealerBackOfficeView: React.FC<DealerBackOfficeViewProps> = ({
               <span className="text-sm font-normal text-teal-700">$</span>
             </div>
             <div className="text-[11px] text-teal-700 font-mono">
-              Küresel Kuyruk İlk 7 Üst Sıra Primi
+              Toplam hakediş; 14 gün bekleyen tutarlar dahil
             </div>
           </div>
 

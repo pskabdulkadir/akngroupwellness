@@ -116,10 +116,15 @@ CREATE TABLE IF NOT EXISTS commission_logs (
     type VARCHAR(50) NOT NULL,
     depth_level INT,
     amount NUMERIC(15,2) NOT NULL,
+    amount_usd NUMERIC(15,2),
+    region VARCHAR(20),
     status VARCHAR(50) NOT NULL,
     release_at TIMESTAMP WITH TIME ZONE NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+ALTER TABLE commission_logs ADD COLUMN IF NOT EXISTS amount_usd NUMERIC(15,2);
+ALTER TABLE commission_logs ADD COLUMN IF NOT EXISTS region VARCHAR(20);
 
 CREATE INDEX IF NOT EXISTS idx_commission_logs_target ON commission_logs(target_user_id, status);
 CREATE INDEX IF NOT EXISTS idx_commission_logs_order ON commission_logs(order_id);

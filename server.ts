@@ -461,6 +461,8 @@ function persistApplicationState() {
     type: log.type,
     depth_level: log.depth_level,
     amount: log.amount,
+    amount_usd: log.amount_usd ?? null,
+    region: log.region ?? null,
     status: log.status || log.clawback_status || 'RELEASED',
     release_at: log.release_at || log.created_at,
     created_at: log.created_at,
@@ -565,11 +567,11 @@ function persistApplicationState() {
         [JSON.stringify(orderRows)]
       );
       await client.query(
-        `INSERT INTO commission_logs (order_id, source_user_id, target_user_id, type, depth_level, amount, status, release_at, created_at)
-         SELECT order_id, source_user_id, target_user_id, type, depth_level, amount, status, release_at, created_at
-         FROM jsonb_to_recordset($1::jsonb) AS x(order_id text, source_user_id text, target_user_id text, type text, depth_level integer, amount numeric, status text, release_at timestamptz, created_at timestamptz)
+        `INSERT INTO commission_logs (order_id, source_user_id, target_user_id, type, depth_level, amount, amount_usd, region, status, release_at, created_at)
+         SELECT order_id, source_user_id, target_user_id, type, depth_level, amount, amount_usd, region, status, release_at, created_at
+         FROM jsonb_to_recordset($1::jsonb) AS x(order_id text, source_user_id text, target_user_id text, type text, depth_level integer, amount numeric, amount_usd numeric, region text, status text, release_at timestamptz, created_at timestamptz)
          ON CONFLICT (order_id, type, (COALESCE(depth_level, 0)), (COALESCE(target_user_id, 'SYSTEM')))
-         DO UPDATE SET source_user_id = EXCLUDED.source_user_id, target_user_id = EXCLUDED.target_user_id, amount = EXCLUDED.amount, status = EXCLUDED.status, release_at = EXCLUDED.release_at`,
+         DO UPDATE SET source_user_id = EXCLUDED.source_user_id, target_user_id = EXCLUDED.target_user_id, amount = EXCLUDED.amount, amount_usd = EXCLUDED.amount_usd, region = EXCLUDED.region, status = EXCLUDED.status, release_at = EXCLUDED.release_at`,
         [JSON.stringify(commissionRows)]
       );
       await client.query(
@@ -4943,9 +4945,17 @@ async function hydrateStateFromPostgres(): Promise<void> {
           };
         });
         const commissionRows = await pgQuery('SELECT * FROM commission_logs ORDER BY created_at DESC, id DESC');
+        const storedCommissionLogs = commissionLogs;
         commissionLogs = (commissionRows?.rows || []).map((row: any) => {
           const source = members.find((item) => item.user_id === row.source_user_id);
           const target = members.find((item) => item.user_id === row.target_user_id);
+          const previous = storedCommissionLogs.find(
+            (log) =>
+              log.order_id === row.order_id &&
+              log.type === row.type &&
+              log.depth_level === (row.depth_level === null ? null : Number(row.depth_level)) &&
+              log.target_external_id === (row.target_user_id || 'SYSTEM_POOL')
+          );
           return {
             id: Number(row.id),
             order_id: row.order_id,
@@ -4959,6 +4969,8 @@ async function hydrateStateFromPostgres(): Promise<void> {
             commission_type: row.type,
             depth_level: row.depth_level === null ? null : Number(row.depth_level),
             amount: Number(row.amount) || 0,
+            amount_usd: row.amount_usd === null ? previous?.amount_usd : Number(row.amount_usd),
+            region: row.region || previous?.region,
             status: row.status,
             clawback_status: row.status === 'PENDING_14D' ? 'PENDING_14D' : undefined,
             release_at: row.release_at ? new Date(row.release_at).toISOString() : null,
@@ -7654,29 +7666,24 @@ async function startServer(options: { listen?: boolean } = {}) {
 </html>`);
   });
 
-  app.post('/api/v1/members/:userId/release-pending', requireAdminOrOwnMember, (req, res) => {
+  app.post('/api/v1/members/:userId/release-pending', requireAdminOrOwnMember, async (req, res) => {
     const member = members.find((m) => m.user_id === req.params.userId);
     if (!member) {
       res.status(404).json({ status: 'error', message: 'Üye bulunamadı.' });
       return;
     }
-    if (getMemberRegionalPendingUsd(member) <= 0) {
-      res
-        .status(400)
-        .json({ status: 'error', message: 'Aktarılacak bekleyen komisyon bulunmuyor.' });
+
+    const result = await runInAtomicTransaction(() =>
+      releasePendingCommissionsCron({ user_id: member.user_id })
+    );
+    if (result.releasedLogsCount === 0) {
+      res.status(400).json({ status: 'error', message: '14 günlük süresi dolmuş komisyon bulunmuyor.' });
       return;
-    }
-    const released = getMemberRegionalPendingUsd(member);
-    for (const region of ['DOMESTIC', 'INTERNATIONAL'] as const) {
-      const pendingUsd = member.wallets[getRegionPendingKey(region)] || 0;
-      if (pendingUsd > 0) {
-        releaseRegionalPendingUsd(member, region, pendingUsd);
-      }
     }
 
     res.json({
       status: 'success',
-      message: `$${released.toFixed(2)} bekleyen komisyon çekilebilir USD bakiyesine aktarıldı.`,
+      message: `$${result.releasedTotalAmount.toFixed(2)} vadesi dolmuş komisyon çekilebilir USD bakiyesine aktarıldı.`,
       state: buildStateResponse(),
     });
   });
@@ -8764,7 +8771,7 @@ async function startServer(options: { listen?: boolean } = {}) {
   // UPDATE wallets SET pending_balance = pending_balance - $1, balance = balance + $1 WHERE user_id = $2
   // UPDATE commission_logs SET status = 'RELEASED' WHERE id = $1
   // ============================================================================
-  function releasePendingCommissionsCron(options?: { order_id?: string }) {
+  function releasePendingCommissionsCron(options?: { order_id?: string; user_id?: string }) {
     const order_id = options?.order_id;
     const nowIso = new Date().toISOString();
     const nowMs = Date.now();
@@ -8776,6 +8783,7 @@ async function startServer(options: { listen?: boolean } = {}) {
     for (const log of commissionLogs) {
       if (log.status !== 'PENDING_14D' && log.clawback_status !== 'PENDING_14D') continue;
       if (order_id && log.order_id !== order_id) continue;
+      if (options?.user_id && log.target_external_id !== options.user_id) continue;
 
       const releaseMs = log.release_at ? new Date(log.release_at).getTime() : NaN;
       if (!Number.isFinite(releaseMs) || releaseMs > nowMs) continue;
@@ -8783,17 +8791,17 @@ async function startServer(options: { listen?: boolean } = {}) {
       const member = members.find(
         (m) => m.id === log.target_user_id || m.user_id === log.target_external_id
       );
-      if (member) {
-        const { region, usd } = resolveLogRegionalUsd(log, member);
-        releaseRegionalPendingUsd(member, region, usd);
-      }
+      if (!member) continue;
+
+      const { region, usd } = resolveLogRegionalUsd(log, member);
+      releaseRegionalPendingUsd(member, region, usd);
 
       // UPDATE commission_logs SET status = 'RELEASED' WHERE id = $1
       log.status = 'RELEASED';
       log.clawback_status = 'RELEASED_TO_BALANCE';
       log.released_at = nowIso;
       releasedLogsCount++;
-      releasedTotalAmount = roundCurrency(releasedTotalAmount + log.amount);
+      releasedTotalAmount = roundCurrency(releasedTotalAmount + usd);
       affectedOrderIds.add(log.order_id);
     }
 

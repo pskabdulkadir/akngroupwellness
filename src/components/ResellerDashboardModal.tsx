@@ -415,8 +415,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
               totalSalesAmount: matched.personal_volume + matched.group_volume,
               totalEarnings: matched.wallets.total_earnings,
               paidEarnings: matched.wallets.total_withdrawn,
-              pendingEarnings:
-                getMemberRegionalUsdBalance(matched) + getMemberRegionalPendingUsd(matched),
+              pendingEarnings: getMemberRegionalPendingUsd(matched),
             };
           });
         }
@@ -1308,7 +1307,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
             {activeTab === 'overview' && (
               <div className="space-y-6 animate-fade-in">
                 {/* 5 Cards Metrics including Credits Balance */}
-                <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
+                <div className="grid grid-cols-2 lg:grid-cols-6 gap-3 sm:gap-4">
                   
                   {/* Active Scan Credits Pool */}
                   <div className={`p-4 rounded-2xl border space-y-2.5 col-span-2 sm:col-span-1 shadow-lg transition-all ${
@@ -1403,17 +1402,29 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                     </div>
                   </div>
 
-                  {/* Pending / Available Balance */}
+                  <div className="p-4 rounded-2xl bg-slate-950/80 border border-emerald-500/30 space-y-2">
+                    <div className="flex items-center justify-between text-emerald-300">
+                      <span className="text-xs font-medium">Çekilebilir Bakiye</span>
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                    </div>
+                    <div className="text-xl sm:text-2xl font-bold text-emerald-300 font-mono">
+                      {formatUsd(liveMonolineMember ? getMemberRegionalUsdBalance(liveMonolineMember) : 0)}
+                    </div>
+                    <div className="text-[10px] text-emerald-400/80">
+                      Cüzdana aktarılmış tutar
+                    </div>
+                  </div>
+
                   <div className="p-4 rounded-2xl bg-slate-950/80 border border-amber-500/30 space-y-2">
                     <div className="flex items-center justify-between text-amber-300">
-                      <span className="text-xs font-medium">Bekleyen Bakiye</span>
+                      <span className="text-xs font-medium">Toplam Bekleyen Bakiye</span>
                       <Clock className="w-4 h-4 text-amber-400" />
                     </div>
                     <div className="text-xl sm:text-2xl font-bold text-amber-300 font-mono">
                       {formatUsd(activeReseller.pendingEarnings || 0)}
                     </div>
                     <div className="text-[10px] text-amber-400/80">
-                      Transfer edilecek
+                      Sponsor, Unilevel ve Monoline kazançları 14 gün bekler
                     </div>
                   </div>
                 </div>

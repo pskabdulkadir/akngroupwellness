@@ -1164,7 +1164,7 @@ export async function registerMonolineMemberToFrekans(
       status: 'active',
       totalEarnings: member.wallets.total_earnings,
       paidEarnings: member.wallets.total_withdrawn,
-      pendingEarnings: getMemberRegionalUsdBalance(member),
+      pendingEarnings: getMemberRegionalPendingUsd(member),
       totalSalesAmount: member.personal_volume,
       totalReferredUsers: member.active_direct_referrals,
       createdAt: nowIso,

@@ -360,14 +360,16 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
           }),
         });
         const settlement = await settlementResponse.json().catch(() => ({}));
+        const grantedCredits = Number(settlement.transaction?.session_credits_added);
         if (
           !settlementResponse.ok ||
           settlement.status !== 'success' ||
-          Number(settlement.transaction?.session_credits_added) !== Math.max(
-            dealerPackages.find((pkg) => pkg.id === cartItems[0].packageId)?.scanCredits || 0,
-            64
-          ) ||
-          typeof settlement.member_token !== 'string'
+          settlement.transaction?.order_id !== orderId ||
+          settlement.transaction?.buyer_user_id !== user.uid ||
+          !Number.isFinite(grantedCredits) ||
+          grantedCredits <= 0 ||
+          typeof settlement.member_token !== 'string' ||
+          !settlement.member_token
         ) {
           throw new Error(
             `Ödeme alındı ancak bayi kaydı etkinleştirilemedi. İşlem numarası: ${posCharge.transaction_id}. ${settlement.message || ''}`
@@ -380,7 +382,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
             selectedPackage: cartItems[0].packageId,
             dealerPackageId: cartItems[0].packageId,
           },
-          Number(settlement.transaction.session_credits_added)
+          grantedCredits
         );
         onDealerRegistrationPaid?.(orderUser);
       }
