@@ -410,7 +410,7 @@ export async function syncFrekansWithMonolineEngine(options?: {
       const purchasedCreditsByUser = new Map<string, number>();
 
       dealerOrders.forEach((dOrder: DealerPackageOrder) => {
-        if (!dOrder || !dOrder.id || dOrder.status === 'rejected') return;
+        if (!dOrder || !dOrder.id || dOrder.status !== 'approved') return;
         if (LEGACY_DEMO_USER_IDS.has(dOrder.resellerId)) return;
         const amt = Number(dOrder.price);
         if (isNaN(amt) || amt <= 0) return;
@@ -459,7 +459,7 @@ export async function syncFrekansWithMonolineEngine(options?: {
 
       memberOrders.forEach((mOrder: MemberOrder) => {
         if (!mOrder || !mOrder.id) return;
-        if (mOrder.paymentStatus === 'DEMO' || mOrder.paymentStatus === 'REJECTED') return;
+        if (mOrder.paymentStatus !== 'PAID') return;
         if (LEGACY_DEMO_USER_IDS.has(mOrder.userId)) return;
         const amt = Number(mOrder.amount);
         if (isNaN(amt) || amt <= 0) return;
@@ -509,7 +509,7 @@ export async function syncFrekansWithMonolineEngine(options?: {
           return;
         }
 
-        if (u.paymentStatus === 'PAID' || u.dealerStatus === 'approved' || u.role === 'dealer') {
+        if (u.paymentStatus === 'PAID') {
           const monolinePkg = mapFrekansPkgToMonolinePkgId(rawPkg);
           const pkgDef = PACKAGES[monolinePkg];
           if (pkgDef && pkgDef.defaultPrice > 0) {

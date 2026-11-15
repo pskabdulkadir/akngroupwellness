@@ -89,7 +89,7 @@ export function installAdminFetchAuth(): void {
     const rawUrl = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
     const path = new URL(rawUrl, window.location.origin).pathname;
     const isAdminPath = ADMIN_API_PATH.test(path);
-    const isAccountingPath = /^\/api\/v1\/(integrations\/accounting\/sync-data|accounting\/)/.test(path);
+    const isAccountingPath = /^\/api\/v1\/(integrations\/accounting\/(sync-data|sync-event)|accounting\/)/.test(path);
     const token = isAdminPath ? adminToken : isAccountingPath ? adminToken || accountingToken : null;
     if (!token) return originalFetch(input, init);
 

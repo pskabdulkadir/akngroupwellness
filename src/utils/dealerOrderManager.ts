@@ -435,14 +435,6 @@ export async function adminApproveDealerPackageOrder(
       console.warn('Firestore approve dealer order notice:', fsErr);
     }
 
-    // 4. Auto-generate official Digital E-Invoice for this dealer order
-    try {
-      const { createInvoiceForDealerOrder } = await import('./invoiceManager');
-      await createInvoiceForDealerOrder(order, rIdx >= 0 ? resellers[rIdx] : undefined);
-    } catch (invErr) {
-      console.debug('Auto invoice generation notice:', invErr);
-    }
-
     // 5. Ensure Monoline Commission Engine Webhook is synced for approved order
     try {
       await fetch('/api/v1/integrations/order-commission', {

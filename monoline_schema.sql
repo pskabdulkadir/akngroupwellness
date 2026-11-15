@@ -289,6 +289,20 @@ ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS entry_data JSONB NOT NULL D
 ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP;
 CREATE UNIQUE INDEX IF NOT EXISTS idx_journal_entries_voucher ON journal_entries(voucher_number);
 
+CREATE TABLE IF NOT EXISTS accounting_events (
+    source_event_id VARCHAR(120) PRIMARY KEY,
+    event_type VARCHAR(60) NOT NULL,
+    accounting_status VARCHAR(40) NOT NULL DEFAULT 'NEEDS_REVIEW',
+    tax_status VARCHAR(40) NOT NULL DEFAULT 'NEEDS_REVIEW',
+    invoice_status VARCHAR(40) NOT NULL DEFAULT 'DRAFT_REQUIRED',
+    amount NUMERIC(15,2) NOT NULL,
+    currency VARCHAR(10) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    event_data JSONB NOT NULL DEFAULT '{}'::jsonb
+);
+
+CREATE INDEX IF NOT EXISTS idx_accounting_events_created_at ON accounting_events(created_at DESC);
+
 ALTER TABLE expense_vouchers ADD COLUMN IF NOT EXISTS voucher_data JSONB NOT NULL DEFAULT '{}'::jsonb;
 ALTER TABLE payout_batches ADD COLUMN IF NOT EXISTS batch_data JSONB NOT NULL DEFAULT '{}'::jsonb;
 ALTER TABLE withdrawal_requests ADD COLUMN IF NOT EXISTS withdrawal_data JSONB NOT NULL DEFAULT '{}'::jsonb;

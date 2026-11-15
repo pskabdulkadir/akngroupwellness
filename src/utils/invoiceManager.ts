@@ -13,8 +13,6 @@ import {
   db
 } from '../lib/db';
 import { formatUsd } from './currency';
-import { Reseller } from './resellerManager';
-import { DealerPackageOrder } from './dealerOrderManager';
 import { ADMIN_PHONE, ADMIN_EMAILS, BANK_INFO } from './authManager';
 
 export interface InvoiceItem {
@@ -419,95 +417,6 @@ export function subscribeToDigitalInvoices(
       window.removeEventListener('aurabio_invoices_updated', handleLocal);
     };
   }
-}
-
-/**
- * Automatically create a standard e-Arşiv Digital Invoice for a dealer order / topup
- */
-export async function createInvoiceForDealerOrder(
-  order: DealerPackageOrder,
-  reseller?: Reseller | null,
-  customRecipient?: Partial<DigitalInvoice['recipient']>
-): Promise<DigitalInvoice> {
-  const allInvoices = await getAllDigitalInvoices();
-  
-  // Check if invoice already exists for this order
-  const existing = allInvoices.find(i => i.orderId === order.id);
-  if (existing) {
-    return existing;
-  }
-
-  const invoiceId = `INV-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`;
-  const invoiceNumber = generateInvoiceNumber(allInvoices.length);
-  const ettn = generateUUID();
-  
-  const now = new Date();
-  const issueDate = now.toISOString().split('T')[0];
-  const issueTime = now.toTimeString().split(' ')[0];
-
-  // Calculate pricing (KDV %20 Dahil)
-  // GrandTotal = Price
-  // Subtotal = Price / 1.20
-  // KdvTotal = Price - Subtotal
-  const grandTotal = Math.max(0, Number(order.price) || 0);
-  const subtotal = Math.round((grandTotal / 1.20) * 100) / 100;
-  const kdvTotal = Math.round((grandTotal - subtotal) * 100) / 100;
-
-  const itemDescription = `${order.packageName || 'Yetkili Bayilik Paketi'} - ${order.scanCredits} Seans Biyorezonans Kredisi & Lisans Hizmeti`;
-
-  const item: InvoiceItem = {
-    id: `item-1`,
-    description: itemDescription,
-    quantity: 1,
-    unit: 'Paket',
-    unitPrice: subtotal,
-    kdvRate: 20,
-    kdvAmount: kdvTotal,
-    totalAmount: grandTotal,
-  };
-
-  const recipient: DigitalInvoice['recipient'] = {
-    uid: order.resellerId || reseller?.uid || '',
-    companyName: customRecipient?.companyName || reseller?.businessName || reseller?.resellerName || order.resellerName || 'Yetkili Bayi',
-    fullName: customRecipient?.fullName || reseller?.fullName || reseller?.resellerName || order.resellerName || 'Yetkili Bayi',
-    taxNumber: customRecipient?.taxNumber || (reseller as any)?.taxNumber || '11111111111',
-    taxOffice: customRecipient?.taxOffice || (reseller as any)?.taxOffice || 'Vergi Dairesi',
-    address: customRecipient?.address || (reseller as any)?.address || 'Türkiye',
-    city: customRecipient?.city || 'İstanbul',
-    phone: customRecipient?.phone || order.resellerPhone || reseller?.phone || '',
-    email: customRecipient?.email || order.resellerEmail || reseller?.email || '',
-    referralCode: customRecipient?.referralCode || reseller?.referralCode || '',
-  };
-
-  const newInvoice: DigitalInvoice = {
-    id: invoiceId,
-    invoiceNumber,
-    ettn,
-    orderId: order.id,
-    packageId: order.packageId,
-    packageName: order.packageName,
-    recipient,
-    issuer: DEFAULT_ISSUER_INFO,
-    issueDate,
-    issueTime,
-    serviceDate: issueDate,
-    currency: 'USD',
-    items: [item],
-    subtotal,
-    kdvTotal,
-    grandTotal,
-    grandTotalInWords: numberToTurkishWords(grandTotal),
-    paymentMethod: order.paymentMethod === 'bank_transfer' ? 'HAVALE_EFT' : 'HAVALE_EFT',
-    paymentReference: order.paymentReference || `Sipariş #${order.id}`,
-    status: 'issued',
-    invoiceType: 'SATIS',
-    notes: "509 Sıra No'lu VUK Genel Tebliği uyarınca e-Arşiv Fatura olarak elektronik ortamda tanzim edilmiştir. İşbu fatura AuraBio Frekans yazılım lisans bedeli ve seans kredi tahsisini içermektedir.",
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  };
-
-  await saveDigitalInvoice(newInvoice);
-  return newInvoice;
 }
 
 /**

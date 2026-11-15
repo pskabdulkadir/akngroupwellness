@@ -13,8 +13,27 @@ import {
   Sparkles,
 } from 'lucide-react';
 
+interface AccountingReviewEvent {
+  source_event_id: string;
+  event_type: string;
+  accounting_status: string;
+  tax_status: string;
+  invoice_status: string;
+  amount: number;
+  currency: string;
+  created_at: string;
+  event_data?: {
+    customer_name?: string;
+    package_name?: string;
+    payment_method?: string;
+    commission_amount?: number;
+    commission_status?: string;
+  };
+}
+
 interface OverviewViewProps {
   invoices: Invoice[];
+  accountingEvents: AccountingReviewEvent[];
   commissions: CommissionPayout[];
   summary: TaxReportSummary;
   aiAdvices: AIAdvice[];
@@ -24,6 +43,7 @@ interface OverviewViewProps {
 
 export const OverviewView: React.FC<OverviewViewProps> = ({
   invoices,
+  accountingEvents,
   commissions,
   summary,
   aiAdvices,
@@ -146,6 +166,32 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
           </div>
         </div>
       </div>
+
+      <section className="rounded-xl border border-amber-200 bg-amber-50/70 p-5 shadow-xs">
+        <div className="mb-4 flex flex-wrap items-start justify-between gap-2">
+          <div>
+            <h3 className="text-sm font-bold text-slate-900">Bayi alışverişleri ve kayıtları</h3>
+            <p className="mt-1 text-xs text-slate-600">Ödeme ve komisyon olayları anında alındı. Vergi/stopaj sınıflandırması ve resmi fatura, mali müşavir incelemesine kadar beklemede; bu olaylar henüz yevmiye kaydı değildir.</p>
+          </div>
+          <button onClick={() => onNavigateTab('monolineReconciliation')} className="text-xs font-semibold text-amber-900 underline">Mutabakatı aç</button>
+        </div>
+        <div className="max-h-72 space-y-2 overflow-auto">
+          {accountingEvents.map((event) => (
+            <div key={event.source_event_id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-100 bg-white p-3">
+              <div className="min-w-0">
+                <p className="truncate text-xs font-bold text-slate-900">{event.event_data?.customer_name || event.source_event_id} · {event.event_data?.package_name || event.event_type}</p>
+                <p className="truncate text-[11px] text-slate-500">{event.source_event_id} · {event.event_data?.payment_method || 'Ödeme yöntemi belirtilmemiş'} · {event.created_at?.slice(0, 10)}</p>
+                <p className="mt-1 text-[11px] font-semibold text-amber-800">Vergi/stopaj incelemede · Fatura taslağı gerekli · Komisyon {event.event_data?.commission_status || 'incelemede'}</p>
+              </div>
+              <div className="shrink-0 text-right">
+                <p className="text-sm font-bold tabular-nums">{Number(event.amount || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2 })} {event.currency}</p>
+                <p className="text-[11px] text-slate-500">Komisyon: {Number(event.event_data?.commission_amount || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2 })} {event.currency}</p>
+              </div>
+            </div>
+          ))}
+          {!accountingEvents.length && <p className="rounded-lg bg-white p-3 text-xs text-slate-500">Henüz inceleme bekleyen bayi alışverişi bulunmuyor.</p>}
+        </div>
+      </section>
 
       {/* Enterprise Expansion Strip: 4 Additional Module KPIs */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -382,10 +428,10 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
         <div className="p-5 border-b border-slate-200 flex items-center justify-between">
           <div>
             <h3 className="text-sm font-semibold text-slate-900">
-              Son Düzenlenen e-Fatura &amp; e-Arşiv Belgeleri
+              Fatura kayıtları
             </h3>
             <p className="text-xs text-slate-500">
-              3DS onaylı siparişlerden otomatik tanzim edilen yasal faturalar
+              Resmi faturalar, vergi kuralları ve entegratör onayı tamamlandıktan sonra düzenlenir.
             </p>
           </div>
           <button

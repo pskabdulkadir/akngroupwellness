@@ -79,6 +79,20 @@ export async function initPostgresDatabase(options: { applySchema?: boolean } = 
       await client.query(sql);
       console.log('[PostgreSQL-18] monoline_schema.sql tabloları ve indeksleri doğrulandı.');
     }
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS accounting_events (
+        source_event_id VARCHAR(120) PRIMARY KEY,
+        event_type VARCHAR(60) NOT NULL,
+        accounting_status VARCHAR(40) NOT NULL DEFAULT 'NEEDS_REVIEW',
+        tax_status VARCHAR(40) NOT NULL DEFAULT 'NEEDS_REVIEW',
+        invoice_status VARCHAR(40) NOT NULL DEFAULT 'DRAFT_REQUIRED',
+        amount NUMERIC(15,2) NOT NULL,
+        currency VARCHAR(10) NOT NULL,
+        created_at TIMESTAMP WITH TIME ZONE NOT NULL,
+        event_data JSONB NOT NULL DEFAULT '{}'::jsonb
+      );
+      CREATE INDEX IF NOT EXISTS idx_accounting_events_created_at ON accounting_events(created_at DESC);
+    `);
     isPostgresAvailable = true;
     return true;
   } catch (err: any) {

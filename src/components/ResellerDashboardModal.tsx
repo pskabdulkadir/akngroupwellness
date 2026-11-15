@@ -115,8 +115,7 @@ import {
   DigitalInvoice, 
   subscribeToDigitalInvoices, 
   getInvoicesForReseller, 
-  generateInvoiceWhatsAppShareUrl,
-  createInvoiceForDealerOrder
+  generateInvoiceWhatsAppShareUrl
 } from '../utils/invoiceManager';
 import { DealerBusinessCardModal } from './DealerBusinessCardModal';
 import { DigitalInvoiceModal } from './DigitalInvoiceModal';
@@ -3134,23 +3133,24 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                                     <span>Yönetici Onayladı & Krediler Yüklendi</span>
                                   </span>
 
-                                  <button
-                                    onClick={async () => {
-                                      let inv = invoices.find(i => i.orderId === ord.id);
-                                      if (!inv) {
-                                        inv = await createInvoiceForDealerOrder(ord);
-                                      }
-                                      if (inv) {
-                                        setSelectedInvoice(inv);
-                                        setShowInvoiceModal(true);
-                                      }
-                                    }}
-                                    className="px-2.5 py-1 rounded-xl bg-purple-950/80 hover:bg-purple-900 text-purple-300 border border-purple-500/40 text-[11px] font-bold flex items-center gap-1 cursor-pointer transition-colors shadow-md"
-                                    title="Dijital E-Faturayı Görüntüle / Yazdır"
-                                  >
-                                    <Receipt className="w-3.5 h-3.5 text-purple-400" />
-                                    <span>E-Fatura</span>
-                                  </button>
+                                  {invoices.some(i => i.orderId === ord.id) ? (
+                                    <button
+                                      onClick={() => {
+                                        const inv = invoices.find(i => i.orderId === ord.id);
+                                        if (inv) {
+                                          setSelectedInvoice(inv);
+                                          setShowInvoiceModal(true);
+                                        }
+                                      }}
+                                      className="px-2.5 py-1 rounded-xl bg-purple-950/80 hover:bg-purple-900 text-purple-300 border border-purple-500/40 text-[11px] font-bold flex items-center gap-1 cursor-pointer transition-colors shadow-md"
+                                      title="Mevcut faturayı görüntüle"
+                                    >
+                                      <Receipt className="w-3.5 h-3.5 text-purple-400" />
+                                      <span>Mevcut Fatura</span>
+                                    </button>
+                                  ) : (
+                                    <span className="text-[11px] font-semibold text-amber-300">Fatura taslağı mali müşavir incelemesinde</span>
+                                  )}
                                 </div>
                               )}
                               {ord.status === 'rejected' && (

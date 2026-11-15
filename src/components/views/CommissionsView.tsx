@@ -121,7 +121,7 @@ export const CommissionsView: React.FC<CommissionsViewProps> = ({
       const data = await res.json();
       if (res.ok) {
         setActionSuccessMsg(
-          data.message || `${data.generatedCount || 0} adet süresi dolan hakediş için resmi e-gider pusulası üretildi.`
+          data.message || `${data.pendingReviewCount || 0} hakediş vergi ve belge incelemesi için kuyruğa alındı.`
         );
         await fetchLiveData();
         if (onRefreshData) onRefreshData();
@@ -359,10 +359,10 @@ export const CommissionsView: React.FC<CommissionsViewProps> = ({
                 onClick={handleTriggerMaturedJob}
                 disabled={isLoading}
                 className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded-lg shadow-2xs hover:bg-slate-100 transition-colors"
-                title="14 günlük süresi dolan tüm hak edişler için arka plan kuyruğunu tetikler"
+                title="Vadesi dolan hakedişleri vergi ve belge incelemesi kuyruğunda gösterir; resmi belge oluşturmaz"
               >
                 <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
-                14 Gün Süresi Dolanları Tetikle
+                Hakedişleri İncelemeye Al
               </button>
             </div>
 

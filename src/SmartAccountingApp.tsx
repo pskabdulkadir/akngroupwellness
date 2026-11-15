@@ -182,6 +182,7 @@ export default function SmartAccountingApp({
   const [accountingWithdrawals, setAccountingWithdrawals] = useState<any[]>([]);
   const [accountingBatches, setAccountingBatches] = useState<any[]>([]);
   const [accountingOrders, setAccountingOrders] = useState<any[]>([]);
+  const [accountingEvents, setAccountingEvents] = useState<any[]>([]);
   const [aiAdvices] = useState<AIAdvice[]>(INITIAL_AI_ADVICE);
 
   // 6 Modül State'leri
@@ -259,6 +260,7 @@ export default function SmartAccountingApp({
         setAccountingWithdrawals(Array.isArray(data.withdrawal_requests) ? data.withdrawal_requests : []);
         setAccountingBatches(Array.isArray(data.payout_batches) ? data.payout_batches : []);
         setAccountingOrders(Array.isArray(data.orders) ? data.orders : []);
+        setAccountingEvents(Array.isArray(data.accounting_events) ? data.accounting_events : []);
 
         // 1. Üyelerden Bayi Listesini Güncelle
         if (Array.isArray(data.members) && data.members.length > 0) {
@@ -325,111 +327,15 @@ export default function SmartAccountingApp({
   };
 
   useEffect(() => {
-    fetchLiveAccountingData();
+    const refresh = () => void fetchLiveAccountingData();
+    refresh();
+    const interval = window.setInterval(refresh, 15000);
+    const unsubscribe = accountingSyncBridge.subscribe(refresh);
+    return () => {
+      window.clearInterval(interval);
+      unsubscribe();
+    };
   }, []);
-
-  // Real-time synchronization with Wellness and Monoline transactions
-  useEffect(() => {
-    const unsub = accountingSyncBridge.subscribe((payload) => {
-      const isExportSale = Boolean(payload.isExport || (payload.amountUsd && payload.amountUsd > 0));
-      const tryAmount = payload.amountTry || (payload.amountUsd ? payload.amountUsd * rates.USD : 0);
-      const vatAmount = isExportSale ? 0 : Number(((tryAmount * 20) / 120).toFixed(2));
-
-      // 1. Yeni e-Fatura / e-Arşiv kaydı oluştur
-      const invNum = `GİB-2026-${Math.floor(100000 + Math.random() * 900000)}`;
-      const newInv: Invoice = {
-        id: payload.orderId || `INV-LIVE-${Date.now().toString().slice(-5)}`,
-        invoiceNumber: invNum,
-        currency: isExportSale ? 'USD' : 'TRY',
-        type: isExportSale ? 'HIZMET_IHRACI' : 'SATIS',
-        ettn: `98a1-${Date.now().toString().slice(-6)}-4b02-8f19`,
-        issueDate: new Date().toISOString().split('T')[0],
-        issueTime: new Date().toTimeString().split(' ')[0],
-        exchangeRateTCMB: rates.USD,
-        subtotal: tryAmount - vatAmount,
-        vatTotal: vatAmount,
-        grandTotal: tryAmount,
-        grandTotalTRY: tryAmount,
-        integrator: 'Logo',
-        notes: ['AKN Wellness Biyo-Rezonans Siparişi'],
-        paymentMethod: '3D_SECURE_CREDIT_CARD',
-        gibStatus: {
-          code: '1200',
-          description: 'GİB Tarafından Başarıyla Alındı ve İmzalandı',
-          sentAt: new Date().toISOString(),
-          signedAt: new Date().toISOString(),
-        },
-        items: [
-          {
-            id: `item-${Date.now()}`,
-            description: payload.packageName || 'AKN Wellness Biyo-Rezonans & Monoline Hizmeti',
-            quantity: 1,
-            unitPrice: tryAmount,
-            currency: isExportSale ? 'USD' : 'TRY',
-            vatRate: isExportSale ? 0 : 0.20,
-            vatAmount: vatAmount,
-            subtotal: tryAmount - vatAmount,
-            total: tryAmount,
-          },
-        ],
-        customer: {
-          name: payload.customerName || 'Danışan / Bayi Müşterisi',
-          taxNumber: payload.vknTckn || '11111111110',
-          isCorporate: false,
-          isGibRegistered: false,
-          address: 'İstanbul, Türkiye',
-          city: 'İstanbul',
-          country: isExportSale ? 'US' : 'TR',
-          email: payload.customerEmail || 'danisan@akngroupfrekans.com',
-        },
-        scenario: isExportSale ? 'IHRACAT' : 'EARSIVBELGE',
-      };
-      setInvoices((prev) => [newInv, ...prev]);
-
-      // 2. Yevmiye defterine çift taraflı kayıt ekle
-      const newLedger: LedgerEntry = {
-        id: `YEV-${Date.now().toString().slice(-5)}`,
-        date: new Date().toISOString().split('T')[0],
-        entryNumber: Math.floor(1000 + Math.random() * 9000),
-        documentNumber: invNum,
-        description: `Monoline Canlı Satış: ${payload.orderId} - ${payload.packageName || payload.customerName || 'Hizmet Satışı'}`,
-        accountCode: '102.01',
-        accountName: 'Ziraat Bankası Ticari Sanal POS',
-        debitTRY: tryAmount,
-        creditTRY: 0,
-        currency: isExportSale ? 'USD' : 'TRY',
-      };
-      setLedgerEntries((prev) => [newLedger, ...prev]);
-
-      // 3. Eğer bayi komisyonu stopajı varsa gider pusulası oluştur
-      if (payload.isDealerCommission && payload.withholdingTaxTry) {
-        const netAmt = payload.netPayoutTry || (tryAmount - payload.withholdingTaxTry);
-        const newComm: CommissionPayout = {
-          id: `COMM-LIVE-${Date.now().toString().slice(-4)}`,
-          invoiceId: newInv.id,
-          invoiceNumber: invNum,
-          distributorId: 'DIST-LIVE-BAYI',
-          distributorName: payload.customerName || 'Aktif Bayi Temsilcisi',
-          tierLevel: 1,
-          commissionRate: 0.20,
-          baseAmountTRY: tryAmount,
-          grossCommissionTRY: tryAmount,
-          withholdingRate: 0.20,
-          withholdingAmountTRY: payload.withholdingTaxTry,
-          netPayableTRY: netAmt,
-          isCompany: Boolean(payload.dealerIsCompany),
-          payoutDate: new Date().toISOString(),
-          documentType: 'GIDER_PUSULASI',
-          documentNumber: `GP-2026-${Math.floor(1000 + Math.random() * 9000)}`,
-          isPaid: true,
-          ledgerPosted: true,
-        };
-        setCommissions((prev) => [newComm, ...prev]);
-      }
-    });
-
-    return unsub;
-  }, [rates]);
 
   const handleRefreshRates = async () => {
     const updated = await fetchLiveExchangeRates();
@@ -778,6 +684,31 @@ export default function SmartAccountingApp({
               </article>
             ))}
           </section>
+          <section className="rounded-2xl border border-amber-200 bg-amber-50/70 p-5 shadow-sm">
+            <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-bold">Bayi kayıtları ve alışverişler · inceleme kuyruğu</h2>
+                <p className="mt-1 text-sm text-slate-600">Sipariş ve komisyon olayları anında alındı. Vergi/stopaj ve resmi fatura sınıflandırması mali müşavir incelemesine kadar beklemededir; bu kayıtlar yevmiyeye veya gelir toplamına dahil değildir.</p>
+              </div>
+              <span className="rounded-full border border-amber-300 bg-white px-3 py-1 text-xs font-bold text-amber-800">{accountingEvents.length} kayıt</span>
+            </div>
+            <div className="max-h-96 space-y-2 overflow-auto">
+              {accountingEvents.map((event) => (
+                <article key={event.source_event_id} className="grid grid-cols-1 gap-2 rounded-xl border border-amber-100 bg-white p-3 sm:grid-cols-[1fr_auto] sm:items-center">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold">{event.event_data?.customer_name || event.source_event_id} · {event.event_data?.package_name || event.event_type}</p>
+                    <p className="text-xs text-slate-500">{event.source_event_id} · {event.event_data?.payment_method || 'Ödeme yöntemi kaydedilmemiş'} · {event.created_at?.slice(0, 10)}</p>
+                    <p className="mt-1 text-xs font-medium text-amber-800">Vergi/stopaj: inceleme bekliyor · Fatura: taslak gerekli · Muhasebe: {event.accounting_status === 'FRAUD_REVIEW' ? 'risk incelemesi' : 'sınıflandırma bekliyor'}</p>
+                  </div>
+                  <div className="text-left sm:text-right">
+                    <p className="text-sm font-bold tabular-nums">{Number(event.amount || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2 })} {event.currency || 'USD'}</p>
+                    <p className="text-xs text-slate-500">Komisyon: {Number(event.event_data?.commission_amount || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2 })} {event.currency || 'USD'} · {event.event_data?.commission_status || 'beklemede'}</p>
+                  </div>
+                </article>
+              ))}
+              {!accountingEvents.length && <p className="rounded-xl bg-white p-4 text-sm text-slate-500">Henüz muhasebe incelemesi bekleyen sipariş yok.</p>}
+            </div>
+          </section>
           <section className="grid grid-cols-1 gap-6 xl:grid-cols-2">
             <article className="min-w-0 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
               <h2 className="mb-4 text-lg font-bold">Yevmiye defteri</h2>
@@ -877,6 +808,7 @@ export default function SmartAccountingApp({
               commissions={commissions}
               summary={summary}
               aiAdvices={aiAdvices}
+              accountingEvents={accountingEvents}
               onSelectInvoice={(inv) => setSelectedInvoice(inv)}
               onNavigateTab={(tab) => setCurrentTab(tab)}
             />

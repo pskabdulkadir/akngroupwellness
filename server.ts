@@ -14,7 +14,6 @@ import {
 } from './server/db.js';
 
 import {
-  calculateVoucherWithholding,
   generateOfficialGiderPusulasiXml,
   generateBankBatchFile,
   CANONICAL_COMPANY_PROFILE,
@@ -291,6 +290,17 @@ let nextVoucherId = 1;
 let expenseVouchers: ExpenseVoucherRecord[] = [];
 let payoutBatches: PayoutBatchRecord[] = [];
 let payoutBatchItems: PayoutBatchItemRecord[] = [];
+let accountingEvents: Array<{
+  source_event_id: string;
+  event_type: string;
+  accounting_status: 'NEEDS_REVIEW' | 'FRAUD_REVIEW';
+  tax_status: 'NEEDS_REVIEW';
+  invoice_status: 'DRAFT_REQUIRED';
+  amount: number;
+  currency: string;
+  created_at: string;
+  event_data: Record<string, unknown>;
+}> = [];
 let journalEntries: Array<{
   id: number;
   voucher_number: string;
@@ -375,6 +385,7 @@ function buildPersistentState() {
     expenseVouchers,
     payoutBatches,
     payoutBatchItems,
+    accountingEvents,
     journalEntries,
     nextVoucherSequence,
     nextPayoutBatchSequence,
@@ -612,6 +623,13 @@ function persistApplicationState() {
         [JSON.stringify(journalRows)]
       );
       await client.query(
+        `INSERT INTO accounting_events (source_event_id, event_type, accounting_status, tax_status, invoice_status, amount, currency, created_at, event_data)
+         SELECT source_event_id, event_type, accounting_status, tax_status, invoice_status, amount, currency, created_at, event_data
+         FROM jsonb_to_recordset($1::jsonb) AS x(source_event_id text, event_type text, accounting_status text, tax_status text, invoice_status text, amount numeric, currency text, created_at timestamptz, event_data jsonb)
+         ON CONFLICT (source_event_id) DO UPDATE SET event_type = EXCLUDED.event_type, accounting_status = EXCLUDED.accounting_status, tax_status = EXCLUDED.tax_status, invoice_status = EXCLUDED.invoice_status, amount = EXCLUDED.amount, currency = EXCLUDED.currency, event_data = EXCLUDED.event_data`,
+        [JSON.stringify(accountingEvents)]
+      );
+      await client.query(
         `INSERT INTO application_state (state_key, payload, updated_at)
          VALUES ('main', $1::jsonb, CURRENT_TIMESTAMP)
          ON CONFLICT (state_key) DO UPDATE SET payload = EXCLUDED.payload, updated_at = CURRENT_TIMESTAMP`,
@@ -708,6 +726,7 @@ async function hydrateApplicationState() {
     expenseVouchers: (value) => (expenseVouchers = value),
     payoutBatches: (value) => (payoutBatches = value),
     payoutBatchItems: (value) => (payoutBatchItems = value),
+    accountingEvents: (value) => (accountingEvents = value),
     journalEntries: (value) => (journalEntries = value),
     ipActivityEvents: (value) => (ipActivityEvents = value),
   };
@@ -2714,6 +2733,46 @@ function processOrderCommission(payload: OrderCommissionPayload): CommissionTran
     career_upgrades_triggered: careerUpgrades,
   };
 
+  if (!accountingEvents.some((event) => event.source_event_id === orderId)) {
+    accountingEvents.unshift({
+      source_event_id: orderId,
+      event_type: orderId.startsWith('ORD-KAYIT-') || orderId.startsWith('ORD-INIT-') ? 'DEALER_REGISTRATION_PURCHASE' : normalizedPkg ? 'PACKAGE_PURCHASE' : 'CUSTOM_ORDER',
+      accounting_status: isFraudFlagged ? 'FRAUD_REVIEW' : 'NEEDS_REVIEW',
+      tax_status: 'NEEDS_REVIEW',
+      invoice_status: 'DRAFT_REQUIRED',
+      amount,
+      currency: 'USD',
+      created_at: nowIso,
+      event_data: {
+        order_id: orderId,
+        user_id: buyer.user_id,
+        customer_name: buyer.full_name,
+        customer_email: buyer.email,
+        customer_phone: buyer.phone,
+        customer_tax_id: buyer.tc_identity_no,
+        customer_is_company: Boolean(buyer.has_tax_company),
+        package_id: normalizedPkg || String(payload.package_id || 'CUSTOM'),
+        package_name: normalizedPkg ? PACKAGES[normalizedPkg].name : String(payload.package_id || 'Özel Sipariş'),
+        payment_method: payload.payment_method || 'NOT_PROVIDED',
+        order_type: payload.order_type || 'STANDARD_ORDER',
+        commission_amount: roundCurrency(commissionLogs
+          .filter((log) => log.order_id === orderId && log.type !== 'SYSTEM_POOL')
+          .reduce((sum, log) => sum + Number(log.amount || 0), 0)),
+        commission_entries: commissionLogs
+          .filter((log) => log.order_id === orderId && log.type !== 'SYSTEM_POOL')
+          .map((log) => ({
+            commission_id: log.id,
+            type: log.type,
+            target_user_id: log.target_external_id,
+            target_name: log.target_user_name,
+            amount: Number(log.amount || 0),
+            status: log.status,
+            release_at: log.release_at,
+          })),
+        commission_status: isFraudFlagged ? 'FRAUD_REVIEW' : 'PENDING_14D',
+      },
+    });
+  }
   transactions.unshift(tx);
 
   // Sponsor için "3 Getir Bedavaya Getir" (Fast-ROI +%15) kontrolünü tetikle
@@ -2778,6 +2837,7 @@ function resetToCleanSlate(includeAdmin = true) {
   transactions = [];
   commissionLogs = [];
   ordersLog = [];
+  accountingEvents = [];
   walletTransactions = [];
   systemWallet = {
     id: 1,
@@ -9113,6 +9173,12 @@ async function startServer(options: { listen?: boolean } = {}) {
         tx.clawback_status = 'RELEASED_TO_BALANCE';
       }
     }
+    for (const event of accountingEvents) {
+      if (affectedOrderIds.has(event.source_event_id)) {
+        event.event_data.commission_status = 'RELEASED';
+        event.event_data.commission_released_at = nowIso;
+      }
+    }
 
     if (releasedLogsCount > 0) {
       cronLogs.unshift({
@@ -11697,7 +11763,12 @@ async function startServer(options: { listen?: boolean } = {}) {
       monoline_transactions_count: transactions.length,
       double_entry_ledger_enabled: true,
       currency_policy: 'HISTORICAL_SNAPSHOT_TRY_AND_USD',
+      accounting_review_pending_count: accountingEvents.length,
+      tax_and_invoice_policy: 'NEEDS_ACCOUNTANT_REVIEW',
       supported_source_events: [
+        'DEALER_REGISTRATION_PURCHASE',
+        'PACKAGE_PURCHASE',
+        'CUSTOM_ORDER',
         'ORDER_PAYMENT_CONFIRMED',
         'COMMISSION_PENDING_ACCRUED',
         'COMMISSION_14D_RELEASED',
@@ -11710,44 +11781,62 @@ async function startServer(options: { listen?: boolean } = {}) {
   });
 
   // 6. Muhasebe Olay Senkronizasyonu (Sync Event Webhook)
-  app.post('/api/v1/integrations/accounting/sync-event', (req, res) => {
+  app.post('/api/v1/integrations/accounting/sync-event', requireAccountingOrAdmin, (req, res) => {
     try {
-      const {
-        source_system,
-        source_event_type,
-        source_event_id,
-        idempotency_key,
-        payload,
-      } = req.body;
-
-      if (!source_event_id || !idempotency_key) {
-        return res.status(400).json({
-          error: 'Geçersiz istek: source_event_id ve idempotency_key zorunludur.',
-        });
+      const { source_system, source_event_type, source_event_id, idempotency_key, payload } = req.body || {};
+      const eventId = String(source_event_id || '').trim();
+      const idempotencyKey = String(idempotency_key || '').trim();
+      if (!eventId || !idempotencyKey || !payload || typeof payload !== 'object') {
+        return res.status(400).json({ error: 'source_event_id, idempotency_key ve payload zorunludur.' });
       }
 
-      if (processedEventIdempotencyKeys.has(idempotency_key)) {
-        return res.status(200).json({
-          success: true,
-          is_duplicate: true,
-          message: `Mükerrer İstek Engellendi: Olay #${source_event_id} daha önce işlendi.`,
-          idempotency_key,
-        });
+      const existing = accountingEvents.find((event) => event.source_event_id === eventId);
+      if (existing || processedEventIdempotencyKeys.has(idempotencyKey)) {
+        return res.status(200).json({ success: true, is_duplicate: true, source_event_id: eventId, status: existing?.accounting_status || 'NEEDS_REVIEW' });
       }
-      processedEventIdempotencyKeys.add(idempotency_key);
 
-      res.json({
+      const paymentStatus = String(payload.payment_status || payload.status || '').toUpperCase();
+      if (!['PAID', 'COMPLETED', 'SETTLED'].includes(paymentStatus)) {
+        return res.status(422).json({ success: false, code: 'PAYMENT_NOT_CONFIRMED', message: 'Kesinleşmiş ödeme olmadan muhasebe olayı oluşturulamaz.' });
+      }
+      const amountTry = Number(payload.amountTry);
+      const amountUsd = Number(payload.amountUsd ?? payload.amount);
+      const amount = Number.isFinite(amountTry) && amountTry > 0 ? amountTry : amountUsd;
+      if (!Number.isFinite(amount) || amount <= 0) {
+        return res.status(400).json({ success: false, code: 'INVALID_AMOUNT', message: 'Geçerli işlem tutarı zorunludur.' });
+      }
+
+      const createdAt = payload.timestamp || new Date().toISOString();
+      const accountingEvent = {
+        source_event_id: eventId,
+        event_type: String(source_event_type || 'ORDER_PAYMENT_CONFIRMED'),
+        accounting_status: 'NEEDS_REVIEW' as const,
+        tax_status: 'NEEDS_REVIEW' as const,
+        invoice_status: 'DRAFT_REQUIRED' as const,
+        amount,
+        currency: Number.isFinite(amountTry) && amountTry > 0 ? 'TRY' : 'USD',
+        created_at: createdAt,
+        event_data: {
+          ...payload,
+          source_system: String(source_system || 'EXTERNAL_ACCOUNTING_SOURCE'),
+          source_event_type: String(source_event_type || 'ORDER_PAYMENT_CONFIRMED'),
+          idempotency_key: idempotencyKey,
+          commission_status: 'NEEDS_REVIEW',
+        },
+      };
+      accountingEvents.unshift(accountingEvent);
+      processedEventIdempotencyKeys.add(idempotencyKey);
+      return res.status(202).json({
         success: true,
-        message: `Finansal kaynak olayı [${source_event_type}] doğrulandı ve muhasebe defterine işlendi.`,
-        source_event_id,
-        idempotency_key,
-        voucher_number: `YEV-2026-10-${Math.floor(1000 + Math.random() * 9000)}`,
-        balanced: true,
-        status: 'POSTED',
-        timestamp: new Date().toISOString(),
+        source_event_id: eventId,
+        idempotency_key: idempotencyKey,
+        accounting_status: accountingEvent.accounting_status,
+        tax_status: accountingEvent.tax_status,
+        invoice_status: accountingEvent.invoice_status,
+        message: 'Finans olayı kalıcı inceleme kuyruğuna alındı; vergi ve resmi fatura kaydı henüz oluşturulmadı.',
       });
     } catch (error: any) {
-      res.status(500).json({ error: error.message || 'Entegrasyon olay işleme hatası' });
+      return res.status(500).json({ error: error.message || 'Entegrasyon olay işleme hatası' });
     }
   });
 
@@ -11778,11 +11867,12 @@ async function startServer(options: { listen?: boolean } = {}) {
   // 8. Gerçek Muhasebe ve Yevmiye Entegrasyonu Uç Noktası (Real PostgreSQL Ledger Data)
   app.get('/api/v1/integrations/accounting/sync-data', requireAccountingOrAdmin, async (_req, res) => {
     try {
-      const [stateMembers, ordersRes, commRes, journalRes] = await Promise.all([
+      const [stateMembers, ordersRes, commRes, journalRes, accountingEventsRes] = await Promise.all([
         queryMembersFromPostgres(),
         pgQuery('SELECT * FROM orders_log ORDER BY created_at DESC LIMIT 200'),
         pgQuery('SELECT * FROM commission_logs ORDER BY created_at DESC LIMIT 500'),
         pgQuery('SELECT * FROM journal_entries ORDER BY created_at DESC, id DESC LIMIT 1000'),
+        pgQuery('SELECT * FROM accounting_events ORDER BY created_at DESC LIMIT 500'),
       ]);
       const canonicalMembers = stateMembers.map((m) => ({
         user_id: m.user_id,
@@ -11818,6 +11908,17 @@ async function startServer(options: { listen?: boolean } = {}) {
           description: row.description,
           created_at: row.created_at,
         }),
+        accounting_events: (accountingEventsRes?.rows || []).map((row: any) => ({
+          ...row.event_data,
+          source_event_id: row.source_event_id,
+          event_type: row.event_type,
+          accounting_status: row.accounting_status,
+          tax_status: row.tax_status,
+          invoice_status: row.invoice_status,
+          amount: Number(row.amount),
+          currency: row.currency,
+          created_at: row.created_at,
+        })),
         expense_vouchers: (await pgQuery('SELECT voucher_data FROM expense_vouchers ORDER BY created_at DESC, id DESC'))?.rows.map((row: any) => row.voucher_data).filter((row: any) => row && Object.keys(row).length > 0) || [],
         payout_batches: (await pgQuery('SELECT batch_data FROM payout_batches ORDER BY created_at DESC'))?.rows.map((row: any) => row.batch_data).filter((row: any) => row && Object.keys(row).length > 0) || [],
         withdrawal_requests: (await pgQuery('SELECT withdrawal_data FROM withdrawal_requests ORDER BY created_at DESC, id DESC'))?.rows.map((row: any) => row.withdrawal_data).filter((row: any) => row && Object.keys(row).length > 0) || [],
@@ -11895,264 +11996,22 @@ async function startServer(options: { listen?: boolean } = {}) {
     return newEntry;
   }
 
-  // ============================================================================
-  // MUHASEBE MOTORU: 14 GÜNLÜK YASAL SÜRESİ DOLAN HAKEDİŞLER İÇİN OTOMATİK GİDER PUSULASI
-  // ============================================================================
-  async function postExpenseVoucherJournalEntries(voucher: ExpenseVoucherRecord) {
-    await postDoubleEntryJournal({
-      voucher_number: `YEV-GDP-${voucher.voucher_number}`,
-      source_event_type: 'EXPENSE_VOUCHER_ISSUED',
-      source_event_id: voucher.voucher_number,
-      user_id: voucher.dealer_user_id,
-      currency: 'TRY',
-      debit_account_code: '760.01',
-      debit_account_name: 'Pazarlama ve Satış Dağıtım Komisyon Giderleri',
-      debit_amount: voucher.gross_amount,
-      credit_account_code: voucher.withholding_amount > 0 ? '360.01' : '320.01',
-      credit_account_name: voucher.withholding_amount > 0
-        ? 'Ödenecek Gelir Vergisi Stopajı (GVK 94/10-b)'
-        : 'Satıcılar / Bayi Cari Borçları',
-      credit_amount: voucher.withholding_amount > 0 ? voucher.withholding_amount : voucher.net_amount,
-      description: `Otomatik Gider Pusulası Tanzimi: ${voucher.voucher_number} - Bayi: ${voucher.dealer_full_name}`,
-    });
-
-    if (voucher.withholding_amount > 0) {
-      await postDoubleEntryJournal({
-        voucher_number: `YEV-BAYI-NET-${voucher.voucher_number}`,
-        source_event_type: 'EXPENSE_VOUCHER_NET_ACCRUAL',
-        source_event_id: voucher.voucher_number,
-        user_id: voucher.dealer_user_id,
-        currency: 'TRY',
-        debit_account_code: '760.01',
-        debit_account_name: 'Pazarlama ve Satış Dağıtım Komisyon Giderleri (Net Pay)',
-        debit_amount: 0,
-        credit_account_code: '320.01',
-        credit_account_name: 'Satıcılar / Bayi Cari Hakediş Hesabı (Net Ödenecek)',
-        credit_amount: voucher.net_amount,
-        description: `Gider Pusulası Net Bayi Hakedişi Tahakkuku: ${voucher.voucher_number} - Bayi: ${voucher.dealer_full_name}`,
-      });
-    }
-  }
-
   async function processMaturedExpenseVouchers(options?: { order_id?: string }) {
     const nowMs = Date.now();
-    let generatedCount = 0;
-    let totalGrossGenerated = 0;
-    let totalNetGenerated = 0;
-
-    for (const log of commissionLogs) {
-      // Yasal Kural: 14 günlük bekleme süresi dolmamış veya RELEASED olmamış hakedişe KESİNLİKLE gider pusulası üretilemez!
-      if (log.status !== 'RELEASED' && log.clawback_status !== 'RELEASED_TO_BALANCE') continue;
-      if (options?.order_id && log.order_id !== options.order_id) continue;
-
+    const pendingReviewLogs = commissionLogs.filter((log) => {
+      if (log.status !== 'RELEASED' && log.clawback_status !== 'RELEASED_TO_BALANCE') return false;
+      if (options?.order_id && log.order_id !== options.order_id) return false;
       const releaseMs = log.release_at ? new Date(log.release_at).getTime() : 0;
-      if (releaseMs > nowMs) continue; // 14 günlük süre henüz dolmamış
-
-      const commLogId = String(log.id);
-      // İdempotency Kontrolü: Aynı komisyon için iki kez gider pusulası üretilemez!
-      const existingVoucher = expenseVouchers.find(
-        (v) => v.commission_log_id === commLogId || v.source_event_id === `EV-COMM-${commLogId}`
-      );
-      if (existingVoucher) {
-        await postExpenseVoucherJournalEntries(existingVoucher);
-        continue;
-      }
-
-      const member = members.find(
-        (m) => m.id === log.target_user_id || m.user_id === log.target_external_id
-      );
-
-      const isCompany = Boolean(member?.has_tax_company);
-      const grossAmt = Number(log.amount) || 0;
-      if (grossAmt <= 0) continue;
-
-      const { withholdingRate, withholdingAmount, netAmount } = calculateVoucherWithholding(
-        grossAmt,
-        isCompany
-      );
-
-      const voucherSeq = nextVoucherSequence++;
-      const voucherNumber = `GDP-2026-${String(voucherSeq).padStart(6, '0')}`;
-      const ettnUuid = `c${Date.now().toString(16)}-${Math.random().toString(16).slice(2, 6)}-4f21-98a1-${voucherSeq.toString().padStart(12, '0')}`;
-      const nowIso = new Date().toISOString();
-
-      const newVoucher: ExpenseVoucherRecord = {
-        id: voucherSeq,
-        voucher_number: voucherNumber,
-        ettn_uuid: ettnUuid,
-        commission_log_id: commLogId,
-        source_event_id: `EV-COMM-${commLogId}`,
-        order_id: log.order_id,
-        dealer_user_id: member?.user_id || log.target_external_id || `DEALER-${log.target_user_id}`,
-        dealer_full_name: member?.full_name || log.target_user_name || 'AKN Yetkili Bayisi',
-        dealer_tckn: member?.tc_identity_no || '11111111110',
-        dealer_tax_office: member?.city ? `${member.city} Vergi Dairesi` : 'Büyük Mükellefler V.D.',
-        dealer_address: member?.city ? `${member.city}, Türkiye` : 'İstanbul, Türkiye',
-        dealer_iban: member?.bank_details?.iban || `TR3300061005111222333444${String(voucherSeq).padStart(2, '0')}`,
-        is_company: isCompany,
-        gross_amount: grossAmt,
-        withholding_rate: withholdingRate,
-        withholding_amount: withholdingAmount,
-        net_amount: netAmount,
-        currency: 'TRY',
-        status: 'ISSUED',
-        integrator_name: 'QNB_EFINANS',
-        integrator_status: 'GIB_SUBMITTED',
-        created_at: nowIso,
-      };
-
-      newVoucher.xml_content = generateOfficialGiderPusulasiXml(newVoucher, CANONICAL_COMPANY_PROFILE);
-      expenseVouchers.unshift(newVoucher);
-      generatedCount++;
-      totalGrossGenerated += grossAmt;
-      totalNetGenerated += netAmount;
-
-      await pgQuery(
-        `INSERT INTO expense_vouchers (voucher_number, user_id, gross_amount, withholding_tax, net_payout, xml_content, status, created_at)
-         VALUES ($1, (SELECT user_id FROM users WHERE user_id = $2), $3, $4, $5, $6, $7, $8)
-         ON CONFLICT (voucher_number) DO NOTHING`,
-        [
-          newVoucher.voucher_number,
-          newVoucher.dealer_user_id,
-          newVoucher.gross_amount,
-          newVoucher.withholding_amount,
-          newVoucher.net_amount,
-          newVoucher.xml_content || null,
-          newVoucher.status || 'PENDING_APPROVAL',
-          newVoucher.created_at || nowIso,
-        ]
-      );
-
-      await postExpenseVoucherJournalEntries(newVoucher);
-    }
-
+      return releaseMs <= nowMs && Number(log.amount) > 0;
+    });
     return {
-      generatedCount,
-      totalGrossGenerated,
-      totalNetGenerated,
+      generatedCount: 0,
+      totalGrossGenerated: pendingReviewLogs.reduce((sum, log) => sum + Number(log.amount || 0), 0),
+      totalNetGenerated: 0,
+      pendingReviewCount: pendingReviewLogs.length,
     };
   }
 
-  // ============================================================================
-  // MUHASEBE MOTORU: BAŞLANGIÇ TEST VERİSİ TOHUMLAMA (SEED INITIAL VOUCHERS)
-  // ============================================================================
-  function seedInitialAccountingVouchersIfNeeded() {
-    if (expenseVouchers.length > 0) return;
-
-    // Gerçekçi 3 adet onaylanmış ve 14 günü dolmuş hakediş oluşturalım:
-    // 1. Alfa Bilişim Medikal Ltd. (Şirket / Fatura Keser / 0% Stopaj)
-    // 2. Mehmet Emin Özkan (Bireysel / Gider Pusulası / %20 Stopaj)
-    // 3. Zeynep Kaya (Bireysel / Gider Pusulası / %20 Stopaj)
-    const samples = [
-      {
-        commId: 'COMM-HIST-101',
-        orderId: 'ORD-HIST-9001',
-        name: 'Alfa Bilişim Medikal Yazılım Ltd. Şti.',
-        tckn: '0540892341',
-        iban: 'TR330006100511122233344401',
-        isCompany: true,
-        gross: 15000,
-      },
-      {
-        commId: 'COMM-HIST-102',
-        orderId: 'ORD-HIST-9002',
-        name: 'Mehmet Emin Özkan',
-        tckn: '28491028472',
-        iban: 'TR440006200123456789012302',
-        isCompany: false,
-        gross: 12000,
-      },
-      {
-        commId: 'COMM-HIST-103',
-        orderId: 'ORD-HIST-9003',
-        name: 'Zeynep Kaya',
-        tckn: '19402948271',
-        iban: 'TR550001500000123456789003',
-        isCompany: false,
-        gross: 8000,
-      },
-    ];
-
-    samples.forEach((s, idx) => {
-      const { withholdingRate, withholdingAmount, netAmount } = calculateVoucherWithholding(
-        s.gross,
-        s.isCompany
-      );
-      const vNum = `GDP-2026-00000${idx + 1}`;
-      const ettn = `a1b2c3d4-${idx}000-4b12-98a1-00000000000${idx + 1}`;
-      const createdDate = new Date(Date.now() - (idx + 1) * 86400000 * 3).toISOString();
-
-      const voucher: ExpenseVoucherRecord = {
-        id: idx + 1,
-        voucher_number: vNum,
-        ettn_uuid: ettn,
-        commission_log_id: s.commId,
-        source_event_id: `EV-${s.commId}`,
-        order_id: s.orderId,
-        dealer_user_id: `DEALER-HIST-${idx + 1}`,
-        dealer_full_name: s.name,
-        dealer_tckn: s.tckn,
-        dealer_tax_office: 'Büyük Mükellefler V.D.',
-        dealer_address: 'Kadıköy, İstanbul, Türkiye',
-        dealer_iban: s.iban,
-        is_company: s.isCompany,
-        gross_amount: s.gross,
-        withholding_rate: withholdingRate,
-        withholding_amount: withholdingAmount,
-        net_amount: netAmount,
-        currency: 'TRY',
-        status: 'ISSUED',
-        integrator_name: 'QNB_EFINANS',
-        integrator_status: 'GIB_SUBMITTED',
-        created_at: createdDate,
-      };
-      voucher.xml_content = generateOfficialGiderPusulasiXml(voucher, CANONICAL_COMPANY_PROFILE);
-      expenseVouchers.push(voucher);
-
-      // Yevmiye kaydı
-      journalEntries.push({
-        id: nextJournalEntryId++,
-        voucher_number: `YEV-${vNum}`,
-        entry_date: createdDate.split('T')[0],
-        source_event_type: 'EXPENSE_VOUCHER_ISSUED',
-        source_event_id: vNum,
-        currency: 'TRY',
-        debit_account_code: '760.01',
-        debit_account_name: 'Pazarlama ve Satış Dağıtım Giderleri',
-        debit_amount: s.gross,
-        credit_account_code: withholdingAmount > 0 ? '360.01' : '320.01',
-        credit_account_name: withholdingAmount > 0 ? 'Ödenecek Gelir Vergisi Stopajı (%20)' : 'Satıcılar / Bayi Cari Borçları',
-        credit_amount: withholdingAmount > 0 ? withholdingAmount : netAmount,
-        description: `Gider Pusulası: ${vNum} - Hak Sahibi: ${s.name}`,
-        reconciled: true,
-        created_at: createdDate,
-      });
-
-      if (withholdingAmount > 0) {
-        journalEntries.push({
-          id: nextJournalEntryId++,
-          voucher_number: `YEV-NET-${vNum}`,
-          entry_date: createdDate.split('T')[0],
-          source_event_type: 'EXPENSE_VOUCHER_NET_ACCRUAL',
-          source_event_id: vNum,
-          currency: 'TRY',
-          debit_account_code: '760.01',
-          debit_account_name: 'Pazarlama ve Satış Dağıtım Giderleri (Net Pay)',
-          debit_amount: 0,
-          credit_account_code: '320.01',
-          credit_account_name: 'Satıcılar / Bayi Cari Borçları (Net)',
-          credit_amount: netAmount,
-          description: `Gider Pusulası Net Bayi Payı: ${vNum}`,
-          reconciled: true,
-          created_at: createdDate,
-        });
-      }
-    });
-
-    nextVoucherSequence = samples.length + 1;
-  }
-
-  seedInitialAccountingVouchersIfNeeded();
   await persistApplicationState();
 
   // ============================================================================
@@ -12204,7 +12063,7 @@ async function startServer(options: { listen?: boolean } = {}) {
       const result = await processMaturedExpenseVouchers();
       res.json({
         status: 'success',
-        message: `${result.generatedCount} adet 14 günlük yasal süresi dolan hakediş için resmi e-gider pusulası üretildi.`,
+        message: `Vergi kuralları mali müşavir onayı beklediği için resmi gider pusulası üretilmedi. ${result.pendingReviewCount} hakediş inceleme kuyruğunda.`,
         ...result,
         totalVouchersCount: expenseVouchers.length,
       });

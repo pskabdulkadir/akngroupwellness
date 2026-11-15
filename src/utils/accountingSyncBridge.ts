@@ -3,6 +3,8 @@
  * AKN Group Wellness & Monoline MLM and VergiSync AI Smart Accounting Suite
  */
 
+import { getAccountingToken, getAdminToken } from './adminSession';
+
 export interface SyncTransactionPayload {
   orderId: string;
   customerName: string;
@@ -56,16 +58,18 @@ class AccountingSyncBridge {
         localStorage.setItem(STORAGE_SYNCED_ORDERS_KEY, JSON.stringify(existing.slice(0, 100)));
       }
 
-      // Also notify backend API asynchronously
+      const token = getAdminToken() || getAccountingToken();
+      if (!token) return;
+
       fetch('/api/v1/integrations/accounting/sync-event', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           source_system: 'AKN_WELLNESS_MONOLINE',
           source_event_type: payload.isDealerCommission ? 'COMMISSION_PENDING_ACCRUED' : 'ORDER_PAYMENT_CONFIRMED',
           source_event_id: payload.orderId,
-          idempotency_key: `IDEMP-${payload.orderId}-${Date.now()}`,
-          payload,
+          idempotency_key: `IDEMP-${payload.orderId}`,
+          payload: { ...payload, payment_status: 'PAID' },
         }),
       }).catch((e) => console.warn('Async accounting sync notice failed:', e));
     } catch (err) {

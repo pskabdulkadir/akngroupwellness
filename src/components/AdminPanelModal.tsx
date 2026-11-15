@@ -120,8 +120,7 @@ import {
   DigitalInvoice, 
   getAllDigitalInvoices, 
   getLocalDigitalInvoices,
-  subscribeToDigitalInvoices, 
-  createInvoiceForDealerOrder, 
+  subscribeToDigitalInvoices,
   generateInvoiceWhatsAppShareUrl, 
   deleteDigitalInvoice, 
   saveDigitalInvoice,
@@ -3722,37 +3721,34 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
                                         </div>
                                       ) : order.status === 'approved' ? (
                                         <div className="flex items-center justify-center gap-1.5 flex-wrap">
-                                          <button
-                                            onClick={async () => {
-                                              let inv = invoices.find(i => i.orderId === order.id);
-                                              if (!inv) {
-                                                const resObj = resellers.find(r => r.id === order.resellerId || r.uid === order.resellerId || Boolean(r.email && order.resellerEmail && r.email.toLowerCase() === order.resellerEmail.toLowerCase()));
-                                                inv = await createInvoiceForDealerOrder(order, resObj);
-                                              }
-                                              handleOpenViewInvoice(inv);
-                                            }}
-                                            className="px-2.5 py-1 rounded-lg bg-purple-950/70 hover:bg-purple-900 text-purple-300 border border-purple-500/40 text-[10px] font-bold flex items-center gap-1 cursor-pointer transition-all"
-                                            title="Dijital E-Faturayı Görüntüle / Düzenle / Yazdır / PDF"
-                                          >
-                                            <FileText className="w-3 h-3 text-purple-400" />
-                                            <span>E-Fatura</span>
-                                          </button>
-
-                                          <button
-                                            onClick={async () => {
-                                              let inv = invoices.find(i => i.orderId === order.id);
-                                              if (!inv) {
-                                                const resObj = resellers.find(r => r.id === order.resellerId || r.uid === order.resellerId || Boolean(r.email && order.resellerEmail && r.email.toLowerCase() === order.resellerEmail.toLowerCase()));
-                                                inv = await createInvoiceForDealerOrder(order, resObj);
-                                              }
-                                              handleSendInvoiceViaWhatsApp(inv);
-                                            }}
-                                            className="px-2.5 py-1 rounded-lg bg-emerald-950/70 hover:bg-emerald-900 text-emerald-300 border border-emerald-500/40 text-[10px] font-bold flex items-center gap-1 cursor-pointer transition-all"
-                                            title="Faturayı Bayiye WhatsApp İle İlet"
-                                          >
-                                            <MessageCircle className="w-3 h-3 text-emerald-400" />
-                                            <span>WhatsApp</span>
-                                          </button>
+                                          {invoices.some(i => i.orderId === order.id) ? (
+                                            <>
+                                              <button
+                                                onClick={() => {
+                                                  const inv = invoices.find(i => i.orderId === order.id);
+                                                  if (inv) handleOpenViewInvoice(inv);
+                                                }}
+                                                className="px-2.5 py-1 rounded-lg bg-purple-950/70 hover:bg-purple-900 text-purple-300 border border-purple-500/40 text-[10px] font-bold flex items-center gap-1 cursor-pointer transition-all"
+                                                title="Mevcut faturayı görüntüle"
+                                              >
+                                                <FileText className="w-3 h-3 text-purple-400" />
+                                                <span>Mevcut Fatura</span>
+                                              </button>
+                                              <button
+                                                onClick={() => {
+                                                  const inv = invoices.find(i => i.orderId === order.id);
+                                                  if (inv) handleSendInvoiceViaWhatsApp(inv);
+                                                }}
+                                                className="px-2.5 py-1 rounded-lg bg-emerald-950/70 hover:bg-emerald-900 text-emerald-300 border border-emerald-500/40 text-[10px] font-bold flex items-center gap-1 cursor-pointer transition-all"
+                                                title="Mevcut faturayı WhatsApp ile ilet"
+                                              >
+                                                <MessageCircle className="w-3 h-3 text-emerald-400" />
+                                                <span>WhatsApp</span>
+                                              </button>
+                                            </>
+                                          ) : (
+                                            <span className="text-[10px] font-semibold text-amber-300">Fatura taslağı mali müşavir incelemesinde</span>
+                                          )}
                                         </div>
                                       ) : (
                                         <span className="text-[10px] text-slate-500 font-mono">
