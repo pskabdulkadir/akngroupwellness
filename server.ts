@@ -202,7 +202,7 @@ let distributionParams: SystemDistributionParameters = {
   depth_percentages: [...MONOLINE_DEPTH_PERCENTAGES],
   unilevel_depth_percentages: [...UNILEVEL_DEPTH_PERCENTAGES],
   monoline_incentive_percentages: [...MONOLINE_INCENTIVE_PERCENTAGES],
-  unilevel_infinity_max_percent: 10,
+
   fast_roi_bonus_percent: 15,
   career_pool_percent: 5,
 };
@@ -237,7 +237,7 @@ let v2ArchitectureConfig: V2ArchitectureConfig = {
   async_queue_enabled: true,
   dynamic_compression_enabled: true,
   dynamic_compression_mode: 'FULL_COMPRESSION',
-  unilevel_infinity_enabled: true,
+  unilevel_infinity_enabled: false,
   matching_bonus_enabled: true,
   fast_roi_3x15_enabled: true,
   fomo_48h_countdown_enabled: true,
@@ -736,7 +736,13 @@ async function hydrateApplicationState() {
   if (state.ethicsGuidelinesContent) ethicsGuidelinesContent = state.ethicsGuidelinesContent;
   if (state.systemWallet) systemWallet = state.systemWallet;
   if (state.distributionParams) distributionParams = state.distributionParams;
-  if (state.v2ArchitectureConfig) v2ArchitectureConfig = state.v2ArchitectureConfig;
+  if (state.v2ArchitectureConfig) {
+    v2ArchitectureConfig = {
+      ...v2ArchitectureConfig,
+      ...state.v2ArchitectureConfig,
+      unilevel_infinity_enabled: false,
+    };
+  }
   if (state.activeBusinessRules) Object.assign(activeBusinessRules, state.activeBusinessRules);
   if (Array.isArray(state.memberCredentials)) {
     memberCredentials.clear();
@@ -1956,7 +1962,7 @@ function processOrderCommission(payload: OrderCommissionPayload): CommissionTran
   }
 
   // 3.5. Kariyer Terfilerini ve "3 Getir Bedavaya Getir" (Fast-ROI +%15) kontrolünü komisyon dağıtımından hemen önce çalıştır
-  // Böylece bu siparişle terfi eden üst liderler, yeni kariyerlerinin derinlik, Sonsuzluk (%2..%10) ve Eşleşme (%10..%25) haklarından anında yararlanır!
+  // Böylece bu siparişle terfi eden üst liderler yeni kariyerlerinin derinlik ve Eşleşme haklarından aynı işlemde yararlanır.
   const careerUpgrades = calculateActiveCareer(buyer.id);
 
   const nowIso = processedAt;
@@ -2507,84 +2513,6 @@ function processOrderCommission(payload: OrderCommissionPayload): CommissionTran
   const uplinePayouts = unilevelPayouts;
 
   // ============================================================================
-  // 7. V2.2 REVİZYON 1: UNILEVEL SONSUZLUK BONUSU (%10 LİDERLİK FARK PRİMİ)
-  // 4. Mutmainne: +%2 | 5. Râziye: +%4 | 6. Marziyye: +%7 | 7. Kâmile (Sâfiye): +%10
-  // (Araya giren alt liderin payı düşülerek 8., 50., 100. derinlik dahil sonsuz derinlikten akar!)
-  // ============================================================================
-  const unilevelInfinityPayouts: NonNullable<CommissionTransaction['unilevel_infinity_payouts']> = [];
-  let totalInfinityDistributed = 0;
-
-  if (v2ArchitectureConfig.unilevel_infinity_enabled !== false && buyer.sponsor_id) {
-    let highestPaidInfinityPercent = 0;
-    const maxInfinityCap = distributionParams.unilevel_infinity_max_percent ?? 10;
-    const visitedSponsors = new Set<string>([buyer.user_id]);
-    let currSponsorId: string | null = buyer.sponsor_id;
-    let generation = 1;
-
-    while (
-      currSponsorId &&
-      !visitedSponsors.has(currSponsorId) &&
-      highestPaidInfinityPercent < maxInfinityCap
-    ) {
-      visitedSponsors.add(currSponsorId);
-      const uplineSponsor = members.find((m) => m.user_id === currSponsorId);
-      if (!uplineSponsor) break;
-
-      const sponsorCareer = v2ArchitectureConfig.use_dynamic_active_career
-        ? uplineSponsor.active_career_level ?? uplineSponsor.career_level
-        : uplineSponsor.career_level;
-      const sponsorTitle = v2ArchitectureConfig.use_dynamic_active_career
-        ? uplineSponsor.active_career_title ?? uplineSponsor.career_title
-        : uplineSponsor.career_title;
-
-      const infRule = UNILEVEL_INFINITY_RULES.find((r) => r.career_level === sponsorCareer);
-      const memberInfPct = infRule ? infRule.infinity_bonus_percent : 0;
-
-      if (
-        uplineSponsor.is_active &&
-        !uplineSponsor.is_locked &&
-        memberInfPct > highestPaidInfinityPercent
-      ) {
-        const diffPct = roundCurrency(
-          Math.min(maxInfinityCap, memberInfPct) - highestPaidInfinityPercent
-        );
-        if (diffPct > 0) {
-          const infAmount = roundCurrency(amount * (diffPct / 100));
-          creditMemberWallet(uplineSponsor, 'UNILEVEL_INFINITY', infAmount, useClawbackPending, buyerRegion);
-          totalInfinityDistributed = roundCurrency(totalInfinityDistributed + infAmount);
-          highestPaidInfinityPercent = roundCurrency(highestPaidInfinityPercent + diffPct);
-
-          logComm(
-            orderId,
-            buyer,
-            uplineSponsor,
-            'UNILEVEL_INFINITY',
-            generation,
-            infAmount,
-            isFraudFlagged ? 'FRAUD_REVIEW' : useClawbackPending ? 'PENDING_14D' : 'RELEASED',
-            useClawbackPending ? clawbackReleaseAt : nowIso,
-            nowIso
-          );
-
-          unilevelInfinityPayouts.push({
-            recipient_user_id: uplineSponsor.user_id,
-            recipient_name: uplineSponsor.full_name,
-            career_level: sponsorCareer,
-            career_title: sponsorTitle,
-            unilevel_generation: generation,
-            member_infinity_percent: memberInfPct,
-            differential_percent: diffPct,
-            amount_paid: infAmount,
-          });
-        }
-      }
-
-      currSponsorId = uplineSponsor.sponsor_id;
-      generation++;
-    }
-  }
-
-  // ============================================================================
   // 8. V2.2 REVİZYON 2: LİDERLİK EŞLEŞME BONUSU (MATCHING BONUS %10..%25)
   // 3. Mülhime (%10) | 4. Mutmainne (%15) | 5. Râziye (%20) | 6. Marziyye & 7. Kâmile (%25)
   // Bizzat sponsor olunan (1. nesil) bayilerin bu siparişte kazandığı nakit komisyonlar üzerinden ödenir!
@@ -2723,12 +2651,10 @@ function processOrderCommission(payload: OrderCommissionPayload): CommissionTran
     monoline_incentive_payouts: monolineIncentivePayouts,
     total_unilevel_distributed: totalDistributedUnilevel,
     total_monoline_incentive_distributed: totalDistributedMonolineIncentive,
-    unilevel_infinity_payouts: unilevelInfinityPayouts,
     matching_bonus_payouts: matchingBonusPayouts,
     compressed_skipped_members: compressedSkippedMembers,
     unclaimed_transfers: txUnclaimedTransfers,
     total_distributed_to_upline: totalDistributedToUpline,
-    total_infinity_distributed: totalInfinityDistributed,
     total_matching_distributed: totalMatchingDistributed,
     career_upgrades_triggered: careerUpgrades,
   };
@@ -2831,7 +2757,7 @@ function resetToCleanSlate(includeAdmin = true) {
     direct_sponsor_percent: DIRECT_SPONSOR_PERCENT,
     monoline_total_percent: 25,
     depth_percentages: [...MONOLINE_DEPTH_PERCENTAGES],
-    unilevel_infinity_max_percent: 10,
+  
     fast_roi_bonus_percent: 15,
     career_pool_percent: 5,
   };
@@ -3499,7 +3425,7 @@ function runFullCareerJourneySimulation() {
 
   // 1. AŞAMA: Ağ yapısını ve hedef kariyer seviyelerini ön-hazırla ki 58 sipariş işlenirken
   // liderler (Kâmile #1, Marziyye #2, Râziye #3, Mutmainne #4-#5, Mülhime #6, Levvâme #7) kendi mertebelerinin
-  // Unilevel Sonsuzluk (%2..%10), Liderlik Eşleşme (%10..%25) ve Dinamik Sıkıştırma primlerini eksiksiz alsın.
+  // Liderlik Eşleşme (%10..%25) ve Dinamik Sıkıştırma primlerini eksiksiz alsın.
   simNodes.forEach((node, index) => {
     const nextLineId = index + 1;
     const matchedSponsor = node.sponsor_id
@@ -9476,7 +9402,6 @@ async function startServer(options: { listen?: boolean } = {}) {
       async_queue_enabled,
       dynamic_compression_enabled,
       dynamic_compression_mode,
-      unilevel_infinity_enabled,
       matching_bonus_enabled,
       fast_roi_3x15_enabled,
       fomo_48h_countdown_enabled,
@@ -9509,10 +9434,7 @@ async function startServer(options: { listen?: boolean } = {}) {
         dynamic_compression_mode === 'FUND_SWEEP'
           ? dynamic_compression_mode
           : v2ArchitectureConfig.dynamic_compression_mode || 'FULL_COMPRESSION',
-      unilevel_infinity_enabled:
-        typeof unilevel_infinity_enabled === 'boolean'
-          ? unilevel_infinity_enabled
-          : v2ArchitectureConfig.unilevel_infinity_enabled,
+      unilevel_infinity_enabled: false,
       matching_bonus_enabled:
         typeof matching_bonus_enabled === 'boolean'
           ? matching_bonus_enabled
@@ -11585,7 +11507,11 @@ async function startServer(options: { listen?: boolean } = {}) {
         careerTiers = payload.careerTiers;
       }
       if (payload.v2ArchitectureConfig) {
-        v2ArchitectureConfig = { ...v2ArchitectureConfig, ...payload.v2ArchitectureConfig };
+        v2ArchitectureConfig = {
+          ...v2ArchitectureConfig,
+          ...payload.v2ArchitectureConfig,
+          unilevel_infinity_enabled: false,
+        };
       }
       if (Array.isArray(payload.adminAuditLogs)) {
         adminAuditLogs = payload.adminAuditLogs;

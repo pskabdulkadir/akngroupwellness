@@ -1601,6 +1601,9 @@ export const DealerBackOfficeView: React.FC<DealerBackOfficeViewProps> = ({
   const memberCommissionLogs = commissionLogs.filter(
     (c) => c.target_external_id === member.user_id
   );
+  const visibleMemberCommissionLogs = memberCommissionLogs.filter(
+    (c) => c.commission_type !== 'UNILEVEL_INFINITY'
+  );
 
   const unilevelEarnings = useMemo(() => {
     if (member.wallets.unilevel_wallet && member.wallets.unilevel_wallet > 0) {
@@ -3685,7 +3688,7 @@ Paket Alarak Aktifliği Yenile →
             <div className="bg-white border border-slate-200 rounded-xl p-6 space-y-4">
               <div className="border-b border-slate-200 pb-3">
                 <h3 className="text-base font-bold text-slate-900">
-                  Cüzdana Yansıyan Son Komisyon Hareketleri ({memberCommissionLogs.length})
+                  Cüzdana Yansıyan Son Komisyon Hareketleri ({visibleMemberCommissionLogs.length})
                 </h3>
                 <p className="text-xs text-slate-500">
                   SQL <code className="font-mono">commission_logs</code> tablosundan bu üyeye gelen
@@ -3706,7 +3709,7 @@ Paket Alarak Aktifliği Yenile →
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-200 font-mono tabular-nums">
-                    {memberCommissionLogs.slice(0, 30).map((log) => (
+                    {visibleMemberCommissionLogs.slice(0, 30).map((log) => (
                       <tr key={log.id}>
                         <td className="py-2 pr-2 text-slate-500">#{log.id}</td>
                         <td className="py-2 px-2 text-slate-900 font-semibold">{log.order_id}</td>
@@ -3759,11 +3762,6 @@ Paket Alarak Aktifliği Yenile →
                           {log.commission_type === 'MONOLINE_DEPTH' && (
                             <span className="text-amber-800 font-medium">
                               Monoline {log.depth_level}. Üst Derinlik
-                            </span>
-                          )}
-                          {log.commission_type === 'UNILEVEL_INFINITY' && (
-                            <span className="text-indigo-700 font-bold">
-                              Unilevel Sonsuzluk Fark Primi ({log.depth_level}. Nesil)
                             </span>
                           )}
                           {log.commission_type === 'MATCHING_BONUS' && (

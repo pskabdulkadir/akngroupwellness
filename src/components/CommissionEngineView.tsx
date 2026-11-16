@@ -120,7 +120,7 @@ export const CommissionEngineView: React.FC<CommissionEngineViewProps> = ({
     use_dynamic_active_career: true,
     async_queue_enabled: true,
     dynamic_compression_enabled: true,
-    unilevel_infinity_enabled: true,
+    unilevel_infinity_enabled: false,
     matching_bonus_enabled: true,
     fast_roi_3x15_enabled: true,
   };
@@ -1098,7 +1098,7 @@ export const CommissionEngineView: React.FC<CommissionEngineViewProps> = ({
                   : 'bg-emerald-50 text-emerald-900 hover:bg-emerald-100 border border-emerald-300'
               }`}
             >
-              8. 🏆 V2.2 6 Altın Revizyon (Sonsuzluk, Eşleşme, Sıkıştırma &amp; Fast-ROI)
+              8. 🏆 V2.2 6 Altın Revizyon (Eşleşme, Sıkıştırma &amp; Fast-ROI)
             </button>
           </div>
         </div>
@@ -2729,7 +2729,7 @@ CREATE TABLE notification_outbox (
           </div>
         )}
 
-        {/* TAB 8: V2.2 6 ALTIN REVİZYON (UNILEVEL SONSUZLUK %10, LİDERLİK EŞLEŞME, DİNAMİK SIKIŞTIRMA, FAST-ROI +%15, B2C PERAKENDE & VEYA ÇEKİM KURALI) */}
+        {/* TAB 8: V2.2 6 ALTIN REVİZYON (LİDERLİK EŞLEŞME, DİNAMİK SIKIŞTIRMA, FAST-ROI +%15, B2C PERAKENDE & VEYA ÇEKİM KURALI) */}
         {activeV2Tab === 'V22_GOLDEN_REVISIONS' && (
           <div className="space-y-6">
             <div className="p-5 bg-gradient-to-r from-slate-900 via-indigo-950 to-emerald-950 text-white rounded-2xl border border-emerald-500/30 space-y-5">
@@ -2748,11 +2748,6 @@ CREATE TABLE notification_outbox (
                       key: 'dynamic_compression_enabled' as const,
                       label: '1A. Dinamik Sıkıştırma',
                       val: effectiveV2Config.dynamic_compression_enabled !== false,
-                    },
-                    {
-                      key: 'unilevel_infinity_enabled' as const,
-                      label: '1B. %10 Sonsuzluk Bonusu',
-                      val: effectiveV2Config.unilevel_infinity_enabled !== false,
                     },
                     {
                       key: 'matching_bonus_enabled' as const,
@@ -2800,12 +2795,12 @@ CREATE TABLE notification_outbox (
                     2. SAHA DAĞITIMI (%60 OPTİMUM MOTİVASYON)
                   </div>
                   <div className="text-lg font-extrabold text-white">
-                    %25 Monoline + %20/%15 Sponsor + %10 Sonsuzluk
+                    %25 Monoline + %20 Sponsor + Fast-ROI
                   </div>
                   <p className="font-sans text-emerald-100 text-[11px] leading-relaxed">
                     • <strong>%25 Monoline 7 Derinlik (7,5,4,3,2,2,2):</strong> Dinamik Sıkıştırmalı
                     <br />• <strong>%20 Direkt Sponsor + %15 Fast-ROI:</strong> 3 Getir Bedavaya Getir
-                    <br />• <strong>%10 Unilevel Sonsuzluk &amp; %10-%25 Eşleşme:</strong> Zirve Lider Kaldıracı
+                    <br />• <strong>%10-%25 Eşleşme:</strong> Zirve Lider Kaldıracı
                   </p>
                 </div>
 
@@ -2828,10 +2823,10 @@ CREATE TABLE notification_outbox (
               <div className="lg:col-span-5 p-5 bg-slate-50 border border-slate-200 rounded-xl space-y-4">
                 <div>
                   <div className="text-xs font-mono font-bold text-indigo-700">
-                    SQL: unilevel_infinity_rules · SONSUZLUK &amp; EŞLEŞME TABLOSU
+                    Kariyere Göre Matching Oran Tablosu
                   </div>
                   <h4 className="text-sm font-bold text-slate-900 mt-0.5">
-                    7 Nefis Mertebesi Unilevel Sonsuzluk Fark Primi &amp; Liderlik Eşleşme Oranları
+                    7 Nefis Mertebesi Liderlik Eşleşme Oranları
                   </h4>
                 </div>
 
@@ -2840,7 +2835,6 @@ CREATE TABLE notification_outbox (
                     <thead>
                       <tr className="bg-slate-100 border-b border-slate-200 text-slate-600">
                         <th className="py-2 px-3">Kariyer</th>
-                        <th className="py-2 px-3 text-right">infinity_bonus_percent</th>
                         <th className="py-2 px-3 text-right">matching_bonus_percent</th>
                       </tr>
                     </thead>
@@ -2849,9 +2843,6 @@ CREATE TABLE notification_outbox (
                         <tr key={r.career_level} className="hover:bg-slate-50">
                           <td className="py-2 px-3 font-sans font-bold text-slate-900">
                             Kariyer Seviyesi {r.career_level}
-                          </td>
-                          <td className="py-2 px-3 text-right font-bold text-indigo-700">
-                            +%{r.infinity_bonus_percent.toFixed(2)}
                           </td>
                           <td className="py-2 px-3 text-right font-bold text-emerald-700">
                             +%{r.matching_bonus_percent.toFixed(2)}
@@ -2863,10 +2854,8 @@ CREATE TABLE notification_outbox (
                 </div>
 
                 <pre className="p-3 bg-slate-950 text-emerald-300 rounded-lg text-[10px] font-mono overflow-x-auto leading-relaxed border border-slate-800">
-{`-- 1. Unilevel Sonsuzluk Bonusu Oranları Tablosu
-CREATE TABLE unilevel_infinity_rules (
+{`CREATE TABLE matching_bonus_rules (
     career_level INT PRIMARY KEY,
-    infinity_bonus_percent NUMERIC(5,2) NOT NULL,
     matching_bonus_percent NUMERIC(5,2) NOT NULL
 );
 
@@ -2894,7 +2883,7 @@ const canWithdraw =
                       <tr className="bg-slate-100 border-b border-slate-200 text-slate-600">
                         <th className="py-2 px-2.5">Lider / Mertebe</th>
                         <th className="py-2 px-2.5 text-right">Sponsor + ROI</th>
-                        <th className="py-2 px-2.5 text-right">Derinlik + Sonsuzluk</th>
+                        <th className="py-2 px-2.5 text-right">Monoline Cüzdanı</th>
                         <th className="py-2 px-2.5 text-right">Eşleşme + Havuz</th>
                         <th className="py-2 px-2.5 text-right">V2.2 Toplam Nakit</th>
                       </tr>

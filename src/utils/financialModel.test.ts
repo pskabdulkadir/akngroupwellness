@@ -75,10 +75,10 @@ function createMember(
 test('14 paket katalogda doğru fiyat ve seans kredileriyle tanımlı', () => {
   assert.equal(FREKANS_PACKAGES.length, 14);
   assert.deepEqual(FREKANS_PACKAGES.map((pkg) => pkg.defaultPrice), EXPECTED_PACKAGE_PRICES);
-  assert.equal(FREKANS_PACKAGES[0].sessionCredits, 32);
+  assert.equal(FREKANS_PACKAGES[0].sessionCredits, 96);
   assert.equal(FREKANS_PACKAGES.at(-1)?.id, 'PKG_ENTERPRISE_MEGA');
   assert.equal(FREKANS_PACKAGES.at(-1)?.defaultPrice, 6031);
-  assert.equal(FREKANS_PACKAGES.at(-1)?.sessionCredits, 5000);
+  assert.equal(FREKANS_PACKAGES.at(-1)?.sessionCredits, 15000);
 });
 
 test('yurt dışı fiyatı 3x olur, seans hakları paket tanımındaki sayıda kalır', () => {

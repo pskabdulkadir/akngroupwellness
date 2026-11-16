@@ -1055,10 +1055,10 @@ export const UNILEVEL_INFINITY_RULES: UnilevelInfinityRule[] = [
   { career_level: 1, career_title: 'Emmâre', infinity_bonus_percent: 0.0, matching_bonus_percent: 0.0 },
   { career_level: 2, career_title: 'Levvâme', infinity_bonus_percent: 0.0, matching_bonus_percent: 0.0 },
   { career_level: 3, career_title: 'Mülhime', infinity_bonus_percent: 0.0, matching_bonus_percent: 10.0 },
-  { career_level: 4, career_title: 'Mutmainne', infinity_bonus_percent: 2.0, matching_bonus_percent: 15.0 },
-  { career_level: 5, career_title: 'Râziye', infinity_bonus_percent: 4.0, matching_bonus_percent: 20.0 },
-  { career_level: 6, career_title: 'Marziyye', infinity_bonus_percent: 7.0, matching_bonus_percent: 25.0 },
-  { career_level: 7, career_title: 'Kâmile (Sâfiye)', infinity_bonus_percent: 10.0, matching_bonus_percent: 25.0 },
+  { career_level: 4, career_title: 'Mutmainne', infinity_bonus_percent: 0.0, matching_bonus_percent: 15.0 },
+  { career_level: 5, career_title: 'Râziye', infinity_bonus_percent: 0.0, matching_bonus_percent: 20.0 },
+  { career_level: 6, career_title: 'Marziyye', infinity_bonus_percent: 0.0, matching_bonus_percent: 25.0 },
+  { career_level: 7, career_title: 'Kâmile (Sâfiye)', infinity_bonus_percent: 0.0, matching_bonus_percent: 25.0 },
 ];
 
 export const INITIAL_MONOLINE_DEPTH_RATES: DepthDistributionRule[] = [
@@ -1080,7 +1080,6 @@ export interface SystemDistributionParameters {
   depth_percentages: number[];
   unilevel_depth_percentages?: number[]; // Motor 1: Sponsorlu Unilevel (%25)
   monoline_incentive_percentages?: number[]; // Motor 2: Küresel Monoline Sıra Teşviki (%5)
-  unilevel_infinity_max_percent?: number;
   fast_roi_bonus_percent?: number;
   career_pool_percent?: number;
 }

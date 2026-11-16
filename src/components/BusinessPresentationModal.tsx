@@ -102,7 +102,6 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
   const [calcCareerLevel, setCalcCareerLevel] = useState<number>(4);
   const [includeMatchingBonus, setIncludeMatchingBonus] = useState<boolean>(true);
   const [includeFastRoi, setIncludeFastRoi] = useState<boolean>(true);
-  const [includeInfinityBonus, setIncludeInfinityBonus] = useState<boolean>(true);
 
   // Active Referral Code Determination
   const activeReferralCode = activeReseller?.referralCode 
@@ -216,20 +215,13 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
     ? Math.round(3 * calcAvgPackagePrice * 0.15)
     : 0;
 
-  // Unilevel Infinity differential bonus (%1 - %7 on deep downline)
-  const infinityRate = calcCareerLevel * 0.01;
-  const monthlyInfinityBonus = includeInfinityBonus && calcCareerLevel >= 2
-    ? Math.round(calcMonolineTeamOrders * calcAvgPackagePrice * infinityRate * 0.3)
-    : 0;
-
   const totalMonthlyEarnings =
     monthlySessionProfit +
     monthlyDirectSponsorCommission +
     monthlyMonolineCommission +
     monthlyCareerPoolBonus +
     monthlyMatchingBonus +
-    monthlyFastRoiBonus +
-    monthlyInfinityBonus;
+    monthlyFastRoiBonus;
 
   const yearlyProjectedEarnings = totalMonthlyEarnings * 12;
 
@@ -1092,22 +1084,8 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
                 </div>
               </div>
 
-              {/* Unilevel Infinity Fark Primi & Esnek Aktiflik Kutusu */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4">
                 
-                <div className="p-5 rounded-2xl bg-gradient-to-br from-indigo-950/80 via-slate-950 to-slate-900 border border-indigo-500/40 space-y-2.5">
-                  <div className="flex items-center justify-between">
-                    <span className="px-2.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 text-[10px] font-black border border-indigo-500/40">
-                      7. GELİR KAPISI: INFINITY (%1 - %7)
-                    </span>
-                    <span className="text-xs font-mono font-bold text-indigo-300">Sınırsız Derinlik</span>
-                  </div>
-                  <h4 className="text-sm font-black text-white">Unilevel Sonsuzluk (Infinity) Fark Primi</h4>
-                  <p className="text-xs text-slate-300 leading-relaxed">
-                    8. derinlikten sonsuza kadar tüm organizasyon cironuzdan aldığınız diferansiyel fark primi: Emmâre %1, Levvâme %2, Mülhime %3, Mutmainne %4, Râzıye %5, Mardıyye %6, Kâmile %7.
-                  </p>
-                </div>
-
                 <div className="p-5 rounded-2xl bg-gradient-to-br from-amber-950/70 via-slate-950 to-slate-900 border border-amber-500/40 space-y-2.5">
                   <div className="flex items-center justify-between">
                     <span className="px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-[10px] font-black border border-amber-500/40">
@@ -1358,7 +1336,7 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
                   {/* Bonus Toggles */}
                   <div className="pt-2 border-t border-slate-850 space-y-2">
                     <span className="text-[11px] font-bold text-slate-400 block">Ekstra Liderlik ve Hızlı Başlangıç Primleri:</span>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                       <label className="flex items-center gap-2 p-2 rounded-xl bg-slate-900/80 border border-slate-800 cursor-pointer hover:bg-slate-900">
                         <input
                           type="checkbox"
@@ -1376,15 +1354,6 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
                           className="accent-emerald-500 rounded"
                         />
                         <span className="text-emerald-300 font-semibold text-[11px]">Fast-ROI (+%15)</span>
-                      </label>
-                      <label className="flex items-center gap-2 p-2 rounded-xl bg-slate-900/80 border border-slate-800 cursor-pointer hover:bg-slate-900">
-                        <input
-                          type="checkbox"
-                          checked={includeInfinityBonus}
-                          onChange={(e) => setIncludeInfinityBonus(e.target.checked)}
-                          className="accent-indigo-500 rounded"
-                        />
-                        <span className="text-indigo-300 font-semibold text-[11px]">Infinity (%1-%7)</span>
                       </label>
                     </div>
                   </div>
@@ -1435,14 +1404,6 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
                           6. Fast-ROI Hızlı İkramiye (+%15):
                         </span>
                         <span className="text-sm font-mono font-black text-emerald-300">+{formatUsd(monthlyFastRoiBonus)}</span>
-                      </div>
-                    )}
-                    {monthlyInfinityBonus > 0 && (
-                      <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-                        <span className="text-xs text-sky-300 font-bold">
-                          7. Infinity Sonsuzluk Farkı (%{calcCareerLevel}):
-                        </span>
-                        <span className="text-sm font-mono font-black text-sky-300">+{formatUsd(monthlyInfinityBonus)}</span>
                       </div>
                     )}
                   </div>

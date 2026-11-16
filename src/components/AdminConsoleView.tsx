@@ -1644,31 +1644,6 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 <div className="bg-white/5 border border-white/10 rounded-xl p-3.5 flex items-center justify-between gap-2">
                   <div>
-                    <div className="text-xs font-bold text-white">%6 Sonsuzluk Diferansiyel</div>
-                    <div className="text-[11px] text-slate-400">
-                      8. derinlik ve sonrası sınırsız liderlik primi
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    disabled={strategicBusy}
-                    onClick={() =>
-                      handleAdminToggleV2Config({
-                        unilevel_infinity_enabled: !v2Config.unilevel_infinity_enabled,
-                      })
-                    }
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer ${
-                      v2Config.unilevel_infinity_enabled
-                        ? 'bg-emerald-500 text-slate-950'
-                        : 'bg-slate-700 text-slate-300'
-                    }`}
-                  >
-                    {v2Config.unilevel_infinity_enabled ? 'AKTİF' : 'PASİF'}
-                  </button>
-                </div>
-
-                <div className="bg-white/5 border border-white/10 rounded-xl p-3.5 flex items-center justify-between gap-2">
-                  <div>
                     <div className="text-xs font-bold text-white">%10+%5 Hızlı Başlangıç (Fast-Start)</div>
                     <div className="text-[11px] text-slate-400">
                       2. ve 3. kademe sponsor hızlı amortisman primi

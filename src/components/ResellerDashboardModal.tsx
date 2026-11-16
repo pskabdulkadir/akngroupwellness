@@ -2605,7 +2605,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                       <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 text-[11px] text-slate-300 space-y-1">
                         <div className="text-emerald-400 font-semibold">• Biyo-Rezonans, 302+ Frekans, 50+ Hastalık &amp; MindSpace Stüdyo</div>
                         <div className="text-amber-300 font-semibold">• Monoline 7 Nefis MLM (%20 Sponsor • %25 Tek Hat • %5 Sistem Fonu)</div>
-                        <div className="text-indigo-300 font-semibold">• V2.2 Liderlik Eşleşme (%20) • Unilevel Sonsuzluk (%1-%7) • Fast-ROI (%75 İade)</div>
+                        <div className="text-indigo-300 font-semibold">• Liderlik Eşleşme (%20) • Fast-ROI (%75 İade)</div>
                         <div className="text-slate-400">• 14 Resmi Alışveriş Paketi (96 Krediden 15.000 Krediye)</div>
                       </div>
                     </div>
