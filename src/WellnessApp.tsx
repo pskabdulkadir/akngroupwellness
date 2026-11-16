@@ -31,6 +31,7 @@ import { AncientHealingMatrix } from './components/AncientHealingMatrix';
 import { TechnicalReportModal } from './components/TechnicalReportModal';
 import { BusinessPresentationModal } from './components/BusinessPresentationModal';
 import { HealingEncyclopediaModal } from './components/HealingEncyclopediaModal';
+import { ParanormalArchiveModal } from './components/ParanormalArchiveModal';
 import { DiseaseDetailModal } from './components/DiseaseDetailModal';
 import { AcousticSessionWorkflowModal, WorkflowStep } from './components/AcousticSessionWorkflowModal';
 import { WearableBridgeModal } from './components/WearableBridgeModal';
@@ -173,6 +174,7 @@ export default function WellnessApp({
   const [isSOSModalOpen, setIsSOSModalOpen] = useState<boolean>(() => initialNav.activeModal === 'sos');
   const [isSleepModalOpen, setIsSleepModalOpen] = useState<boolean>(() => initialNav.activeModal === 'sleep');
   const [isEncyclopediaOpen, setIsEncyclopediaOpen] = useState<boolean>(() => initialNav.activeModal === 'encyclopedia');
+  const [isParanormalArchiveOpen, setIsParanormalArchiveOpen] = useState(false);
   const [isWearableModalOpen, setIsWearableModalOpen] = useState<boolean>(() => initialNav.activeModal === 'wearable');
   const [isJourneyModalOpen, setIsJourneyModalOpen] = useState<boolean>(() => initialNav.activeModal === 'journey');
   const [isFrequencyForgeModalOpen, setIsFrequencyForgeModalOpen] = useState<boolean>(() => initialNav.activeModal === 'forge');
@@ -898,6 +900,7 @@ export default function WellnessApp({
     scanWorkflowDisease ||
     comparisonPair ||
     isEncyclopediaOpen ||
+    isParanormalArchiveOpen ||
     isUserGuideOpen ||
     isTechnicalReportOpen ||
     isAdminOpen ||
@@ -943,6 +946,7 @@ export default function WellnessApp({
           }
         }}
         onOpenEncyclopedia={() => setIsEncyclopediaOpen(true)}
+        onOpenParanormalArchive={() => setIsParanormalArchiveOpen(true)}
         onOpenSOSModal={() => setIsSOSModalOpen(true)}
         onOpenSleepModal={() => setIsSleepModalOpen(true)}
         onOpenUserGuide={() => setIsUserGuideOpen(true)}
@@ -1389,6 +1393,11 @@ export default function WellnessApp({
           setIsEncyclopediaOpen(false);
           setScanWorkflowDisease(disease);
         }}
+      />
+
+      <ParanormalArchiveModal
+        isOpen={isParanormalArchiveOpen}
+        onClose={() => setIsParanormalArchiveOpen(false)}
       />
 
       {/* Modal 12: Hastalık Detay & Reçete Görünümü */}

@@ -41,7 +41,8 @@ import {
   Database,
   RotateCcw,
   ShoppingCart,
-  Receipt
+  Receipt,
+  Eye
 } from 'lucide-react';
 import { ActiveTab } from '../types';
 import { UserMember, checkMemberAccess } from '../utils/authManager';
@@ -67,6 +68,7 @@ interface HeaderProps {
   onOpenAuthModal: (mode?: 'login' | 'register' | 'dealer') => void;
   onOpenDealerModal?: () => void;
   onOpenEncyclopedia?: () => void;
+  onOpenParanormalArchive?: () => void;
   onOpenSOSModal?: () => void;
   onOpenSleepModal?: () => void;
   onOpenUserGuide?: () => void;
@@ -100,6 +102,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenAuthModal,
   onOpenDealerModal,
   onOpenEncyclopedia,
+  onOpenParanormalArchive,
   onOpenSOSModal,
   onOpenSleepModal,
   onOpenUserGuide,
@@ -824,6 +827,27 @@ export const Header: React.FC<HeaderProps> = ({
                       </div>
                     </div>
                     <ChevronRight className="w-4 h-4 text-emerald-400 shrink-0" />
+                  </button>
+                )}
+
+                {onOpenParanormalArchive && (!menuSearchQuery || 'paranormal paranormal olaylar manevi tefekkür folklor'.includes(menuSearchQuery.toLocaleLowerCase('tr'))) && (
+                  <button
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      onOpenParanormalArchive();
+                    }}
+                    className="w-full flex items-center justify-between p-3 rounded-2xl bg-gradient-to-r from-violet-950/70 via-slate-900 to-slate-900 border border-violet-500/50 text-left transition-all active:scale-[0.99] shadow-md"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="p-2.5 rounded-xl bg-violet-500/20 border border-violet-500/40 shrink-0">
+                        <Eye className="w-4 h-4 text-violet-300" />
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-violet-200">Paranormal</div>
+                        <div className="text-[11px] text-slate-400 mt-0.5">Olay anlatıları ve manevi tefekkür</div>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-violet-400 shrink-0" />
                   </button>
                 )}
 
