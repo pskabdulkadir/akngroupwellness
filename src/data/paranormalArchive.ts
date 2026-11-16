@@ -16,6 +16,7 @@ export interface ParanormalArchiveItem {
   disclaimer: string;
   historicalSource: string;
   sourceUrl?: string;
+  frequencyHz: number;
   palette: string;
 }
 
@@ -30,11 +31,12 @@ export interface SpiritualFrequencyProtocol {
 }
 
 const DISCLAIMER = 'Bu içerik tarihsel tanıklık, folklor veya tartışmalı iddia niteliğindedir; paranormal açıklaması doğrulanmış değildir. Tıbbi ya da psikiyatrik tanı/tedavi sunmaz.';
-const REFLECTION_PROTOCOL = 'İsterseniz sakin bir ortamda kısa nefes farkındalığı veya kişisel dua/tefekkür uygulayın. İsteğe bağlı 432 Hz ambient ton yalnızca genel ses seçeneğidir; vaka ya da manevi metinle kanıtlanmış bir tedavi ilişkisi yoktur. Süregelen korku, uykusuzluk veya sıkıntıda sağlık uzmanından destek alın.';
+const REFLECTION_PROTOCOL = 'İsterseniz sakin bir ortamda kısa nefes farkındalığı veya kişisel dua/tefekkür uygulayın. İsteğe bağlı ambient tonun frekansı yalnızca ses tasarımı seçimidir; vaka ya da manevi metinle kanıtlanmış bir etkisi yoktur. Süregelen korku, uykusuzluk veya sıkıntıda sağlık uzmanından destek alın.';
 
 export const PARANORMAL_ARCHIVE_ITEMS: ParanormalArchiveItem[] = [
   {
     id: 'fox-sisters',
+    frequencyHz: 285,
     title: 'Fox kardeşler ve Hydesville anlatısı',
     category: 'global-historical-accounts',
     centuryOrPeriod: '1848 · Hydesville, ABD',
@@ -47,6 +49,7 @@ export const PARANORMAL_ARCHIVE_ITEMS: ParanormalArchiveItem[] = [
   },
   {
     id: 'versailles',
+    frequencyHz: 396,
     title: 'Versailles bahçelerindeki “zaman kayması”',
     category: 'global-historical-accounts',
     centuryOrPeriod: '1901 · Versailles, Fransa',
@@ -59,6 +62,7 @@ export const PARANORMAL_ARCHIVE_ITEMS: ParanormalArchiveItem[] = [
   },
   {
     id: 'fatima',
+    frequencyHz: 528,
     title: 'Fâtıma güneş olayı anlatısı',
     category: 'global-historical-accounts',
     centuryOrPeriod: '1917 · Fâtıma, Portekiz',
@@ -71,6 +75,7 @@ export const PARANORMAL_ARCHIVE_ITEMS: ParanormalArchiveItem[] = [
   },
   {
     id: 'loch-ness',
+    frequencyHz: 174,
     title: 'Loch Ness canavarı ve “cerrah fotoğrafı”',
     category: 'global-historical-accounts',
     centuryOrPeriod: '1934 · İskoçya',
@@ -83,6 +88,7 @@ export const PARANORMAL_ARCHIVE_ITEMS: ParanormalArchiveItem[] = [
   },
   {
     id: 'flatwoods',
+    frequencyHz: 285,
     title: 'Flatwoods canavarı tanıklıkları',
     category: 'global-historical-accounts',
     centuryOrPeriod: '1952 · Batı Virginia, ABD',
@@ -95,6 +101,7 @@ export const PARANORMAL_ARCHIVE_ITEMS: ParanormalArchiveItem[] = [
   },
   {
     id: 'hill-abduction',
+    frequencyHz: 396,
     title: 'Betty ve Barney Hill UFO anlatısı',
     category: 'global-historical-accounts',
     centuryOrPeriod: '1961 · New Hampshire, ABD',
@@ -107,6 +114,7 @@ export const PARANORMAL_ARCHIVE_ITEMS: ParanormalArchiveItem[] = [
   },
   {
     id: 'pascagoula',
+    frequencyHz: 432,
     title: 'Pascagoula nehir kıyısı karşılaşma iddiası',
     category: 'global-historical-accounts',
     centuryOrPeriod: '1973 · Mississippi, ABD',
@@ -119,6 +127,7 @@ export const PARANORMAL_ARCHIVE_ITEMS: ParanormalArchiveItem[] = [
   },
   {
     id: 'enfield',
+    frequencyHz: 285,
     title: 'Enfield poltergeist vakası',
     category: 'global-historical-accounts',
     centuryOrPeriod: '1977–1979 · Londra, Birleşik Krallık',
@@ -131,6 +140,7 @@ export const PARANORMAL_ARCHIVE_ITEMS: ParanormalArchiveItem[] = [
   },
   {
     id: 'rendlesham',
+    frequencyHz: 432,
     title: 'Rendlesham Ormanı ışıkları',
     category: 'global-historical-accounts',
     centuryOrPeriod: '1980 · Suffolk, Birleşik Krallık',
@@ -143,6 +153,7 @@ export const PARANORMAL_ARCHIVE_ITEMS: ParanormalArchiveItem[] = [
   },
   {
     id: 'broad-haven',
+    frequencyHz: 528,
     title: 'Broad Haven okul bahçesi gözlemi',
     category: 'global-historical-accounts',
     centuryOrPeriod: '1977 · Galler, Birleşik Krallık',
@@ -155,6 +166,7 @@ export const PARANORMAL_ARCHIVE_ITEMS: ParanormalArchiveItem[] = [
   },
   {
     id: 'allagash',
+    frequencyHz: 174,
     title: 'Allagash su yolu UFO anlatısı',
     category: 'global-historical-accounts',
     centuryOrPeriod: '1976 · Maine, ABD',
@@ -167,6 +179,7 @@ export const PARANORMAL_ARCHIVE_ITEMS: ParanormalArchiveItem[] = [
   },
   {
     id: 'aurora-legend',
+    frequencyHz: 396,
     title: 'Aurora uzay gemisi kasabası efsanesi',
     category: 'global-historical-accounts',
     centuryOrPeriod: '1897 · Teksas, ABD',
@@ -179,6 +192,7 @@ export const PARANORMAL_ARCHIVE_ITEMS: ParanormalArchiveItem[] = [
   },
   {
     id: 'ibrahim-adham-call',
+    frequencyHz: 639,
     title: 'İbrâhim b. Edhem’in av sırasında duyduğu ses rivayeti',
     category: 'sufi-hagiography',
     centuryOrPeriod: '8. yüzyıl şahsiyeti; menkıbe kaynakları daha geç dönem',
@@ -192,6 +206,7 @@ export const PARANORMAL_ARCHIVE_ITEMS: ParanormalArchiveItem[] = [
   },
   {
     id: 'fudayl-repentance',
+    frequencyHz: 528,
     title: 'Fudayl b. İyâz’ın Kur’an ayetini işitmesi',
     category: 'sufi-hagiography',
     centuryOrPeriod: '8. yüzyıl şahsiyeti; menkıbe kaynakları daha geç dönem',
@@ -205,6 +220,7 @@ export const PARANORMAL_ARCHIVE_ITEMS: ParanormalArchiveItem[] = [
   },
   {
     id: 'yunus-emre-vilayetname',
+    frequencyHz: 639,
     title: 'Yunus Emre’nin Tapduk Emre’ye yöneliş menkıbesi',
     category: 'sufi-hagiography',
     centuryOrPeriod: 'Menkıbe, 15. yüzyıl sonlarına tarihlenen Vilâyetnâme geleneğinde aktarılır',
@@ -218,6 +234,7 @@ export const PARANORMAL_ARCHIVE_ITEMS: ParanormalArchiveItem[] = [
   },
   {
     id: 'evliya-celebi-dream',
+    frequencyHz: 432,
     title: 'Evliya Çelebi’nin seyahate çıkış rüyası',
     category: 'ottoman-historical',
     centuryOrPeriod: '1630 · Osmanlı dönemi',
@@ -231,6 +248,7 @@ export const PARANORMAL_ARCHIVE_ITEMS: ParanormalArchiveItem[] = [
   },
   {
     id: 'sari-saltuk-dragon',
+    frequencyHz: 396,
     title: 'Sarı Saltuk ve yedi başlı ejderha menkıbesi',
     category: 'islamic-folklore',
     centuryOrPeriod: '13. yüzyıl şahsiyeti; anlatı 15. yüzyılda derlenen Saltuknâme’de',
@@ -244,6 +262,7 @@ export const PARANORMAL_ARCHIVE_ITEMS: ParanormalArchiveItem[] = [
   },
   {
     id: 'shams-rumi-meeting',
+    frequencyHz: 741,
     title: 'Şems-i Tebrîzî ile Mevlânâ’nın karşılaşma rivayeti',
     category: 'sufi-hagiography',
     centuryOrPeriod: '13. yüzyıl; olayın menkıbevî anlatımları 14. yüzyıl kaynaklarında',
@@ -257,6 +276,7 @@ export const PARANORMAL_ARCHIVE_ITEMS: ParanormalArchiveItem[] = [
   },
   {
     id: 'rabia-hagiography',
+    frequencyHz: 639,
     title: 'Râbia el-Adeviyye’nin zühd ve Allah sevgisi menkıbeleri',
     category: 'sufi-hagiography',
     centuryOrPeriod: '8. yüzyıl şahsiyeti; menkıbeler sonraki tasavvuf kaynaklarında',
