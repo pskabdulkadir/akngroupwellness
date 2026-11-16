@@ -7,6 +7,7 @@ import { DataBackupRestoreModal } from './DataBackupRestoreModal';
 import { DealerBackOfficeView, type DealerBackOfficeSubTab } from './DealerBackOfficeView';
 import { LedgerTransactionsView } from './LedgerTransactionsView';
 import { MonolineTimelineView } from './MonolineTimelineView';
+import { UnilevelOrganizationTreePanel } from './UnilevelOrganizationTreePanel';
 import { PackagesCatalogView } from './PackagesCatalogView';
 import { SalesVolumeD3Chart } from './SalesVolumeD3Chart';
 import {
@@ -85,6 +86,7 @@ export const MonolineMlmPortalModal: React.FC<MonolineMlmPortalModalProps> = ({
     | undefined
   >(undefined);
   const [selectedMemberId, setSelectedMemberId] = useState<string>('');
+  const [monolineTreeView, setMonolineTreeView] = useState<'MONOLINE' | 'UNILEVEL'>('MONOLINE');
   const [dealerBackOfficeTab, setDealerBackOfficeTab] = useState<DealerBackOfficeSubTab>('wallet');
   const [lastTransaction, setLastTransaction] = useState<CommissionTransaction | null>(null);
   const [checkoutRequest, setCheckoutRequest] = useState<{
@@ -1557,16 +1559,51 @@ export const MonolineMlmPortalModal: React.FC<MonolineMlmPortalModalProps> = ({
             )}
 
             {activeTab === 'monoline' && (
-              <MonolineTimelineView
-                members={state.members}
-                selectedMemberId={selectedMemberId}
-                onSelectMember={(id) => setSelectedMemberId(id)}
-                lastTransaction={lastTransaction}
-                onRegisterMember={handleRegisterMember}
-                onQuickTriggerOrder={handleQuickTriggerOrder}
-                isSubmitting={isSubmitting}
-                isAdminAuthenticated={isAdminAuthenticated}
-              />
+              <div className="space-y-4">
+                <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 p-2">
+                  <button
+                    type="button"
+                    onClick={() => setMonolineTreeView('MONOLINE')}
+                    className={`rounded-lg px-3 py-2 text-xs font-semibold transition-colors cursor-pointer ${
+                      monolineTreeView === 'MONOLINE'
+                        ? 'bg-emerald-600 text-white shadow-xs'
+                        : 'text-slate-600 hover:bg-white hover:text-slate-900'
+                    }`}
+                  >
+                    Monoline Tek Hat
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMonolineTreeView('UNILEVEL')}
+                    className={`rounded-lg px-3 py-2 text-xs font-semibold transition-colors cursor-pointer ${
+                      monolineTreeView === 'UNILEVEL'
+                        ? 'bg-indigo-600 text-white shadow-xs'
+                        : 'text-slate-600 hover:bg-white hover:text-slate-900'
+                    }`}
+                  >
+                    Unilevel 7 Derinlik
+                  </button>
+                </div>
+                {monolineTreeView === 'MONOLINE' ? (
+                  <MonolineTimelineView
+                    members={state.members}
+                    selectedMemberId={selectedMemberId}
+                    onSelectMember={(id) => setSelectedMemberId(id)}
+                    lastTransaction={lastTransaction}
+                    onRegisterMember={handleRegisterMember}
+                    onQuickTriggerOrder={handleQuickTriggerOrder}
+                    isSubmitting={isSubmitting}
+                    isAdminAuthenticated={isAdminAuthenticated}
+                  />
+                ) : (
+                  <UnilevelOrganizationTreePanel
+                    mode="dealer"
+                    currentDealerId={selectedMemberId || undefined}
+                    embedded={true}
+                    onMemberUpdated={() => fetchSystemState(true)}
+                  />
+                )}
+              </div>
             )}
 
             {isAdminAuthenticated && activeTab === 'webhook' && (
