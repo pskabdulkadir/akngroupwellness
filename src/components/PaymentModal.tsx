@@ -39,6 +39,7 @@ import {
   updateMemberCart,
   recordMemberOrder,
   completePaidDealerRegistration,
+  getMemberWalletToken,
   saveMemberWalletToken
 } from '../utils/authManager';
 import { DealerPackage, getDealerPackages, subscribeToDealerPackages } from '../utils/resellerManager';
@@ -112,7 +113,10 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
     orderId: string;
     txId: string;
     amount: number;
+    paymentMethod: 'CARD' | 'SPONSOR_WALLET';
   } | null>(null);
+  const [dealerPaymentMethod, setDealerPaymentMethod] = useState<'CARD' | 'SPONSOR_WALLET'>('CARD');
+  const canPayFromSponsorWallet = isPendingDealerRegistration && Boolean(user.resellerId);
 
   const [demoLoading, setDemoLoading] = useState<boolean>(false);
   const [demoError, setDemoError] = useState<string | null>(null);
@@ -312,12 +316,18 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
       setPosError('Yeni bayi kaydında tek bir bayi paketi seçerek devam edebilirsiniz.');
       return;
     }
+    if (isPendingDealerRegistration && !user.pendingDealerOrderId) {
+      setPosError('Bekleyen bayi kaydına ait sipariş bilgisi bulunamadı. Lütfen kaydı yeniden başlatın.');
+      return;
+    }
 
     const packageItems = cartItems.map((item) => ({ package_id: item.packageId, quantity: item.quantity }));
 
     setPosProcessing(true);
     try {
-      const orderId = `ORD-${isPendingDealerRegistration ? 'KAYIT' : 'MEMBER'}-${crypto.randomUUID()}`;
+      const orderId = isPendingDealerRegistration
+        ? user.pendingDealerOrderId!
+        : `ORD-MEMBER-${crypto.randomUUID()}`;
       const approvals = await recordUserContractApprovals({
         user_id: user.uid,
         user_name: user.fullName || user.email,
@@ -329,40 +339,31 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
       });
       if (approvals.length !== 4) throw new Error('Sözleşme onayları sunucuya kaydedilemedi. Ödeme başlatılmadı.');
 
-      const posCharge = await defaultPaymentProcessor.chargeCreditCard(
-        {
-          cardHolder: posCardHolder,
-          cardNumber: posCardNumber,
-          cardExpiry: posCardExpiry,
-          cardCvv: posCardCvv,
-        },
-        totalCartPrice,
-        orderId,
-        user.uid,
-        packageItems
-      );
-
+      let paymentReference = '';
       let orderUser = user;
-      if (isPendingDealerRegistration) {
-        const settlementResponse = await fetch('/api/v1/integrations/order-commission', {
+      if (isPendingDealerRegistration && dealerPaymentMethod === 'SPONSOR_WALLET') {
+        const payerUserId = user.resellerId || '';
+        const walletToken = getMemberWalletToken();
+        if (!walletToken || !payerUserId) {
+          throw new Error('Sponsor bayi cüzdan oturumu bulunamadı. Sponsorun yeniden giriş yapması gerekir.');
+        }
+        const walletResponse = await fetch('/api/v1/wallet/purchase-package', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${walletToken}` },
           body: JSON.stringify({
-            user_id: user.uid,
+            payer_user_id: payerUserId,
+            buyer_user_id: user.uid,
+            request_id: `WLTREG-${crypto.randomUUID()}`,
             order_id: orderId,
-            order_amount: totalCartPrice,
             package_id: cartItems[0].packageId,
-            timestamp: new Date().toISOString(),
-            order_type: 'STANDARD_ORDER',
-            payment_method: 'CARD_3D',
-            merchant_oid: posCharge.merchant_oid,
-            transaction_id: posCharge.transaction_id,
+            order_type: 'DEALER_REGISTRATION',
+            note: 'Yeni bayi kaydı için sponsor cüzdan ödemesi',
           }),
         });
-        const settlement = await settlementResponse.json().catch(() => ({}));
+        const settlement = await walletResponse.json().catch(() => ({}));
         const grantedCredits = Number(settlement.transaction?.session_credits_added);
         if (
-          !settlementResponse.ok ||
+          !walletResponse.ok ||
           settlement.status !== 'success' ||
           settlement.transaction?.order_id !== orderId ||
           settlement.transaction?.buyer_user_id !== user.uid ||
@@ -371,11 +372,10 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
           typeof settlement.member_token !== 'string' ||
           !settlement.member_token
         ) {
-          throw new Error(
-            `Ödeme alındı ancak bayi kaydı etkinleştirilemedi. İşlem numarası: ${posCharge.transaction_id}. ${settlement.message || ''}`
-          );
+          throw new Error(settlement.message || 'Sponsor cüzdan ödemesi tamamlanamadı.');
         }
         saveMemberWalletToken(settlement.member_token);
+        paymentReference = settlement.wallet_transaction?.transaction_id || orderId;
         orderUser = await completePaidDealerRegistration(
           {
             ...user,
@@ -385,6 +385,63 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
           grantedCredits
         );
         onDealerRegistrationPaid?.(orderUser);
+      } else {
+        const posCharge = await defaultPaymentProcessor.chargeCreditCard(
+          {
+            cardHolder: posCardHolder,
+            cardNumber: posCardNumber,
+            cardExpiry: posCardExpiry,
+            cardCvv: posCardCvv,
+          },
+          totalCartPrice,
+          orderId,
+          user.uid,
+          packageItems
+        );
+        paymentReference = posCharge.transaction_id;
+        if (isPendingDealerRegistration) {
+          const settlementResponse = await fetch('/api/v1/integrations/order-commission', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              user_id: user.uid,
+              order_id: orderId,
+              order_amount: totalCartPrice,
+              package_id: cartItems[0].packageId,
+              timestamp: new Date().toISOString(),
+              order_type: 'STANDARD_ORDER',
+              payment_method: 'CARD_3D',
+              merchant_oid: posCharge.merchant_oid,
+              transaction_id: posCharge.transaction_id,
+            }),
+          });
+          const settlement = await settlementResponse.json().catch(() => ({}));
+          const grantedCredits = Number(settlement.transaction?.session_credits_added);
+          if (
+            !settlementResponse.ok ||
+            settlement.status !== 'success' ||
+            settlement.transaction?.order_id !== orderId ||
+            settlement.transaction?.buyer_user_id !== user.uid ||
+            !Number.isFinite(grantedCredits) ||
+            grantedCredits <= 0 ||
+            typeof settlement.member_token !== 'string' ||
+            !settlement.member_token
+          ) {
+            throw new Error(
+              `Ödeme alındı ancak bayi kaydı etkinleştirilemedi. İşlem numarası: ${posCharge.transaction_id}. ${settlement.message || ''}`
+            );
+          }
+          saveMemberWalletToken(settlement.member_token);
+          orderUser = await completePaidDealerRegistration(
+            {
+              ...user,
+              selectedPackage: cartItems[0].packageId,
+              dealerPackageId: cartItems[0].packageId,
+            },
+            grantedCredits
+          );
+          onDealerRegistrationPaid?.(orderUser);
+        }
       }
 
       const activeItems = cartItems.map((item) => {
@@ -416,16 +473,20 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
         amount: totalCartPrice,
         paymentStatus: 'PAID',
         date: new Date().toISOString(),
-        paymentMethod: '3D Secure Sanal POS (Kredi Kartı)',
-        referenceNumber: posCharge.transaction_id,
+        paymentMethod:
+          isPendingDealerRegistration && dealerPaymentMethod === 'SPONSOR_WALLET'
+            ? 'Sponsor Bayi Cüzdanı'
+            : '3D Secure Sanal POS (Kredi Kartı)',
+        referenceNumber: paymentReference,
         items: activeItems,
       }, orderUser);
-      if (!orderRecorded) throw new Error(`Ödeme alındı ancak sipariş kaydedilemedi. İşlem numarası: ${posCharge.transaction_id}`);
+      if (!orderRecorded) throw new Error(`Ödeme alındı ancak sipariş kaydedilemedi. İşlem numarası: ${paymentReference}`);
 
       setPosSuccessReceipt({
         orderId,
-        txId: posCharge.transaction_id,
+        txId: paymentReference,
         amount: totalCartPrice,
+        paymentMethod: isPendingDealerRegistration && dealerPaymentMethod === 'SPONSOR_WALLET' ? 'SPONSOR_WALLET' : 'CARD',
       });
     } catch (err: any) {
       setPosError(err?.message || 'Sanal POS kredi kartı ödemesi başarısız oldu.');
@@ -915,7 +976,9 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                   <span className="text-xs text-emerald-400 font-normal">({totalCartDaysText})</span>
                 </h4>
                 <p className="text-xs text-slate-400">
-                  Banka denetimi ve yasal uyum gereği ödemeler yalnızca 3D Secure Sanal POS (Kredi / Banka Kartı) ile tahsil edilir.
+                  {isPendingDealerRegistration && canPayFromSponsorWallet
+                    ? 'Paket ödemesini 3D Secure kartla veya sponsor bayinin cüzdanından yapabilirsiniz.'
+                    : 'Banka denetimi ve yasal uyum gereği ödemeler 3D Secure Sanal POS (Kredi / Banka Kartı) ile tahsil edilir.'}
                 </p>
               </div>
             </div>
@@ -948,8 +1011,35 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
             </div>
           )}
 
+          {isPendingDealerRegistration && (
+            <section className="rounded-2xl border border-indigo-500/30 bg-indigo-950/40 p-4 space-y-3">
+              <h5 className="text-xs font-bold text-indigo-100">Ödeme Yöntemi</h5>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setDealerPaymentMethod('CARD')}
+                  className={`rounded-xl border p-3 text-left text-xs font-semibold ${dealerPaymentMethod === 'CARD' ? 'border-emerald-400 bg-emerald-500/15 text-emerald-100' : 'border-slate-700 bg-slate-900 text-slate-300'}`}
+                >
+                  3D Secure kart ile ödeme
+                </button>
+                {canPayFromSponsorWallet && (
+                  <button
+                    type="button"
+                    onClick={() => setDealerPaymentMethod('SPONSOR_WALLET')}
+                    className={`rounded-xl border p-3 text-left text-xs font-semibold ${dealerPaymentMethod === 'SPONSOR_WALLET' ? 'border-indigo-300 bg-indigo-500/20 text-indigo-100' : 'border-slate-700 bg-slate-900 text-slate-300'}`}
+                  >
+                    Sponsor bayinin cüzdanından öde
+                  </button>
+                )}
+              </div>
+              {dealerPaymentMethod === 'SPONSOR_WALLET' && (
+                <p className="text-[11px] text-indigo-100">Ödeme, sponsor bayi hesabının sunucuda doğrulanan kullanılabilir bakiyesinden düşülür.</p>
+              )}
+            </section>
+          )}
+
           {/* 3D Secure Credit Card Form (Only Credit Card — IBAN/Havale/Crypto Removed) */}
-          <div className="p-4 rounded-2xl bg-slate-900/90 border border-emerald-500/30 space-y-3 text-xs">
+          {dealerPaymentMethod === 'CARD' && <div className="p-4 rounded-2xl bg-slate-900/90 border border-emerald-500/30 space-y-3 text-xs">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-2.5">
               <div className="flex items-center gap-2 text-emerald-300 font-bold">
                 <CreditCard className="w-4 h-4 text-emerald-400" />
@@ -1047,7 +1137,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
                   <span>
-                    <strong>Sanal POS Ödemesi Onaylandı!</strong> Sipariş No: <span className="font-mono">{posSuccessReceipt.orderId}</span> · İşlem ID: <span className="font-mono">{posSuccessReceipt.txId}</span>
+                    <strong>{posSuccessReceipt.paymentMethod === 'SPONSOR_WALLET' ? 'Sponsor cüzdanı ödemesi onaylandı!' : 'Sanal POS ödemesi onaylandı!'}</strong> Sipariş No: <span className="font-mono">{posSuccessReceipt.orderId}</span> · İşlem ID: <span className="font-mono">{posSuccessReceipt.txId}</span>
                   </span>
                 </div>
                 <button
@@ -1059,7 +1149,13 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                 </button>
               </div>
             )}
-          </div>
+          </div>}
+          {posSuccessReceipt?.paymentMethod === 'SPONSOR_WALLET' && (
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-emerald-500/60 bg-emerald-950/80 p-3.5 text-xs text-emerald-200">
+              <span><strong>Sponsor cüzdanı ödemesi onaylandı.</strong> Sipariş No: {posSuccessReceipt.orderId} · İşlem ID: {posSuccessReceipt.txId}</span>
+              <button type="button" onClick={onProceedToWaiting} className="rounded-lg bg-emerald-500 px-3 py-1.5 text-xs font-bold text-slate-950">Devam Et</button>
+            </div>
+          )}
 
           {/* SECTION 4: E-COMMERCE LEGAL CONTRACTS & MANDATORY CHECKBOX */}
           <div id="legal-terms-section" className="space-y-2.5">
@@ -1152,7 +1248,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
               <div className="p-3 rounded-xl bg-rose-950/80 border border-rose-500/50 text-xs text-rose-300 flex items-center gap-2 animate-fade-in">
                 <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
                 <span>
-                  3D Secure Sanal POS ödemesini tamamlayabilmek için lütfen iki sözleşme onay kutucuğunu da işaretleyiniz.
+                  Ödemeyi tamamlayabilmek için lütfen iki sözleşme onay kutucuğunu da işaretleyiniz.
                 </span>
               </div>
             )}
@@ -1174,8 +1270,10 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
               <ShieldCheck className="w-4 h-4" />
               <span>
                 {posProcessing
-                  ? '3D Secure Sanal POS İşleniyor...'
-                  : `Kredi Kartı ile Güvenli Öde & Siparişi Tamamla (${formatUsd(totalCartPrice)})`}
+                  ? dealerPaymentMethod === 'SPONSOR_WALLET' ? 'Sponsor cüzdanı işleniyor...' : '3D Secure Sanal POS İşleniyor...'
+                  : dealerPaymentMethod === 'SPONSOR_WALLET'
+                    ? `Sponsor Cüzdanından Öde & Kaydı Tamamla (${formatUsd(totalCartPrice)})`
+                    : `Kredi Kartı ile Güvenli Öde & Siparişi Tamamla (${formatUsd(totalCartPrice)})`}
               </span>
             </button>
 

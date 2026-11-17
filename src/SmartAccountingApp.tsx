@@ -186,6 +186,13 @@ export default function SmartAccountingApp({
   const [accountingBatches, setAccountingBatches] = useState<any[]>([]);
   const [accountingOrders, setAccountingOrders] = useState<any[]>([]);
   const [accountingEvents, setAccountingEvents] = useState<any[]>([]);
+  const [taxRefundInvoices, setTaxRefundInvoices] = useState<any[]>([]);
+  const taxRefundInvoiceTotal = taxRefundInvoices.reduce(
+    (sum, invoice) => sum + Number(invoice.tax_deducted_amount || 0),
+    0
+  );
+  const [invoiceDownloadBusyId, setInvoiceDownloadBusyId] = useState<number | null>(null);
+  const [invoiceDownloadError, setInvoiceDownloadError] = useState<string | null>(null);
   const [selectedTestEventIds, setSelectedTestEventIds] = useState<Set<string>>(new Set());
   const [accountingDeleteMessage, setAccountingDeleteMessage] = useState<string | null>(null);
   const [isDeletingAccountingEvents, setIsDeletingAccountingEvents] = useState(false);
@@ -300,6 +307,7 @@ export default function SmartAccountingApp({
         setAccountingBatches(Array.isArray(data.payout_batches) ? data.payout_batches : []);
         setAccountingOrders(Array.isArray(data.orders) ? data.orders : []);
         setAccountingEvents(Array.isArray(data.accounting_events) ? data.accounting_events : []);
+        setTaxRefundInvoices(Array.isArray(data.tax_refund_invoices) ? data.tax_refund_invoices : []);
 
         // 1. Üyelerden Bayi Listesini Güncelle
         if (Array.isArray(data.members) && data.members.length > 0) {
@@ -365,13 +373,41 @@ export default function SmartAccountingApp({
     }
   };
 
+  const handleDownloadTaxRefundInvoice = async (invoice: any) => {
+    setInvoiceDownloadBusyId(invoice.id);
+    setInvoiceDownloadError(null);
+    try {
+      const response = await fetch(`/api/v1/accounting/tax-refund-invoices/${invoice.id}/file`);
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || typeof data.invoice_data_url !== 'string') {
+        throw new Error(data.message || 'Fatura dosyası alınamadı.');
+      }
+      const fileResponse = await fetch(data.invoice_data_url);
+      const blob = await fileResponse.blob();
+      const fileUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = fileUrl;
+      link.download = data.invoice_file_name || invoice.invoice_file_name || `fatura-${invoice.id}`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(fileUrl), 1000);
+    } catch (error: any) {
+      setInvoiceDownloadError(error?.message || 'Fatura dosyası alınamadı.');
+    } finally {
+      setInvoiceDownloadBusyId(null);
+    }
+  };
+
   useEffect(() => {
     const refresh = () => void fetchLiveAccountingData();
     refresh();
     const interval = window.setInterval(refresh, 15000);
     const unsubscribe = accountingSyncBridge.subscribe(refresh);
+    window.addEventListener('akn-tax-refund-invoice-uploaded', refresh);
     return () => {
       window.clearInterval(interval);
+      window.removeEventListener('akn-tax-refund-invoice-uploaded', refresh);
       unsubscribe();
     };
   }, []);
@@ -793,6 +829,31 @@ export default function SmartAccountingApp({
               {!accountingEvents.length && <p className="rounded-xl bg-white p-4 text-sm text-slate-500">Henüz muhasebe incelemesi bekleyen sipariş yok.</p>}
             </div>
           </section>
+          <section className="rounded-2xl border border-teal-200 bg-teal-50/60 p-5 shadow-sm">
+            <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-bold">Bayi vergi iadesi faturaları</h2>
+                <p className="mt-1 text-sm text-slate-600">Backoffice’ten yüklenen faturalar burada listelenir. Bu panel yalnızca inceleme içindir; iade onayı mevcut yönetici onay akışında yapılır.</p>
+              </div>
+              <span className="rounded-full border border-teal-300 bg-white px-3 py-1 text-xs font-bold text-teal-800">{taxRefundInvoices.length} fatura · {taxRefundInvoices.filter((invoice) => invoice.status === 'PENDING_ADMIN_APPROVAL').length} bekliyor · Toplam {taxRefundInvoiceTotal.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} $</span>
+            </div>
+            {invoiceDownloadError && <p role="alert" className="mb-3 rounded-lg border border-rose-200 bg-rose-50 p-2 text-xs text-rose-700">{invoiceDownloadError}</p>}
+            <div className="max-h-96 space-y-2 overflow-auto">
+              {taxRefundInvoices.map((invoice) => (
+                <article key={invoice.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-teal-100 bg-white p-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold">{invoice.user_full_name} · {invoice.invoice_no}</p>
+                    <p className="text-xs text-slate-500">{invoice.refund_code} · {invoice.invoice_file_name} · {invoice.requested_at?.slice(0, 10)}</p>
+                    <p className="mt-1 text-xs font-medium text-teal-800">{invoice.status === 'PENDING_ADMIN_APPROVAL' ? 'Yönetici onayı bekliyor' : invoice.status === 'APPROVED_CREDITED' ? 'Onaylandı ve iade aktarıldı' : 'Reddedildi'} · İade tutarı: {Number(invoice.tax_deducted_amount || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2 })} $</p>
+                  </div>
+                  <button type="button" onClick={() => void handleDownloadTaxRefundInvoice(invoice)} disabled={invoiceDownloadBusyId === invoice.id} className="rounded-lg border border-teal-300 bg-teal-50 px-3 py-2 text-xs font-semibold text-teal-900 disabled:opacity-50">
+                    {invoiceDownloadBusyId === invoice.id ? 'İndiriliyor…' : 'Faturayı indir'}
+                  </button>
+                </article>
+              ))}
+              {!taxRefundInvoices.length && <p className="rounded-xl bg-white p-4 text-sm text-slate-500">Henüz yüklenmiş vergi iadesi faturası bulunmuyor.</p>}
+            </div>
+          </section>
           <section className="grid grid-cols-1 gap-6 xl:grid-cols-2">
             <article className="min-w-0 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
               <h2 className="mb-4 text-lg font-bold">Yevmiye defteri</h2>
@@ -899,10 +960,37 @@ export default function SmartAccountingApp({
           )}
 
           {currentTab === 'invoices' && (
-            <InvoicesView
-              invoices={invoices}
-              onSelectInvoice={(inv) => setSelectedInvoice(inv)}
-            />
+            <div className="space-y-6">
+              <section className="rounded-2xl border border-teal-200 bg-teal-50/60 p-5 shadow-sm">
+                <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <h2 className="text-lg font-bold">Bayi vergi iadesi faturaları</h2>
+                    <p className="mt-1 text-sm text-slate-600">Backoffice’ten yüklenen faturalar burada toplanır. Bu panel inceleme içindir; iade kararı mevcut yönetici onay akışında kalır.</p>
+                  </div>
+                  <span className="rounded-full border border-teal-300 bg-white px-3 py-1 text-xs font-bold text-teal-800">{taxRefundInvoices.length} fatura · {taxRefundInvoices.filter((invoice) => invoice.status === 'PENDING_ADMIN_APPROVAL').length} bekliyor · Toplam {taxRefundInvoiceTotal.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} $</span>
+                </div>
+                {invoiceDownloadError && <p role="alert" className="mb-3 rounded-lg border border-rose-200 bg-rose-50 p-2 text-xs text-rose-700">{invoiceDownloadError}</p>}
+                <div className="max-h-80 space-y-2 overflow-auto">
+                  {taxRefundInvoices.map((invoice) => (
+                    <article key={invoice.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-teal-100 bg-white p-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold">{invoice.user_full_name} · {invoice.invoice_no}</p>
+                        <p className="text-xs text-slate-500">{invoice.refund_code} · {invoice.invoice_file_name} · {invoice.requested_at?.slice(0, 10)}</p>
+                        <p className="mt-1 text-xs font-medium text-teal-800">{invoice.status === 'PENDING_ADMIN_APPROVAL' ? 'Yönetici onayı bekliyor' : invoice.status === 'APPROVED_CREDITED' ? 'Onaylandı ve iade aktarıldı' : 'Reddedildi'} · İade tutarı: {Number(invoice.tax_deducted_amount || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2 })} $</p>
+                      </div>
+                      <button type="button" onClick={() => void handleDownloadTaxRefundInvoice(invoice)} disabled={invoiceDownloadBusyId === invoice.id} className="rounded-lg border border-teal-300 bg-teal-50 px-3 py-2 text-xs font-semibold text-teal-900 disabled:opacity-50">
+                        {invoiceDownloadBusyId === invoice.id ? 'İndiriliyor…' : 'Faturayı indir'}
+                      </button>
+                    </article>
+                  ))}
+                  {!taxRefundInvoices.length && <p className="rounded-xl bg-white p-4 text-sm text-slate-500">Henüz yüklenmiş vergi iadesi faturası bulunmuyor.</p>}
+                </div>
+              </section>
+              <InvoicesView
+                invoices={invoices}
+                onSelectInvoice={(inv) => setSelectedInvoice(inv)}
+              />
+            </div>
           )}
 
           {currentTab === 'simulator' && (

@@ -2620,7 +2620,13 @@ function processOrderCommission(payload: OrderCommissionPayload): CommissionTran
     session_credits_added: creditsAdded,
     order_amount: amount,
     timestamp: nowIso,
-    order_type: isActivationOrder ? 'ACTIVATION' : isActivityRenewalOrder ? 'ACTIVITY_RENEWAL' : 'STANDARD_ORDER',
+    order_type: isActivationOrder
+      ? 'ACTIVATION'
+      : isActivityRenewalOrder
+        ? 'ACTIVITY_RENEWAL'
+        : payload.order_type === 'DEALER_REGISTRATION' || isInitialRegistrationSync
+          ? 'DEALER_REGISTRATION'
+          : 'STANDARD_ORDER',
     activity_extended: activityExtended,
     enforce_career_depth_lock: lockActive,
     clawback_status: isFraudFlagged
@@ -7109,6 +7115,20 @@ async function startServer(options: { listen?: boolean } = {}) {
         { attempts: 3, backoff: 5000 }
       );
 
+      if (normalizedOrderId.startsWith('ORD-KAYIT-') && matchedUser) {
+        const packageId = normalizePackageId(String(package_id || ''));
+        if (packageId) {
+          upsertDealerInvoiceDraft({
+            orderId: normalizedOrderId,
+            member: matchedUser,
+            amount: Number(order_amount),
+            packageId,
+            isPaymentConfirmed: true,
+            createdAt: timestamp || new Date().toISOString(),
+          });
+        }
+      }
+
       if (normalizedOrderId.startsWith('ORD-KAYIT-')) {
         const paidMember = members.find((member) => member.user_id === String(user_id));
         if (paidMember && getIsPostgresAvailable()) {
@@ -7689,7 +7709,7 @@ async function startServer(options: { listen?: boolean } = {}) {
       const nowIso = new Date().toISOString();
       const customRef = ref_code ? String(ref_code).trim().toUpperCase() : '';
 
-      const isPendingPayment = Boolean(pending_payment && !isCallingAdmin);
+      const isPendingPayment = !isCallingAdmin || Boolean(pending_payment);
       const manualCareer =
         isCallingAdmin &&
         manual_career_override !== undefined &&
@@ -10599,7 +10619,7 @@ async function startServer(options: { listen?: boolean } = {}) {
 
       res.status(201).json({
         status: 'success',
-        message: `🧾 Faturanız (${newInvoice.invoice_file_name} · Fatura No: ${newInvoice.invoice_no}) başarıyla yüklendi ve Yönetici Vergi İadesi Paneline iletildi! Yönetici onayladığında +${taxAmt.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} $ (%20 Vergi İadesi) hesabınıza aktarılacaktır.`,
+        message: `🧾 Faturanız (${newInvoice.invoice_file_name} · Fatura No: ${newInvoice.invoice_no}) yüklendi ve Yönetici Vergi İadesi ile Akıllı Muhasebe inceleme kuyruklarına iletildi. Yönetici onayladığında +${taxAmt.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} $ (%20 Vergi İadesi) hesabınıza aktarılacaktır.`,
         invoice: newInvoice,
         state: buildStateResponse(),
       });
@@ -10771,11 +10791,14 @@ async function startServer(options: { listen?: boolean } = {}) {
           ? getPackagePriceForRegion(PACKAGES[normalizedPkg].defaultPrice, resolveMemberRegion(buyer.country_code))
           : getActivationOrderAmount(buyer.user_id)
       );
+      const isDealerRegistration = order_type === 'DEALER_REGISTRATION';
       const activityOrderType = isActivationPurchase
         ? 'ACTIVATION'
-        : order_type === 'ACTIVITY_RENEWAL'
-          ? 'ACTIVITY_RENEWAL'
-          : 'STANDARD_ORDER';
+        : isDealerRegistration
+          ? 'DEALER_REGISTRATION'
+          : order_type === 'ACTIVITY_RENEWAL'
+            ? 'ACTIVITY_RENEWAL'
+            : 'STANDARD_ORDER';
 
       const result = await runInAtomicTransaction(() => {
         if (walletTransactions.some((entry) => entry.request_id === requestId)) {
@@ -10806,7 +10829,26 @@ async function startServer(options: { listen?: boolean } = {}) {
           error.code = 'INSUFFICIENT_WALLET_BALANCE';
           throw error;
         }
-        if (payer.is_locked || buyer.is_locked) {
+        if (isDealerRegistration) {
+          const registrationEvent = accountingEvents.find(
+            (event) => event.source_event_id === orderId &&
+              event.event_type === 'DEALER_REGISTRATION_PURCHASE' &&
+              event.event_data.user_id === buyer.user_id
+          );
+          if (
+            payer.user_id === buyer.user_id ||
+            buyer.sponsor_id !== payer.user_id ||
+            !buyer.is_locked ||
+            buyer.is_active ||
+            !registrationEvent ||
+            !orderId.startsWith('ORD-KAYIT-')
+          ) {
+            const error: any = new Error('Sponsor cüzdanı yalnızca kendi referansıyla oluşturulan bekleyen bayi kaydını ödeyebilir.');
+            error.statusCode = 403;
+            error.code = 'INVALID_DEALER_REGISTRATION';
+            throw error;
+          }
+        } else if (payer.is_locked || buyer.is_locked) {
           const error: any = new Error('Kilitli bayi hesabı cüzdan alışverişi yapamaz.');
           error.statusCode = 403;
           error.code = 'MEMBER_LOCKED';
@@ -10822,6 +10864,16 @@ async function startServer(options: { listen?: boolean } = {}) {
           payment_method: 'WALLET_BALANCE',
           timestamp: nowIso,
         });
+        if (isDealerRegistration && normalizedPkg) {
+          upsertDealerInvoiceDraft({
+            orderId,
+            member: buyer,
+            amount: cost,
+            packageId: normalizedPkg,
+            isPaymentConfirmed: true,
+            createdAt: buyer.joined_at,
+          });
+        }
         debitMemberRegionalUsd(payer, cost);
 
         const walletTransaction: WalletTransactionRecord = {
@@ -10879,6 +10931,7 @@ async function startServer(options: { listen?: boolean } = {}) {
         wallet_transaction: result.walletTransaction,
         transfer: result.p2pRecord,
         buyer: result.buyer,
+        member_token: isDealerRegistration ? issueMemberToken(result.buyer.user_id) : undefined,
         state: buildStateResponse(),
       });
     } catch (err: any) {
@@ -10890,271 +10943,9 @@ async function startServer(options: { listen?: boolean } = {}) {
     }
   });
 
-  // Bayi Cüzdan Bakiyesi ile Yeni Alt Bayi Ekleme ve Paket Ödemesini Gerçekleştirme Endpoint'i
-  app.post('/api/v1/wallet/register-subdealer', requireWalletMember, async (req, res) => {
-    try {
-      const {
-        payer_user_id,
-        request_id,
-        order_id,
-        full_name,
-        email,
-        phone,
-        city = 'İstanbul',
-        country_code,
-        initial_package_id = 'PKG_MINI_DENEME',
-        password,
-        assigned_leg,
-      } = req.body || {};
 
-      if (!full_name || String(full_name).trim().length < 2) {
-        res.status(400).json({
-          status: 'error',
-          message: 'Yeni eklenecek bayinin Adı Soyadı zorunludur.',
-        });
-        return;
-      }
-      const normalizedCountryCode = String(country_code || 'TR').trim().toUpperCase();
-      if (normalizedCountryCode !== 'TR') {
-        res.status(400).json({
-          status: 'error',
-          code: 'DOMESTIC_ONLY_CHANNEL',
-          message: 'Bakiye ile alt bayi kaydı yalnızca yurt içi (TR) üyeler için açıktır.',
-        });
-        return;
-      }
-      if (typeof password !== 'string' || password.length < 8) {
-        res.status(400).json({ status: 'error', code: 'WEAK_MEMBER_PASSWORD', message: 'Yeni bayi şifresi en az 8 karakter olmalıdır.' });
-        return;
-      }
 
-      const payerId = String(payer_user_id || '').trim();
-      const requestId = String(request_id || '').trim();
-      const orderId = String(order_id || '').trim();
-      if (!requestId || !orderId) {
-        res.status(400).json({ status: 'error', code: 'REQUEST_ID_REQUIRED', message: 'Tekil cüzdan işlem ve sipariş kimlikleri zorunludur.' });
-        return;
-      }
-      const sponsor = members.find((m) => m.user_id === payerId);
-      if (!sponsor) {
-        res.status(404).json({ status: 'error', code: 'PAYER_NOT_FOUND', message: 'Ödeyen sponsor bayi bulunamadı.' });
-        return;
-      }
 
-      const normalizedPkg = normalizePackageId(String(initial_package_id || ''));
-      if (!normalizedPkg) {
-        res.status(400).json({ status: 'error', code: 'INVALID_PACKAGE', message: 'Geçerli bir başlangıç paketi seçiniz.' });
-        return;
-      }
-      const pkgDef = PACKAGES[normalizedPkg];
-      const cost = roundCurrency(pkgDef.defaultPrice);
-
-      const result = await runInAtomicTransaction(() => {
-        if (walletTransactions.some((entry) => entry.request_id === requestId)) {
-          const error: any = new Error('Bu cüzdan isteği daha önce işlendi.');
-          error.statusCode = 409;
-          error.code = 'DUPLICATE_WALLET_REQUEST';
-          throw error;
-        }
-        if (processedOrderIds.has(orderId) || ordersLog.some((entry) => entry.order_id === orderId)) {
-          const error: any = new Error('Bu sipariş kimliği daha önce işlendi.');
-          error.statusCode = 409;
-          error.code = 'DUPLICATE_ORDER_ID';
-          throw error;
-        }
-        const balanceBefore = getMemberRegionalUsdBalance(sponsor);
-        const approvedContracts = new Set(['DISTANCE_SALES', 'PRE_INFORMATION', 'MLM_TERMS', 'KVKK']);
-        userContractApprovals.forEach((approval) => {
-          if (
-            approval.order_id === orderId &&
-            approval.user_id === sponsor.user_id &&
-            Math.round(Number(approval.order_amount) * 100) === Math.round(cost * 100) &&
-            Boolean(approval.product_summary)
-          ) approvedContracts.delete(approval.contract_type);
-        });
-        if (approvedContracts.size) {
-          const error: any = new Error('Yeni bayi siparişi için zorunlu sözleşme onayları kaydedilmemiş.');
-          error.statusCode = 400;
-          error.code = 'CONTRACT_APPROVALS_MISSING';
-          throw error;
-        }
-        if (balanceBefore < cost) {
-          const error: any = new Error(`Sponsorun çekilebilir cüzdan bakiyesi yetersiz. Mevcut: $${balanceBefore.toFixed(2)}; gereken: $${cost.toFixed(2)}.`);
-          error.statusCode = 422;
-          error.code = 'INSUFFICIENT_WALLET_BALANCE';
-          throw error;
-        }
-        if (sponsor.is_locked) {
-          const error: any = new Error('Kilitli sponsor hesabı cüzdanla bayi kaydı ödeyemez.');
-          error.statusCode = 403;
-          error.code = 'MEMBER_LOCKED';
-          throw error;
-        }
-        if (email && members.some((m) => m.email.toLowerCase() === String(email).trim().toLowerCase())) {
-          const error: any = new Error('Bu e-posta adresiyle kayıtlı bir bayi zaten var.');
-          error.statusCode = 409;
-          error.code = 'DUPLICATE_EMAIL';
-          throw error;
-        }
-
-        const nextLineId = members.length + 1;
-        const randSuffix = Math.random().toString(36).substring(2, 8).toUpperCase();
-        const newUserId = `USR-${randSuffix}`;
-        const nowIso = new Date().toISOString();
-
-        let finalLeg: 'LEFT' | 'RIGHT' = 'LEFT';
-        if (assigned_leg === 'LEFT' || assigned_leg === 'RIGHT') {
-          finalLeg = assigned_leg;
-        } else if (sponsor) {
-          const leftCount = members.filter(
-            (m) => m.sponsor_id === sponsor.user_id && (m as any).assigned_leg === 'LEFT'
-          ).length;
-          const rightCount = members.filter(
-            (m) => m.sponsor_id === sponsor.user_id && (m as any).assigned_leg === 'RIGHT'
-          ).length;
-          finalLeg = leftCount <= rightCount ? 'LEFT' : 'RIGHT';
-        }
-
-        const newMember: MonolineMember = {
-          id: nextLineId,
-          user_id: newUserId,
-          global_line_id: nextLineId,
-          ref_code: `AURA-BAYI-${Math.floor(1000 + Math.random() * 9000)}`,
-          full_name: String(full_name).trim(),
-          email:
-            email && String(email).trim()
-              ? String(email).trim()
-              : `${String(full_name)
-                  .toLowerCase()
-                  .replace(/[^a-z0-9]/g, '.')
-                  .replace(/\.+/g, '.')}@akngroupfrekans.com`,
-          phone: phone ? String(phone).trim() : '',
-          city: String(city || 'Türkiye').trim(),
-          country_code: normalizedCountryCode,
-          joined_at: nowIso,
-          sponsor_id: sponsor.user_id,
-          sponsor_db_id: sponsor.id,
-          highest_package_id: normalizedPkg,
-          session_credits: 0,
-          personal_volume: 0,
-          group_volume: 0,
-          active_direct_referrals: 0,
-          career_level: 1,
-          career_title: 'Emmâre',
-          manual_career_override: null,
-          unlocked_depth: 1,
-          wallets: {
-            sponsor_wallet: 0,
-            monoline_wallet: 0,
-            career_pool_wallet: 0,
-            total_earnings: 0,
-
-            system_fund_balance: 0,
-            total_withdrawn: 0,
-          },
-          bank_details: {
-            iban_holder_name: String(full_name).trim(),
-            bank_name: 'Ziraat Bankası',
-            iban: `TR${Math.floor(10 + Math.random() * 89)} 0001 0004 8271 9283 10${nextLineId}`,
-            trc20_address: '',
-            preferred_method: 'IBAN',
-          },
-          two_factor: {
-            enabled: false,
-            secret_key: generateSecureTotpSecret(),
-            verified_at: null,
-            backup_codes: generateSecureBackupCodes(4),
-          },
-          is_active: true,
-          is_locked: false,
-          activity_expires_at: createFutureExpiryIso(),
-          welcome_bonus_granted: false,
-          welcome_bonus_credits: 0,
-          tc_identity_no: `${Math.floor(10000000000 + Math.random() * 89999999999)}`,
-          has_tax_company: false,
-          last_login_ip: `176.240.${Math.floor(10 + Math.random() * 200)}.${nextLineId}`,
-          device_fingerprint: `DEV-FP-${nextLineId}`,
-          kvkk_approved_at: nowIso,
-          contract_version: 'v2.2',
-          daily_withdrawal_limit: DAILY_WITHDRAWAL_LIMITS_BY_CAREER[1],
-          fast_start_awarded: false,
-          assigned_leg: finalLeg,
-          left_leg_volume: 0,
-          right_leg_volume: 0,
-        };
-
-        members.push(newMember);
-
-        const tx = processOrderCommission({
-          user_id: newUserId,
-          order_id: orderId,
-          order_amount: cost,
-          package_id: normalizedPkg,
-          payment_method: 'WALLET_BALANCE',
-          timestamp: nowIso,
-        });
-        debitMemberRegionalUsd(sponsor, cost);
-        memberCredentials.set(newMember.user_id, hashMemberPassword(password));
-        const walletTransaction: WalletTransactionRecord = {
-          id: nextWalletTransactionId++,
-          transaction_id: `WLT-${randomBytes(10).toString('hex').toUpperCase()}`,
-          user_id: sponsor.id,
-          external_user_id: sponsor.user_id,
-          user_full_name: sponsor.full_name,
-          transaction_type: 'MEMBER_REGISTRATION_WALLET',
-          request_id: requestId,
-          direction: 'DEBIT',
-          amount: cost,
-          balance_before: balanceBefore,
-          balance_after: getMemberRegionalUsdBalance(sponsor),
-          order_id: orderId,
-          related_user_id: newMember.user_id,
-          package_id: normalizedPkg,
-          description: `Yeni bayi kaydı · ${newMember.full_name} · ${pkgDef.name}`,
-          status: 'COMPLETED',
-          created_at: nowIso,
-        };
-        walletTransactions.unshift(walletTransaction);
-
-        const p2pRecord: P2PTransferRecord = {
-          id: nextP2PTransferId++,
-          tx_code: `WLT-NEW-${9000 + nextP2PTransferId}`,
-          from_user_id: sponsor.id,
-          from_external_id: sponsor.user_id,
-          from_user_name: sponsor.full_name,
-          to_user_id: newMember.id,
-          to_external_id: newMember.user_id,
-          to_user_name: newMember.full_name,
-          amount: cost,
-          transfer_type: 'DIRECT_PACKAGE_ACTIVATION',
-          package_id: normalizedPkg,
-          voucher_code: null,
-          note: `Yeni Alt Bayi (${newMember.full_name}) Kaydı & ${pkgDef.name} Ödemesi Cüzdan Bakiyesinden Gerçekleştirildi`,
-          status: 'COMPLETED',
-          created_at: nowIso,
-        };
-        p2pTransfers.unshift(p2pRecord);
-
-        return { newMember, tx, p2pRecord, walletTransaction };
-      });
-
-      res.status(201).json({
-        status: 'success',
-        message: `🎉 Yeni Alt Bayiniz "${result.newMember.full_name}" (#${result.newMember.global_line_id} · Kod: ${result.newMember.ref_code}) ödemesi (${cost.toLocaleString('tr-TR')} $) kendi cüzdan bakiyenizden karşılanarak kaydedildi! Yeni bayiye ${result.newMember.session_credits} Seans Kredisi yüklendi ve sponsorluk komisyonunuz hesaplandı.`,
-        member: result.newMember,
-        transaction: result.tx,
-        wallet_transaction: result.walletTransaction,
-        transfer: result.p2pRecord,
-        state: buildStateResponse(),
-      });
-    } catch (err: any) {
-      res.status(err?.statusCode || 400).json({
-        status: 'error',
-        code: err?.code || 'MEMBER_REGISTRATION_FAILED',
-        message: err?.message || 'Cüzdan ile yeni bayi kaydı sırasında hata oluştu.',
-      });
-    }
-  });
 
   // ============================================================================
   // BANKA DENETİMİ, SANAL POS ADAPTER VE YASAL UYUM (user_contract_approvals)
@@ -11986,12 +11777,44 @@ async function startServer(options: { listen?: boolean } = {}) {
         expense_vouchers: (await pgQuery('SELECT voucher_data FROM expense_vouchers ORDER BY created_at DESC, id DESC'))?.rows.map((row: any) => row.voucher_data).filter((row: any) => row && Object.keys(row).length > 0) || [],
         payout_batches: (await pgQuery('SELECT batch_data FROM payout_batches ORDER BY created_at DESC'))?.rows.map((row: any) => row.batch_data).filter((row: any) => row && Object.keys(row).length > 0) || [],
         withdrawal_requests: (await pgQuery('SELECT withdrawal_data FROM withdrawal_requests ORDER BY created_at DESC, id DESC'))?.rows.map((row: any) => row.withdrawal_data).filter((row: any) => row && Object.keys(row).length > 0) || [],
+        tax_refund_invoices: taxRefundInvoices.map((invoice) => ({
+          id: invoice.id,
+          refund_code: invoice.refund_code,
+          withdrawal_id: invoice.withdrawal_id,
+          external_user_id: invoice.external_user_id,
+          user_full_name: invoice.user_full_name,
+          gross_withdrawal_amount: invoice.gross_withdrawal_amount,
+          tax_deducted_amount: invoice.tax_deducted_amount,
+          net_withdrawal_amount: invoice.net_withdrawal_amount,
+          invoice_no: invoice.invoice_no,
+          tax_office_and_id: invoice.tax_office_and_id,
+          invoice_file_name: invoice.invoice_file_name,
+          invoice_file_type: invoice.invoice_file_type,
+          invoice_file_size: invoice.invoice_file_size,
+          status: invoice.status,
+          requested_at: invoice.requested_at,
+          processed_at: invoice.processed_at,
+          admin_note: invoice.admin_note,
+        })),
         timestamp: new Date().toISOString(),
       });
     } catch (err: any) {
       console.error('[PostgreSQL-18 Live Ledger Read Error]:', err?.message);
       res.status(503).json({ status: 'error', code: 'LEDGER_READ_FAILED', message: 'Muhasebe verileri PostgreSQL’den okunamadı.' });
     }
+  });
+
+  app.get('/api/v1/accounting/tax-refund-invoices/:id/file', requireAccountingOrAdmin, (req, res) => {
+    const invoice = taxRefundInvoices.find((entry) => entry.id === Number(req.params.id));
+    if (!invoice) {
+      res.status(404).json({ status: 'error', message: 'Fatura kaydı bulunamadı.' });
+      return;
+    }
+    res.json({
+      invoice_file_name: invoice.invoice_file_name,
+      invoice_file_type: invoice.invoice_file_type,
+      invoice_data_url: invoice.invoice_data_url,
+    });
   });
 
   // ============================================================================

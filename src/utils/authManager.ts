@@ -527,6 +527,7 @@ export interface UserMember {
   dealerDetails?: DealerDetails;
   creditsBalance?: number; // Available scan / session credits pool
   dealerPackageId?: string; // e.g. 'bronze-dealer', 'silver-dealer', 'gold-dealer'
+  pendingDealerOrderId?: string;
   welcomeBonusGranted?: boolean;
   welcomeBonusCredits?: number;
   welcomeBonusBreakdown?: string;
@@ -1017,7 +1018,7 @@ export async function registerMember(
 
     const uid = generateUid();
     const isDealer = true; // In the unified dealer architecture, all registrations are Dealer registrations
-    const isPendingDealerRegistration = Boolean(dealerApplicationData);
+    const isPendingDealerRegistration = isDealer;
 
     const {
       generateUniqueReferralCode,
@@ -1184,6 +1185,7 @@ export async function registerMember(
     // 5. Sync new registration & package order with Monoline 7 Nefis MLM & Commission Engine
     const m = await import('./monolineSyncBridge');
     const monolinePkgId = m.mapFrekansPkgToMonolinePkgId(effectiveStarterPkg);
+    let registeredUser = newUser;
     const memberResponse = await fetch('/api/v1/members', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -1202,9 +1204,21 @@ export async function registerMember(
         pending_payment: isPendingDealerRegistration,
       }),
     });
+    const registrationResult = await memberResponse.json().catch(() => ({}));
     if (!memberResponse.ok) {
-      const error = await memberResponse.json().catch(() => ({}));
-      throw new Error(error?.message || 'Bayi hesabı sunucuya kaydedilemiyor.');
+      throw new Error(registrationResult?.message || 'Bayi hesabı sunucuya kaydedilemiyor.');
+    }
+    if (isPendingDealerRegistration) {
+      const pendingDealerOrderId = registrationResult?.order?.order_id;
+      if (typeof pendingDealerOrderId !== 'string' || !pendingDealerOrderId) {
+        throw new Error('Bekleyen bayi kaydının ödeme siparişi oluşturulamadı.');
+      }
+      registeredUser = { ...newUser, pendingDealerOrderId };
+      try {
+        await setDoc(doc(db, 'users', uid), { pendingDealerOrderId }, { merge: true });
+      } catch (firestoreSyncErr) {
+        console.warn('Pending dealer order sync notice:', firestoreSyncErr);
+      }
     }
     if (memberResponse.ok && !isPendingDealerRegistration) {
       await requestMemberWalletToken(cleanEmail, password);
@@ -1218,18 +1232,18 @@ export async function registerMember(
       }).catch(() => {});
     }
 
-    saveToLocalMembersDirectory(newUser);
-    localStorage.setItem(STORAGE_SESSION_KEY, JSON.stringify(newUser));
+    saveToLocalMembersDirectory(registeredUser);
+    localStorage.setItem(STORAGE_SESSION_KEY, JSON.stringify(registeredUser));
     if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('aurabio_session_updated', { detail: newUser }));
+      window.dispatchEvent(new CustomEvent('aurabio_session_updated', { detail: registeredUser }));
     }
 
     return {
       success: true,
       message: isPendingDealerRegistration
-        ? `${companyName} bayi kaydınız alındı. Hesabınız ödeme bekliyor; sandbox sanal kart ödemesi tamamlanınca paket kredisi ve +32 paket alım bonusu tanımlanacak.`
+        ? `${companyName} bayi kaydınız alındı. Ödeme tamamlandığında paket kredisi ve +32 paket alım bonusu tanımlanacaktır.`
         : `Tebrikler! ${companyName} yetkili bayilik hesabınız başarıyla oluşturuldu. Paket kredinize +32 paket alım bonusu eklenerek ${initialCredits} Seans Kredisi hesabınıza tanımlandı!`,
-      user: newUser,
+      user: registeredUser,
       whatsappDealerUrl,
       pendingPayment: isPendingDealerRegistration,
     };

@@ -1696,7 +1696,7 @@ export interface OrderCommissionPayload {
   package_id: string;
   timestamp?: string;
   enforce_career_depth_lock?: boolean;
-  order_type?: 'ACTIVITY_RENEWAL' | 'STANDARD_ORDER' | 'ACTIVATION';
+  order_type?: 'ACTIVITY_RENEWAL' | 'STANDARD_ORDER' | 'ACTIVATION' | 'DEALER_REGISTRATION';
   payment_method?: 'CARD_3D' | 'CREDIT_CARD_3D' | 'BANK_EFT' | 'USDT_TRC20' | 'WALLET_BALANCE';
   merchant_oid?: string;
   transaction_id?: string;
@@ -1715,7 +1715,7 @@ export interface CommissionTransaction {
   session_credits_added: number;
   order_amount: number;
   timestamp: string;
-  order_type?: 'ACTIVITY_RENEWAL' | 'STANDARD_ORDER' | 'ACTIVATION';
+  order_type?: 'ACTIVITY_RENEWAL' | 'STANDARD_ORDER' | 'ACTIVATION' | 'DEALER_REGISTRATION';
   activity_extended?: boolean;
   enforce_career_depth_lock: boolean;
   clawback_status?: 'PENDING_14D' | 'RELEASED_TO_BALANCE' | 'REFUNDED' | 'FRAUD_REVIEW';

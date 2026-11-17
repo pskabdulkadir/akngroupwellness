@@ -1200,9 +1200,7 @@ export const DealerBackOfficeView: React.FC<DealerBackOfficeViewProps> = ({
   const [invoiceUploadFeedback, setInvoiceUploadFeedback] = useState<string | null>(null);
 
   // Cüzdan Bakiyesi ile Para Gönderme (P2P), Kredi/Paket Satın Alma & Yeni Bayi Ödemesi State'leri
-  const [walletActionTab, setWalletActionTab] = useState<
-    'buy_credits' | 'p2p_send' | 'register_subdealer'
-  >('buy_credits');
+  const [walletActionTab, setWalletActionTab] = useState<'buy_credits' | 'p2p_send'>('buy_credits');
   const [walletBuyPkgId, setWalletBuyPkgId] =
     useState<Exclude<PackageId, 'CUSTOM'>>('PKG_MINI_DENEME');
   const [walletBuyOrderType, setWalletBuyOrderType] = useState<'ACTIVITY_RENEWAL' | 'STANDARD_ORDER' | 'ACTIVATION'>('STANDARD_ORDER');
@@ -1219,16 +1217,6 @@ export const DealerBackOfficeView: React.FC<DealerBackOfficeViewProps> = ({
   const [walletP2pNote, setWalletP2pNote] = useState<string>(
     'Bayi Cüzdanından Cüzdana Bakiye Transferi'
   );
-  const [walletSubDealerName, setWalletSubDealerName] = useState<string>('');
-  const [walletSubDealerEmail, setWalletSubDealerEmail] = useState<string>('');
-  const [walletSubDealerPhone, setWalletSubDealerPhone] = useState<string>('');
-  const [walletSubDealerCity, setWalletSubDealerCity] = useState<string>('İstanbul');
-  const [walletSubDealerPkgId, setWalletSubDealerPkgId] =
-    useState<Exclude<PackageId, 'CUSTOM'>>('PKG_MINI_DENEME');
-  const [walletSubDealerPassword, setWalletSubDealerPassword] = useState<string>('');
-  const [showWalletSubDealerPassword, setShowWalletSubDealerPassword] = useState<boolean>(false);
-  const [walletSubDealerLeg, setWalletSubDealerLeg] = useState<'LEFT' | 'RIGHT' | 'AUTO'>('AUTO');
-  const [walletSubDealerTermsAccepted, setWalletSubDealerTermsAccepted] = useState<boolean>(false);
   const [walletOpsBusy, setWalletOpsBusy] = useState<boolean>(false);
   const [walletOpsFeedback, setWalletOpsFeedback] = useState<{
     type: 'success' | 'error';
@@ -1284,8 +1272,9 @@ export const DealerBackOfficeView: React.FC<DealerBackOfficeViewProps> = ({
       }
       setInvoiceUploadFeedback(
         data.message ||
-          'Faturanız başarıyla yüklendi ve Yönetici Vergi İadesi Paneline iletildi!'
+          'Faturanız yönetici onayı ve Akıllı Muhasebe inceleme kuyruğuna iletildi.'
       );
+      window.dispatchEvent(new Event('akn-tax-refund-invoice-uploaded'));
       setInvoiceFileName('');
       setInvoiceDataUrl('');
       setInvoiceNo('');
@@ -1399,80 +1388,6 @@ export const DealerBackOfficeView: React.FC<DealerBackOfficeViewProps> = ({
       setWalletOpsFeedback({
         type: 'error',
         text: err?.message || 'Transfer sırasında hata oluştu.',
-      });
-    } finally {
-      setWalletOpsBusy(false);
-    }
-  };
-
-  const handleWalletRegisterSubDealer = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!member) return;
-    if (!walletSubDealerName.trim()) {
-      setWalletOpsFeedback({
-        type: 'error',
-        text: 'Lütfen yeni eklenecek bayinin Ad Soyad bilgisini giriniz.',
-      });
-      return;
-    }
-    if (!walletSubDealerTermsAccepted) {
-      setWalletOpsFeedback({ type: 'error', text: 'Kayıt ödemesi öncesi sözleşme onaylarını kabul edin.' });
-      return;
-    }
-    setWalletOpsBusy(true);
-    setWalletOpsFeedback(null);
-    try {
-      const orderId = `ORD-REG-WLT-${crypto.randomUUID()}`;
-      const pkg = PACKAGES[walletSubDealerPkgId];
-      const approvals = await recordUserContractApprovals({
-        user_id: member.user_id,
-        user_name: member.full_name,
-        order_id: orderId,
-        order_amount: pkg.defaultPrice,
-        product_summary: `Yeni bayi ${walletSubDealerName.trim()} · ${pkg.name} · ${pkg.sessionCreditsLabel}`,
-        contracts: ['DISTANCE_SALES', 'PRE_INFORMATION', 'MLM_TERMS', 'KVKK'],
-        version: 'v2.2',
-      });
-      if (approvals.length !== 4) throw new Error('Sözleşme onayları sunucuya kaydedilemedi.');
-      const token = getMemberWalletToken();
-      if (!token) throw new Error('Güvenli bayi oturumu yok; yeniden giriş yapın.');
-      const res = await fetch('/api/v1/wallet/register-subdealer', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          payer_user_id: member.user_id,
-          request_id: crypto.randomUUID(),
-          order_id: orderId,
-          full_name: walletSubDealerName.trim(),
-          email: walletSubDealerEmail.trim() || undefined,
-          phone: walletSubDealerPhone.trim() || undefined,
-          city: walletSubDealerCity.trim() || 'İstanbul',
-          initial_package_id: walletSubDealerPkgId,
-          password: walletSubDealerPassword.trim(),
-          assigned_leg: walletSubDealerLeg,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.message || 'Cüzdan bakiyesi ile yeni bayi kaydı yapılamadı.');
-      }
-      setWalletOpsFeedback({
-        type: 'success',
-        text:
-          data.message ||
-          'Yeni alt bayiniz cüzdan bakiyenizden ödenerek başarıyla kaydedildi ve aktifleştirildi!',
-      });
-      setWalletSubDealerName('');
-      setWalletSubDealerEmail('');
-      setWalletSubDealerPhone('');
-      setWalletSubDealerPassword('');
-      setWalletSubDealerLeg('AUTO');
-      setWalletSubDealerTermsAccepted(false);
-      if (onRefreshState) onRefreshState();
-    } catch (err: any) {
-      setWalletOpsFeedback({
-        type: 'error',
-        text: err?.message || 'Yeni bayi ödemesi sırasında hata oluştu.',
       });
     } finally {
       setWalletOpsBusy(false);
@@ -2763,17 +2678,19 @@ export const DealerBackOfficeView: React.FC<DealerBackOfficeViewProps> = ({
               <button
                 type="button"
                 onClick={() => {
-                  setWalletActionTab('register_subdealer');
                   setWalletOpsFeedback(null);
+                  redirectToDealerRegistrationPortal({
+                    user_id: member.user_id,
+                    full_name: member.full_name,
+                    ref_code: member.ref_code,
+                    email: member.email,
+                    phone: member.phone,
+                  });
                 }}
-                className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1.5 ${
-                  walletActionTab === 'register_subdealer'
-                    ? 'bg-indigo-500 text-white shadow-sm'
-                    : 'text-slate-300 hover:text-white hover:bg-white/5'
-                }`}
+                className="px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1.5 text-slate-300 hover:text-white hover:bg-white/5"
               >
                 <UserPlus className="w-3.5 h-3.5" />
-                <span>3. Yeni Bayi Eklerken Cüzdandan Ödeme Yap</span>
+                <span>3. Yeni Bayi Ekle · Cüzdandan Öde</span>
               </button>
             </div>
 
@@ -3049,202 +2966,6 @@ export const DealerBackOfficeView: React.FC<DealerBackOfficeViewProps> = ({
                     {walletOpsBusy
                       ? 'Gönderiliyor...'
                       : '💸 Cüzdan Bakiyemden Seçili Bayiye Anında Gönder'}
-                  </button>
-                </div>
-              </form>
-            )}
-
-            {/* TAB 3: YENİ BAYİ EKLERKEN CÜZDANDAN ÖDEME GERÇEKLEŞTİRME */}
-            {walletActionTab === 'register_subdealer' && (
-              <form
-                onSubmit={handleWalletRegisterSubDealer}
-                className="grid grid-cols-1 lg:grid-cols-12 gap-6 bg-white/5 border border-white/10 rounded-xl p-5"
-              >
-                <div className="lg:col-span-7 space-y-3 text-xs">
-                  <div className="text-sm font-bold text-indigo-300">
-                    👤 Yeni Alt Bayi Eklerken Paket Ödemesini Kendi Cüzdanınızdan Yapın
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-slate-300 font-semibold mb-1">
-                        Yeni Bayi Ad Soyad *
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={walletSubDealerName}
-                        onChange={(e) => setWalletSubDealerName(e.target.value)}
-                        placeholder="Örn: Uzm. Elif Demir"
-                        className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-white/20 text-white"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-slate-300 font-semibold mb-1">Şehir</label>
-                      <input
-                        type="text"
-                        value={walletSubDealerCity}
-                        onChange={(e) => setWalletSubDealerCity(e.target.value)}
-                        placeholder="İstanbul"
-                        className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-white/20 text-white"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-slate-300 font-semibold mb-1">
-                        E-Posta Adresi
-                      </label>
-                      <input
-                        type="email"
-                        value={walletSubDealerEmail}
-                        onChange={(e) => setWalletSubDealerEmail(e.target.value)}
-                        placeholder="yeni.bayi@frekans.com"
-                        className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-white/20 text-white"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-slate-300 font-semibold mb-1">Telefon</label>
-                      <input
-                        type="text"
-                        value={walletSubDealerPhone}
-                        onChange={(e) => setWalletSubDealerPhone(e.target.value)}
-                        placeholder="0532 000 00 00"
-                        className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-white/20 text-white"
-                      />
-                    </div>
-                    <div className="sm:col-span-2">
-                      <div className="flex items-center justify-between mb-1">
-                        <label className="text-slate-300 font-semibold flex items-center gap-1">
-                          <Lock className="w-3.5 h-3.5 text-indigo-400" />
-                          <span>Yeni Bayi Giriş Şifresi Belirle *</span>
-                        </label>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const rand = 'Bayi' + Math.floor(100000 + Math.random() * 900000) + '!';
-                            setWalletSubDealerPassword(rand);
-                          }}
-                          className="text-[10px] text-indigo-300 hover:text-indigo-200 underline cursor-pointer"
-                        >
-                          Rastgele Şifre Üret
-                        </button>
-                      </div>
-                      <div className="relative">
-                        <input
-                          type={showWalletSubDealerPassword ? 'text' : 'password'}
-                          required
-                          minLength={8}
-                          value={walletSubDealerPassword}
-                          onChange={(e) => setWalletSubDealerPassword(e.target.value)}
-                          placeholder="En az 8 karakter"
-                          className="w-full pl-3 pr-9 py-2 rounded-lg bg-slate-900 border border-white/20 text-white font-mono text-xs"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowWalletSubDealerPassword(!showWalletSubDealerPassword)}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white p-1 cursor-pointer"
-                          title={showWalletSubDealerPassword ? 'Şifreyi Gizle' : 'Şifreyi Göster'}
-                        >
-                          {showWalletSubDealerPassword ? (
-                            <EyeOff className="w-4 h-4" />
-                          ) : (
-                            <Eye className="w-4 h-4" />
-                          )}
-                        </button>
-                      </div>
-                    </div>
-                    <div className="sm:col-span-2">
-                      <label className="block text-slate-300 font-semibold mb-1">
-                        Yeni Bayinin Başlangıç Paketi (Ödemesi Sizin Cüzdanınızdan Düşülür)
-                      </label>
-                      <select
-                        value={walletSubDealerPkgId}
-                        onChange={(e) =>
-                          setWalletSubDealerPkgId(e.target.value as Exclude<PackageId, 'CUSTOM'>)
-                        }
-                        className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-white/20 text-white font-semibold"
-                      >
-                        {FREKANS_PACKAGES.map((pkg) => (
-                          <option key={pkg.id} value={pkg.id}>
-                            {pkg.name} — {pkg.defaultPrice.toLocaleString('tr-TR')} $ (Yeni Bayiye +
-                            {pkg.sessionCredits} Seans Kredisi + 32 Paket Alım Bonusu)
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div className="sm:col-span-2">
-                      <div className="flex items-center justify-between mb-1">
-                        <label className="text-slate-300 font-semibold flex items-center gap-1">
-                          <GitBranch className="w-3.5 h-3.5 text-indigo-400" />
-                          <span>Kol Yerleşimi (Sol Kol / Sağ Kol Tercihi) *</span>
-                        </label>
-                        <div className="flex items-center gap-2 text-[10px] font-mono">
-                          <span className="text-blue-300">Sol: {members.filter((m) => m.sponsor_id === member.user_id && (m as any).assigned_leg === 'LEFT').length}</span>
-                          <span className="text-purple-300">Sağ: {members.filter((m) => m.sponsor_id === member.user_id && (m as any).assigned_leg === 'RIGHT').length}</span>
-                        </div>
-                      </div>
-                      <select
-                        value={walletSubDealerLeg}
-                        onChange={(e) => setWalletSubDealerLeg(e.target.value as 'LEFT' | 'RIGHT' | 'AUTO')}
-                        className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-white/20 text-white font-medium text-xs"
-                      >
-                        <option value="AUTO">⚖️ Otomatik / Dengeli Dağıtım (Önerilen - %50 Kol Kuralı)</option>
-                        <option value="LEFT">⬅️ Sol Kol (Sol Bacak / Left Leg)</option>
-                        <option value="RIGHT">➡️ Sağ Kol (Sağ Bacak / Right Leg)</option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="lg:col-span-5 bg-slate-900/90 border border-white/15 rounded-xl p-5 flex flex-col justify-between space-y-4">
-                  <div className="space-y-2 text-xs font-mono">
-                    <div className="text-slate-400 uppercase">Cüzdandan Yeni Bayi Kayıt Özeti</div>
-                    <div className="flex justify-between py-1.5 border-b border-white/10">
-                      <span className="text-slate-300">Direkt Sponsor:</span>
-                      <strong className="text-white">{member.full_name} (Siz)</strong>
-                    </div>
-                    <div className="flex justify-between py-1.5 border-b border-white/10">
-                      <span className="text-slate-300">Yerleştirilecek Kol:</span>
-                      <strong className="text-white font-semibold">
-                        {walletSubDealerLeg === 'LEFT' ? '⬅️ Sol Kol' : walletSubDealerLeg === 'RIGHT' ? '➡️ Sağ Kol' : '⚖️ Otomatik Dengeli'}
-                      </strong>
-                    </div>
-                    <div className="flex justify-between py-1.5 border-b border-white/10">
-                      <span className="text-slate-300">Cüzdanınızdan Ödenecek:</span>
-                      <strong className="text-amber-300 text-sm">
-                        {PACKAGES[walletSubDealerPkgId]?.defaultPrice.toLocaleString('tr-TR')} $
-                      </strong>
-                    </div>
-                    <div className="flex justify-between py-1.5 border-b border-white/10">
-                      <span className="text-slate-300">Size Dönecek %20 Sponsor Primi:</span>
-                      <strong className="text-emerald-400">
-                        +
-                        {Math.round(
-                          (PACKAGES[walletSubDealerPkgId]?.defaultPrice || 5000) * 0.2
-                        ).toLocaleString('tr-TR')}{' '}
-                        $
-                      </strong>
-                    </div>
-                  </div>
-
-                  <label className="flex items-start gap-2 text-[11px] text-slate-300">
-                    <input
-                      type="checkbox"
-                      checked={walletSubDealerTermsAccepted}
-                      onChange={(event) => setWalletSubDealerTermsAccepted(event.target.checked)}
-                      className="mt-0.5 accent-indigo-500"
-                    />
-                    Ön Bilgilendirme Formu, Mesafeli Satış Sözleşmesi, KVKK ve Bayilik şartlarını okudum, onaylıyorum.
-                  </label>
-                  <button
-                    type="submit"
-                    disabled={walletOpsBusy || !walletSubDealerTermsAccepted}
-                    className="w-full py-3 px-4 rounded-xl bg-indigo-500 hover:bg-indigo-400 text-white font-extrabold text-xs cursor-pointer transition-colors disabled:opacity-50"
-                  >
-                    {walletOpsBusy
-                      ? 'Kaydediliyor...'
-                      : `👤 Cüzdanımdan Öde (${PACKAGES[
-                          walletSubDealerPkgId
-                        ]?.defaultPrice.toLocaleString('tr-TR')} $) & Yeni Bayiyi Ekle`}
                   </button>
                 </div>
               </form>
@@ -4034,7 +3755,7 @@ Paket Alarak Aktifliği Yenile →
                 className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg transition-colors cursor-pointer shadow-xs"
               >
                 <UserPlus className="w-4 h-4" />
-                <span>+ Alt Ekibe Yeni Bayi Ekle (Şifreli)</span>
+                <span>Alt Bayi Ekle</span>
               </button>
 
               <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-lg">
