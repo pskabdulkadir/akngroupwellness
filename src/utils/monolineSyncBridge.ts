@@ -225,6 +225,10 @@ export async function syncFrekansWithMonolineEngine(options?: {
           creditsBalance: number;
           createdAt: string;
           isAllowed: boolean;
+          isDealer: boolean;
+          countryCode: string;
+          taxId: string;
+          hasTaxCompany: boolean;
           bankName: string;
           ibanHolder: string;
           iban: string;
@@ -246,6 +250,10 @@ export async function syncFrekansWithMonolineEngine(options?: {
         creditsBalance?: number;
         createdAt?: string;
         isAllowed?: boolean;
+        isDealer?: boolean;
+        countryCode?: string;
+        taxId?: string;
+        hasTaxCompany?: boolean;
         bankName?: string;
         ibanHolder?: string;
         iban?: string;
@@ -283,6 +291,10 @@ export async function syncFrekansWithMonolineEngine(options?: {
               typeof person.creditsBalance === 'number'
                 ? person.creditsBalance
                 : existing.creditsBalance,
+            isDealer: Boolean(person.isDealer || existing.isDealer),
+            countryCode: person.countryCode || existing.countryCode,
+            taxId: person.taxId || existing.taxId,
+            hasTaxCompany: Boolean(person.hasTaxCompany || existing.hasTaxCompany),
             bankName: person.bankName || existing.bankName,
             ibanHolder: person.ibanHolder || existing.ibanHolder,
             iban: person.iban || existing.iban,
@@ -304,6 +316,10 @@ export async function syncFrekansWithMonolineEngine(options?: {
               typeof person.creditsBalance === 'number' ? person.creditsBalance : 0,
             createdAt: person.createdAt || new Date().toISOString(),
             isAllowed: person.isAllowed !== false,
+            isDealer: Boolean(person.isDealer),
+            countryCode: person.countryCode || 'TR',
+            taxId: person.taxId || '',
+            hasTaxCompany: Boolean(person.hasTaxCompany),
             bankName: person.bankName || '',
             ibanHolder: person.ibanHolder || person.fullName || '',
             iban: person.iban || '',
@@ -328,6 +344,10 @@ export async function syncFrekansWithMonolineEngine(options?: {
           creditsBalance: u.creditsBalance,
           createdAt: u.createdAt,
           isAllowed: u.isAllowed,
+          isDealer: u.role === 'dealer' || Boolean(u.isDealerRequested),
+          countryCode: u.country_code,
+          taxId: u.dealerDetails?.taxNumber,
+          hasTaxCompany: Boolean(u.dealerDetails?.taxNumber && u.dealerDetails.taxNumber !== 'Belirtilmedi'),
           bankName: u.dealerDetails?.bankInfo?.bankName,
           ibanHolder: u.dealerDetails?.bankInfo?.accountHolder || u.fullName,
           iban: u.dealerDetails?.bankInfo?.iban,
@@ -348,6 +368,10 @@ export async function syncFrekansWithMonolineEngine(options?: {
           creditsBalance: r.creditsBalance,
           createdAt: r.createdAt || (r as any).joinedAt,
           isAllowed: r.status !== 'suspended',
+          isDealer: true,
+          countryCode: r.countryCode || 'TR',
+          taxId: r.taxNumber,
+          hasTaxCompany: Boolean(r.taxNumber && r.taxNumber !== 'Belirtilmedi'),
           bankName: r.bankInfo?.bankName,
           ibanHolder: r.bankInfo?.accountHolder || r.resellerName,
           iban: r.bankInfo?.iban,
@@ -368,6 +392,10 @@ export async function syncFrekansWithMonolineEngine(options?: {
           creditsBalance: activeMember.creditsBalance,
           createdAt: activeMember.createdAt,
           isAllowed: activeMember.isAllowed,
+          isDealer: activeMember.role === 'dealer' || Boolean(activeMember.isDealerRequested),
+          countryCode: activeMember.country_code,
+          taxId: activeMember.dealerDetails?.taxNumber,
+          hasTaxCompany: Boolean(activeMember.dealerDetails?.taxNumber && activeMember.dealerDetails.taxNumber !== 'Belirtilmedi'),
           bankName: activeMember.dealerDetails?.bankInfo?.bankName,
           ibanHolder: activeMember.dealerDetails?.bankInfo?.accountHolder || activeMember.fullName,
           iban: activeMember.dealerDetails?.bankInfo?.iban,
@@ -386,6 +414,10 @@ export async function syncFrekansWithMonolineEngine(options?: {
           creditsBalance: activeReseller.creditsBalance,
           createdAt: activeReseller.createdAt,
           isAllowed: activeReseller.status !== 'suspended',
+          isDealer: true,
+          countryCode: (activeReseller as any).countryCode || 'TR',
+          taxId: (activeReseller as any).taxNumber,
+          hasTaxCompany: Boolean((activeReseller as any).taxNumber && (activeReseller as any).taxNumber !== 'Belirtilmedi'),
           bankName: activeReseller.bankInfo?.bankName,
           ibanHolder: activeReseller.bankInfo?.accountHolder || activeReseller.resellerName,
           iban: activeReseller.bankInfo?.iban,

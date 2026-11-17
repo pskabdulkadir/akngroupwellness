@@ -41,7 +41,6 @@ import {
   LifeBuoy,
   Inbox,
   Sparkles,
-  Receipt,
   Calculator,
 } from 'lucide-react';
 import {
@@ -117,7 +116,6 @@ interface AdminConsoleViewProps {
   systemFundBalance: number;
   idempotentBlockedCount: number;
   initialSection?: AdminConsoleSection;
-  onOpenSmartAccounting?: () => void;
   onUpdateCareers: (tiers: CareerTier[]) => Promise<void>;
   onDecideWithdrawal: (
     id: number,
@@ -273,7 +271,6 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
   systemFundBalance,
   idempotentBlockedCount,
   initialSection,
-  onOpenSmartAccounting,
   onUpdateCareers,
   onDecideWithdrawal,
   onBulkApproveWithdrawals,
@@ -1308,20 +1305,6 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
             Bayi Ekleme/Silme, Monoline Sıra & Sponsor Değiştirme, Kariyer Bonus Yönetimi & SQL
           </h2>
           <div className="mt-4 flex flex-col items-stretch gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                if (onOpenSmartAccounting) onOpenSmartAccounting();
-                else window.dispatchEvent(new CustomEvent('open-smart-accounting'));
-              }}
-              className="inline-flex items-center justify-between gap-1.5 px-3.5 py-2.5 text-xs font-bold text-amber-950 bg-gradient-to-r from-amber-300 via-emerald-300 to-teal-300 hover:from-amber-200 hover:to-emerald-200 border border-amber-400 rounded-xl cursor-pointer shadow-lg shadow-amber-950/30 transition-transform active:scale-95"
-            >
-              <div className="flex items-center gap-2">
-                <Receipt className="w-4 h-4 text-emerald-950" />
-                <span className="font-black text-slate-950 text-xs">Akıllı Muhasebe (CFO Suite)</span>
-              </div>
-              <span className="px-1.5 py-0.5 rounded text-[9px] bg-slate-950 text-amber-300 font-mono font-bold">GİB CANLI</span>
-            </button>
             <button
               type="button"
               onClick={() => openAdminSection('data_management')}

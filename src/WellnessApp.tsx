@@ -1500,7 +1500,6 @@ export default function WellnessApp({
         }}
         initialSubTab={monolineInitialSubTab}
         isAdminAuthenticated={false}
-        onOpenSmartAccounting={onOpenSmartAccounting}
       />
 
       <VoiceErrorToast />

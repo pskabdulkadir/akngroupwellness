@@ -293,9 +293,9 @@ let payoutBatchItems: PayoutBatchItemRecord[] = [];
 let accountingEvents: Array<{
   source_event_id: string;
   event_type: string;
-  accounting_status: 'NEEDS_REVIEW' | 'FRAUD_REVIEW';
+  accounting_status: 'NEEDS_REVIEW' | 'FRAUD_REVIEW' | 'AWAITING_PAYMENT';
   tax_status: 'NEEDS_REVIEW';
-  invoice_status: 'DRAFT_REQUIRED';
+  invoice_status: 'DRAFT_REQUIRED' | 'DRAFT_PREPARED';
   amount: number;
   currency: string;
   created_at: string;
@@ -2746,6 +2746,71 @@ function processOrderCommission(payload: OrderCommissionPayload): CommissionTran
   });
 
   return tx;
+}
+
+function upsertDealerInvoiceDraft(params: {
+  orderId: string;
+  member: MonolineMember;
+  amount: number;
+  packageId: Exclude<PackageId, 'CUSTOM'>;
+  isPaymentConfirmed: boolean;
+  createdAt: string;
+}) {
+  const { orderId, member, amount, packageId, isPaymentConfirmed, createdAt } = params;
+  const existing = accountingEvents.find((event) => event.source_event_id === orderId);
+  const accountingStatus: 'NEEDS_REVIEW' | 'AWAITING_PAYMENT' = isPaymentConfirmed ? 'NEEDS_REVIEW' : 'AWAITING_PAYMENT';
+  const draft = {
+    source_event_id: orderId,
+    event_type: 'DEALER_REGISTRATION_PURCHASE',
+    accounting_status: accountingStatus,
+    tax_status: 'NEEDS_REVIEW' as const,
+    invoice_status: 'DRAFT_PREPARED' as const,
+    amount,
+    currency: 'TRY',
+    created_at: existing?.created_at ?? createdAt,
+    event_data: {
+      ...(existing?.event_data ?? {}),
+      order_id: orderId,
+      user_id: member.user_id,
+      customer_name: member.full_name,
+      customer_email: member.email,
+      customer_phone: member.phone,
+      customer_tax_id: member.tc_identity_no || null,
+      customer_is_company: Boolean(member.has_tax_company),
+      package_id: packageId,
+      package_name: PACKAGES[packageId].name,
+      order_type: 'DEALER_REGISTRATION',
+      is_test: /^(ORD-SIM-|ORD-DEMO-|TEST-|SIM-)/i.test(orderId),
+      invoice_draft: {
+        status: 'PREPARED_FOR_ACCOUNTANT_REVIEW',
+        customer: {
+          name: member.full_name,
+          email: member.email,
+          phone: member.phone,
+          tax_id: member.tc_identity_no || null,
+          is_company: Boolean(member.has_tax_company),
+        },
+        missing_fields: member.tc_identity_no ? [] : ['customer.tax_id'],
+        items: [{
+          description: `${PACKAGES[packageId].name} bayi kayıt paketi`,
+          quantity: 1,
+          unit_price: amount,
+          line_total: amount,
+        }],
+        currency: 'TRY',
+        subtotal: amount,
+        tax_rate: null,
+        tax_amount: null,
+        total: amount,
+        official_issue_authorized: false,
+      },
+    },
+  };
+  if (existing) {
+    Object.assign(existing, draft);
+  } else {
+    accountingEvents.unshift(draft);
+  }
 }
 
 function resetToCleanSlate(includeAdmin = true) {
@@ -7260,7 +7325,6 @@ async function startServer(options: { listen?: boolean } = {}) {
           (a, b) =>
             new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime()
         );
-
         // 1. Upsert all real Frekans members/dealers in chronological Monoline order
         for (const fm of incomingMembers) {
           if (!fm || !fm.uid) continue;
@@ -7291,6 +7355,9 @@ async function startServer(options: { listen?: boolean } = {}) {
               email,
               phone: String(fm.phone || '').trim(),
               city: String(fm.city || 'Türkiye').trim(),
+              country_code: String(fm.countryCode || 'TR').trim().toUpperCase(),
+              tc_identity_no: String(fm.taxId || '').trim(),
+              has_tax_company: Boolean(fm.hasTaxCompany),
               joined_at: fm.createdAt || new Date().toISOString(),
               sponsor_id: null,
               sponsor_db_id: null,
@@ -7337,6 +7404,9 @@ async function startServer(options: { listen?: boolean } = {}) {
             if (email) existing.email = email;
             if (fm.phone) existing.phone = String(fm.phone).trim();
             if (fm.city) existing.city = String(fm.city).trim();
+            if (fm.countryCode) existing.country_code = String(fm.countryCode).trim().toUpperCase();
+            if (fm.taxId) existing.tc_identity_no = String(fm.taxId).trim();
+            if (typeof fm.hasTaxCompany === 'boolean') existing.has_tax_company = fm.hasTaxCompany;
             if (fm.referralCode) {
               existing.ref_code = String(fm.referralCode).trim().toUpperCase();
             }
@@ -7429,6 +7499,34 @@ async function startServer(options: { listen?: boolean } = {}) {
           } catch {
             // skip invalid order
           }
+        }
+
+        // Prepare a reviewable invoice draft for every dealer; official issuance stays a reviewed action.
+        for (const fm of incomingMembers) {
+          if (!fm || fm.isDealer !== true) continue;
+          const uid = String(fm.uid || '').trim();
+          const member = members.find((candidate) => candidate.user_id === uid);
+          if (!member) continue;
+
+          const registrationEvent = accountingEvents.find(
+            (event) => event.event_data.user_id === uid && event.event_type === 'DEALER_REGISTRATION_PURCHASE'
+          );
+          const packageId = normalizePackageId(fm.packageId || member.highest_package_id || 'PKG_MINI_DENEME');
+          if (!packageId) continue;
+          const amount = getPackageOrderAmount(uid, packageId);
+          if (amount <= 0 || registrationEvent?.accounting_status === 'FRAUD_REVIEW') continue;
+          if (registrationEvent?.invoice_status === 'DRAFT_PREPARED' &&
+            (registrationEvent.accounting_status !== 'AWAITING_PAYMENT' || fm.isPaymentConfirmed !== true)) continue;
+
+          upsertDealerInvoiceDraft({
+            orderId: registrationEvent?.source_event_id || `ORD-KAYIT-SYNC-${uid}`,
+            member,
+            amount,
+            packageId,
+            isPaymentConfirmed:
+              registrationEvent?.accounting_status === 'NEEDS_REVIEW' || fm.isPaymentConfirmed === true,
+            createdAt: registrationEvent?.created_at || member.joined_at,
+          });
         }
 
         // 4. Sync authoritative session_credits from Frekans member's reconciled creditsBalance
@@ -7683,10 +7781,7 @@ async function startServer(options: { listen?: boolean } = {}) {
         activity_expires_at: createFutureExpiryIso(),
         welcome_bonus_granted: !isPendingPayment && Boolean(skip_initial_order),
         welcome_bonus_credits: !isPendingPayment && skip_initial_order ? WELCOME_BONUS_CREDITS : 0,
-        tc_identity_no:
-          tc_identity_no ||
-          req.body?.tc_identity_no ||
-          `${Math.floor(10000000000 + Math.random() * 89999999999)}`,
+        tc_identity_no: String(tc_identity_no || req.body?.tc_identity_no || '').trim(),
         has_tax_company: Boolean(has_tax_company ?? req.body?.has_tax_company),
         last_login_ip:
           req.body?.last_login_ip || `176.240.${Math.floor(10 + Math.random() * 200)}.${nextLineId}`,
@@ -7823,6 +7918,15 @@ async function startServer(options: { listen?: boolean } = {}) {
       // =========================================================================
       // 4. KULLANICIYA 201 CREATED & GÜVENLİ ÖDEME YÖNLENDİRME DÖNÜŞÜ
       // =========================================================================
+      upsertDealerInvoiceDraft({
+        orderId,
+        member: newMember,
+        amount: orderAmt,
+        packageId: pkgKey,
+        isPaymentConfirmed: Boolean(skip_initial_order) && !isPendingPayment,
+        createdAt: nowIso,
+      });
+
       res.status(201).json({
         status: 'success',
         message: isPendingPayment

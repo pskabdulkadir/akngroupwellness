@@ -49,7 +49,6 @@ interface MonolineMlmPortalModalProps {
   onSubTabChange?: (tab: MonolineSubTab) => void;
   embedded?: boolean;
   isAdminAuthenticated?: boolean;
-  onOpenSmartAccounting?: () => void;
 }
 
 export const MonolineMlmPortalModal: React.FC<MonolineMlmPortalModalProps> = ({
@@ -62,8 +61,6 @@ export const MonolineMlmPortalModal: React.FC<MonolineMlmPortalModalProps> = ({
   onSubTabChange,
   embedded = false,
   isAdminAuthenticated = false,
-  onOpenSmartAccounting,
-
 }) => {
   const safeInitialTab: MonolineSubTab =
     !isAdminAuthenticated &&
@@ -1507,15 +1504,6 @@ export const MonolineMlmPortalModal: React.FC<MonolineMlmPortalModalProps> = ({
                 members={state.members}
                 careerTiers={state.career_tiers}
                 distributionParams={state.distribution_params}
-                onOpenSmartAccounting={() => {
-                  onClose?.();
-                  if (onOpenSmartAccounting) {
-                    onOpenSmartAccounting();
-                  } else {
-                    window.dispatchEvent(new CustomEvent('open-smart-accounting'));
-                  }
-                }}
-
                 activityLogs={state.activity_logs}
                 withdrawalRequests={state.withdrawal_requests}
                 taxRefundInvoices={state.tax_refund_invoices}

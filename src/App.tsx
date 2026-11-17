@@ -14,8 +14,7 @@ import SmartAccountingApp from './SmartAccountingApp';
 import { 
   ArrowRight, 
   Sparkles, 
-  Activity, 
-  Calculator, 
+  Activity,
   Home, 
   Moon, 
   Sun,
@@ -368,15 +367,7 @@ export default function App() {
         </div>
 
         <div className="flex shrink-0 items-center gap-1 sm:gap-2">
-          {activeView === 'wellness' ? (
-            <button
-              onClick={() => setActiveView('accounting')}
-              className="flex items-center gap-1 px-2.5 py-1 text-slate-300 hover:text-white hover:bg-white/10 rounded transition-colors cursor-pointer"
-            >
-              <Calculator className="w-3.5 h-3.5 text-blue-400" />
-              <span>VergiSync AI</span>
-            </button>
-          ) : (
+          {activeView === 'accounting' && (
             <button
               onClick={() => setActiveView('wellness')}
               className="flex items-center gap-1 px-2.5 py-1 text-slate-300 hover:text-white hover:bg-white/10 rounded transition-colors cursor-pointer"

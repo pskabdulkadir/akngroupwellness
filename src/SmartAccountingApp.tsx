@@ -770,7 +770,7 @@ export default function SmartAccountingApp({
                     <div className="min-w-0">
                     <p className="truncate text-sm font-semibold">{event.event_data?.customer_name || event.source_event_id} · {event.event_data?.package_name || event.event_type}</p>
                     <p className="text-xs text-slate-500">{event.source_event_id} · {event.event_data?.payment_method || 'Ödeme yöntemi kaydedilmemiş'} · {event.created_at?.slice(0, 10)}</p>
-                    <p className="mt-1 text-xs font-medium text-amber-800">Vergi/stopaj: inceleme bekliyor · Fatura: taslak gerekli · Muhasebe: {event.accounting_status === 'FRAUD_REVIEW' ? 'risk incelemesi' : 'sınıflandırma bekliyor'}</p>
+                    <p className="mt-1 text-xs font-medium text-amber-800">Vergi/stopaj: inceleme bekliyor · Fatura: {event.invoice_status === 'DRAFT_PREPARED' ? 'taslak hazır (mali müşavir onayı bekliyor)' : 'taslak gerekli'} · Muhasebe: {event.accounting_status === 'FRAUD_REVIEW' ? 'risk incelemesi' : event.accounting_status === 'AWAITING_PAYMENT' ? 'ödeme bekleniyor' : 'sınıflandırma bekliyor'}</p>
                     {isTestEvent && (
                       <button
                         type="button"
