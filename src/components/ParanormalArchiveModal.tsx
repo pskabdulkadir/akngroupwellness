@@ -3,7 +3,10 @@ import { BookOpen, Eye, Info, Moon, Play, Search, Sparkles, Square, X } from 'lu
 import { AYET_LIST } from '../data/ayetData';
 import { ESMA_LIST } from '../data/esmaData';
 import { PARANORMAL_ARCHIVE_ITEMS, ParanormalArchiveCategory, SPIRITUAL_FREQUENCY_PROTOCOLS } from '../data/paranormalArchive';
+import { QURAN_SURAH_DISCLAIMER, QURAN_SURAH_THERAPY } from '../data/quranSurahTherapy';
 import { soundEngine } from '../utils/soundEngine';
+import { ActiveMeditation, FrequencyMeditationPanel } from './FrequencyMeditationPanel';
+import { NazarSelfCheck } from './NazarSelfCheck';
 
 interface ParanormalArchiveModalProps {
   isOpen: boolean;
@@ -45,6 +48,7 @@ export const ParanormalArchiveModal: React.FC<ParanormalArchiveModalProps> = ({ 
   const [storyFilter, setStoryFilter] = useState<StoryFilter>('all');
   const [search, setSearch] = useState('');
   const [playingId, setPlayingId] = useState<string | null>(null);
+  const [meditation, setMeditation] = useState<ActiveMeditation | null>(null);
 
   if (!isOpen) return null;
 
@@ -58,23 +62,42 @@ export const ParanormalArchiveModal: React.FC<ParanormalArchiveModalProps> = ({ 
   });
   const practices = PRACTICES.filter((item) => `${item.title} ${item.meaning} ${item.kind}`.toLocaleLowerCase('tr').includes(query));
   const protocols = SPIRITUAL_FREQUENCY_PROTOCOLS.filter((item) => `${item.title} ${item.spiritualBasis} ${item.reflectionText}`.toLocaleLowerCase('tr').includes(query));
+  const surahs = QURAN_SURAH_THERAPY.filter((item) => `${item.name} ${item.theme} ${item.frequencyHz} ${item.applicationSteps.join(' ')}`.toLocaleLowerCase('tr').includes(query));
+
+  const stopAllSound = () => {
+    soundEngine.stopAll();
+    setPlayingId(null);
+    setMeditation(null);
+  };
+
+  const switchTab = (tab: ArchiveTab) => {
+    stopAllSound();
+    setActiveTab(tab);
+    setSearch('');
+  };
 
   const toggleTone = async (id: string, frequencyHz: number) => {
     if (playingId === id) {
-      soundEngine.stopAll();
-      setPlayingId(null);
+      stopAllSound();
       return;
     }
-    soundEngine.stopAll();
+    stopAllSound();
     await soundEngine.unlockAudio();
     soundEngine.playTone(frequencyHz, 0.07);
     soundEngine.playSoundscape('ocean', 0.25);
     setPlayingId(id);
   };
 
+  const startMeditation = async (sessionKey: string, frequencyHz: number, durationMinutes: number) => {
+    stopAllSound();
+    await soundEngine.unlockAudio();
+    soundEngine.playTone(frequencyHz, 0.07);
+    soundEngine.playSoundscape('ocean', 0.25);
+    setMeditation({ key: sessionKey, frequencyHz, durationMinutes, startedAt: Date.now() });
+  };
+
   const close = () => {
-    soundEngine.stopAll();
-    setPlayingId(null);
+    stopAllSound();
     onClose();
   };
 
@@ -99,9 +122,9 @@ export const ParanormalArchiveModal: React.FC<ParanormalArchiveModalProps> = ({ 
 
         <div className="space-y-3 border-b border-slate-800 bg-slate-950/70 p-4 sm:px-6">
           <div className="flex flex-wrap gap-2">
-            <button onClick={() => { setActiveTab('stories'); setSearch(''); }} className={`rounded-xl px-4 py-2 text-xs font-bold ${activeTab === 'stories' ? 'bg-violet-500 text-white' : 'border border-slate-700 bg-slate-900 text-slate-300'}`}><BookOpen className="mr-1.5 inline h-4 w-4" />Olay anlatıları · {PARANORMAL_ARCHIVE_ITEMS.length}</button>
-            <button onClick={() => { setActiveTab('reflection'); setSearch(''); }} className={`rounded-xl px-4 py-2 text-xs font-bold ${activeTab === 'reflection' ? 'bg-emerald-500 text-slate-950' : 'border border-slate-700 bg-slate-900 text-slate-300'}`}><Moon className="mr-1.5 inline h-4 w-4" />Ayet ve Esma · {PRACTICES.length}</button>
-            <button onClick={() => { setActiveTab('protocols'); setSearch(''); }} className={`rounded-xl px-4 py-2 text-xs font-bold ${activeTab === 'protocols' ? 'bg-indigo-500 text-white' : 'border border-slate-700 bg-slate-900 text-slate-300'}`}><Sparkles className="mr-1.5 inline h-4 w-4" />Tefekkür seansları · {SPIRITUAL_FREQUENCY_PROTOCOLS.length}</button>
+            <button onClick={() => switchTab('stories')} className={`rounded-xl px-4 py-2 text-xs font-bold ${activeTab === 'stories' ? 'bg-violet-500 text-white' : 'border border-slate-700 bg-slate-900 text-slate-300'}`}><BookOpen className="mr-1.5 inline h-4 w-4" />Olay anlatıları · {PARANORMAL_ARCHIVE_ITEMS.length}</button>
+            <button onClick={() => switchTab('reflection')} className={`rounded-xl px-4 py-2 text-xs font-bold ${activeTab === 'reflection' ? 'bg-emerald-500 text-slate-950' : 'border border-slate-700 bg-slate-900 text-slate-300'}`}><Moon className="mr-1.5 inline h-4 w-4" />Ayet ve Esma · {PRACTICES.length}</button>
+            <button onClick={() => switchTab('protocols')} className={`rounded-xl px-4 py-2 text-xs font-bold ${activeTab === 'protocols' ? 'bg-indigo-500 text-white' : 'border border-slate-700 bg-slate-900 text-slate-300'}`}><Sparkles className="mr-1.5 inline h-4 w-4" />Tefekkür seansları · {SPIRITUAL_FREQUENCY_PROTOCOLS.length}</button>
           </div>
           {activeTab === 'stories' && (
             <div className="flex gap-2 overflow-x-auto pb-1">
@@ -122,6 +145,7 @@ export const ParanormalArchiveModal: React.FC<ParanormalArchiveModalProps> = ({ 
           {activeTab === 'stories' ? (
             <>
               <div className="mb-4 text-[11px] text-slate-400">Kart görselleri temsili ve dekoratiftir; olay fotoğrafı değildir. Kayıtlarda farklı Hz ses seçenekleri kullanılır; frekansların konuya göre kanıtlanmış rahatlatıcı etkisi yoktur ve kişisel ses tercihi değişebilir. Arşivde {PARANORMAL_ARCHIVE_ITEMS.length} kaynak türü açıkça etiketlenmiş kayıt bulunuyor. Menkıbeler ve halk anlatıları tarihsel belgeyle doğrulanmış olaylar olarak sunulmaz.</div>
+              {storyFilter === 'classical-havas' && <div className="mb-4"><NazarSelfCheck /></div>}
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                 {stories.map((item, index) => (
                   <article key={item.id} className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-950/70">
@@ -143,6 +167,7 @@ export const ParanormalArchiveModal: React.FC<ParanormalArchiveModalProps> = ({ 
                         {playingId === item.id ? <Square className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
                         {playingId === item.id ? 'Sesi durdur' : `${item.frequencyHz} Hz ambient tonu dinle`}
                       </button>
+                      <FrequencyMeditationPanel sessionKey={`story-${item.id}`} frequencyHz={item.frequencyHz} active={meditation} onStart={startMeditation} onStop={stopAllSound} />
                     </div>
                   </article>
                 ))}
@@ -151,6 +176,39 @@ export const ParanormalArchiveModal: React.FC<ParanormalArchiveModalProps> = ({ 
             </>
           ) : activeTab === 'reflection' ? (
             <>
+              <section className="mb-6 space-y-3">
+                <div>
+                  <div className="text-[10px] font-bold uppercase tracking-wide text-emerald-300">Kur’an-ı Kerim sûre frekansları</div>
+                  <h3 className="mt-1 text-sm font-bold text-white">Sûre bazlı tefekkür ve terapi protokolü</h3>
+                  <p className="mt-1 text-[11px] leading-relaxed text-slate-400">{QURAN_SURAH_DISCLAIMER}</p>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {surahs.map((surah) => (
+                    <article key={surah.id} className="rounded-2xl border border-emerald-500/20 bg-slate-950/70 p-4">
+                      <div className="mb-2 flex items-center justify-between gap-2">
+                        <span className="rounded-full bg-emerald-950 px-2.5 py-1 text-[10px] font-bold text-emerald-300">{surah.verseCount} ayet</span>
+                        <span className="rounded-lg border border-emerald-400/20 bg-emerald-950/50 px-2.5 py-1 font-mono text-[11px] font-bold text-emerald-200">{surah.frequencyHz} Hz</span>
+                      </div>
+                      <h4 className="text-sm font-bold text-white">{surah.name} Sûresi</h4>
+                      <p className="mt-1 text-[11px] leading-relaxed text-slate-400">{surah.theme}</p>
+                      <ol className="mt-3 space-y-1.5">
+                        {surah.applicationSteps.map((step, index) => (
+                          <li key={step} className="flex gap-2 text-[11px] leading-relaxed text-slate-300">
+                            <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 text-[9px] font-bold text-emerald-200">{index + 1}</span>
+                            {step}
+                          </li>
+                        ))}
+                      </ol>
+                      <button onClick={() => void toggleTone(surah.id, surah.frequencyHz)} className={`mt-3 flex w-full items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-xs font-bold ${playingId === surah.id ? 'bg-rose-600 text-white' : 'bg-slate-800 text-emerald-200 hover:bg-slate-700'}`}>
+                        {playingId === surah.id ? <Square className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
+                        {playingId === surah.id ? 'Sesi durdur' : `${surah.frequencyHz} Hz tonu dinle`}
+                      </button>
+                      <FrequencyMeditationPanel sessionKey={`surah-${surah.id}`} frequencyHz={surah.frequencyHz} active={meditation} onStart={startMeditation} onStop={stopAllSound} />
+                    </article>
+                  ))}
+                </div>
+                {surahs.length === 0 && <p className="py-6 text-center text-sm text-slate-400">Bu aramayla eşleşen sûre bulunamadı.</p>}
+              </section>
               <div className="mb-4 flex gap-2 rounded-2xl border border-emerald-500/20 bg-emerald-950/20 p-3 text-xs leading-relaxed text-emerald-100/80"><Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" />Bu bölüm dini metinleri kişisel tefekkür ve dinleme amacıyla sunar. İsteğe bağlı ses tonu genel bir ambient seçeneğidir; ayet veya Esma’ya ait bilimsel/tedavi edici frekans olduğu anlamına gelmez. Sağlık tanısı veya tedavisi yerine geçmez.</div>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {practices.map((item) => (
@@ -159,6 +217,7 @@ export const ParanormalArchiveModal: React.FC<ParanormalArchiveModalProps> = ({ 
                     <h3 className="text-sm font-bold text-white">{item.title}</h3>
                     <p dir="rtl" className="mt-2 text-right font-serif text-xl leading-loose text-emerald-100">{item.arabic}</p>
                     <p className="mt-2 text-xs leading-relaxed text-slate-300">{item.meaning}</p>
+                    <FrequencyMeditationPanel sessionKey={`practice-${item.id}`} frequencyHz={item.frequencyHz} active={meditation} onStart={startMeditation} onStop={stopAllSound} />
                   </article>
                 ))}
               </div>
@@ -181,6 +240,7 @@ export const ParanormalArchiveModal: React.FC<ParanormalArchiveModalProps> = ({ 
                       {playingId === protocol.id ? 'Seansı durdur' : `${protocol.frequencyHz} Hz tefekkür seansını başlat`}
                     </button>
                     {playingId === protocol.id && <p className="mt-3 rounded-xl bg-slate-900 p-3 text-sm leading-relaxed text-indigo-100">{protocol.reflectionText}</p>}
+                    <FrequencyMeditationPanel sessionKey={`protocol-${protocol.id}`} frequencyHz={protocol.frequencyHz} active={meditation} onStart={startMeditation} onStop={stopAllSound} />
                     <p className="mt-3 text-[10px] leading-relaxed text-slate-500">{protocol.disclaimer}</p>
                   </article>
                 ))}

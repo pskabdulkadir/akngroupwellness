@@ -590,6 +590,26 @@ export const AcousticSessionWorkflowModal: React.FC<AcousticSessionWorkflowModal
                 </div>
               </div>
 
+              {/* Energy Analysis */}
+              <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-3">
+                <span className="text-xs font-bold text-slate-200 block">Enerji Analizi</span>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+                  <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800">
+                    <span className="text-[10px] text-slate-500 block font-bold">ENERJİ DÜŞÜKLÜĞÜ:</span>
+                    <span className="text-slate-300">Önce %{100 - report.preScan.cellularVitalityScore} → Sonra %{100 - report.postScan.cellularVitalityScore}</span>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800">
+                    <span className="text-[10px] text-slate-500 block font-bold">ENERJİ TESPİT ORANI (VOKAL):</span>
+                    <span className="text-slate-300">Önce %{report.preScan.rmsEnergy} → Sonra %{report.postScan.rmsEnergy}</span>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800">
+                    <span className="text-[10px] text-slate-500 block font-bold">PARANORMAL VARLIK TESPİTİ:</span>
+                    <span className="text-slate-400">Ölçülmedi. Bu tarama paranormal varlık için veri üretmez.</span>
+                  </div>
+                </div>
+                <p className="text-[10px] text-slate-500">Değerler tarama modülünün tahminleridir; tıbbi tanı değildir.</p>
+              </div>
+
               {/* Re-Run Action */}
               <div className="flex items-center justify-between pt-2">
                 <button
