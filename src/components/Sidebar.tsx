@@ -60,6 +60,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         },
         { id: 'overview', label: 'Genel Mali Bakış', icon: LayoutDashboard },
         { id: 'invoices', label: 'e-Fatura & e-Arşiv', icon: FileSpreadsheet },
+        { id: 'purchaseInvoices', label: 'Alışveriş Faturası', icon: FileText },
         { id: 'simulator', label: 'Satış & 3DS Motoru', icon: Zap },
         {
           id: 'clawback',

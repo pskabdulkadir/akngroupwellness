@@ -2668,7 +2668,10 @@ function processOrderCommission(payload: OrderCommissionPayload): CommissionTran
   if (!accountingEvents.some((event) => event.source_event_id === orderId)) {
     accountingEvents.unshift({
       source_event_id: orderId,
-      event_type: orderId.startsWith('ORD-KAYIT-') || orderId.startsWith('ORD-INIT-') ? 'DEALER_REGISTRATION_PURCHASE' : normalizedPkg ? 'PACKAGE_PURCHASE' : 'CUSTOM_ORDER',
+      event_type:
+        isInitialRegistrationSync || payload.order_type === 'DEALER_REGISTRATION'
+          ? 'DEALER_REGISTRATION_PURCHASE'
+          : 'ACTIVITY_RENEWAL_PURCHASE',
       accounting_status: isFraudFlagged ? 'FRAUD_REVIEW' : 'NEEDS_REVIEW',
       tax_status: 'NEEDS_REVIEW',
       invoice_status: 'DRAFT_REQUIRED',
@@ -2706,6 +2709,34 @@ function processOrderCommission(payload: OrderCommissionPayload): CommissionTran
       },
     });
   }
+
+  const invoiceOrderType = isInitialRegistrationSync || payload.order_type === 'DEALER_REGISTRATION'
+    ? 'DEALER_REGISTRATION'
+    : isActivationOrder
+      ? 'ACTIVATION'
+      : 'ACTIVITY_RENEWAL';
+  if (invoiceOrderType) {
+    const productName = isActivationOrder
+      ? '30 Günlük Süre Uzatma Paketi'
+      : normalizedPkg
+        ? PACKAGES[normalizedPkg].name
+        : String(payload.package_id || 'Bayi Aktiflik Paketi');
+    upsertPurchaseInvoiceDraft({
+      orderId,
+      member: buyer,
+      amount,
+      currency: 'USD',
+      packageId: normalizedPkg || String(payload.package_id || ''),
+      productName,
+      itemDescription: invoiceOrderType === 'DEALER_REGISTRATION'
+        ? `${productName} bayi kayıt paketi`
+        : `${productName} aktiflik ve paket alışverişi (+${ACTIVITY_PERIOD_DAYS} gün)`,
+      orderType: invoiceOrderType,
+      isPaymentConfirmed: true,
+      createdAt: nowIso,
+    });
+  }
+
   transactions.unshift(tx);
 
   // Sponsor için "3 Getir Bedavaya Getir" (Fast-ROI +%15) kontrolünü tetikle
@@ -2754,25 +2785,34 @@ function processOrderCommission(payload: OrderCommissionPayload): CommissionTran
   return tx;
 }
 
-function upsertDealerInvoiceDraft(params: {
+function upsertPurchaseInvoiceDraft(params: {
   orderId: string;
   member: MonolineMember;
   amount: number;
-  packageId: Exclude<PackageId, 'CUSTOM'>;
+  currency: string;
+  packageId?: string;
+  productName: string;
+  itemDescription: string;
+  orderType: 'DEALER_REGISTRATION' | 'ACTIVITY_RENEWAL' | 'ACTIVATION';
   isPaymentConfirmed: boolean;
   createdAt: string;
 }) {
-  const { orderId, member, amount, packageId, isPaymentConfirmed, createdAt } = params;
+  const { orderId, member, amount, currency, productName, itemDescription, orderType, isPaymentConfirmed, createdAt } = params;
   const existing = accountingEvents.find((event) => event.source_event_id === orderId);
-  const accountingStatus: 'NEEDS_REVIEW' | 'AWAITING_PAYMENT' = isPaymentConfirmed ? 'NEEDS_REVIEW' : 'AWAITING_PAYMENT';
+  const wasFlaggedForFraud = existing?.accounting_status === 'FRAUD_REVIEW';
+  const accountingStatus = !isPaymentConfirmed
+    ? 'AWAITING_PAYMENT'
+    : wasFlaggedForFraud
+      ? 'FRAUD_REVIEW'
+      : 'NEEDS_REVIEW';
   const draft = {
     source_event_id: orderId,
-    event_type: 'DEALER_REGISTRATION_PURCHASE',
-    accounting_status: accountingStatus,
+    event_type: orderType === 'DEALER_REGISTRATION' ? 'DEALER_REGISTRATION_PURCHASE' : 'ACTIVITY_RENEWAL_PURCHASE',
+    accounting_status,
     tax_status: 'NEEDS_REVIEW' as const,
     invoice_status: 'DRAFT_PREPARED' as const,
     amount,
-    currency: 'TRY',
+    currency,
     created_at: existing?.created_at ?? createdAt,
     event_data: {
       ...(existing?.event_data ?? {}),
@@ -2783,9 +2823,9 @@ function upsertDealerInvoiceDraft(params: {
       customer_phone: member.phone,
       customer_tax_id: member.tc_identity_no || null,
       customer_is_company: Boolean(member.has_tax_company),
-      package_id: packageId,
-      package_name: PACKAGES[packageId].name,
-      order_type: 'DEALER_REGISTRATION',
+      package_id: params.packageId || null,
+      package_name: productName,
+      order_type: orderType,
       is_test: /^(ORD-SIM-|ORD-DEMO-|TEST-|SIM-)/i.test(orderId),
       invoice_draft: {
         status: 'PREPARED_FOR_ACCOUNTANT_REVIEW',
@@ -2797,13 +2837,8 @@ function upsertDealerInvoiceDraft(params: {
           is_company: Boolean(member.has_tax_company),
         },
         missing_fields: member.tc_identity_no ? [] : ['customer.tax_id'],
-        items: [{
-          description: `${PACKAGES[packageId].name} bayi kayıt paketi`,
-          quantity: 1,
-          unit_price: amount,
-          line_total: amount,
-        }],
-        currency: 'TRY',
+        items: [{ description: itemDescription, quantity: 1, unit_price: amount, line_total: amount }],
+        currency,
         subtotal: amount,
         tax_rate: null,
         tax_amount: null,
@@ -2812,11 +2847,27 @@ function upsertDealerInvoiceDraft(params: {
       },
     },
   };
-  if (existing) {
-    Object.assign(existing, draft);
-  } else {
-    accountingEvents.unshift(draft);
-  }
+  if (existing) Object.assign(existing, draft);
+  else accountingEvents.unshift(draft);
+}
+
+function upsertDealerInvoiceDraft(params: {
+  orderId: string;
+  member: MonolineMember;
+  amount: number;
+  packageId: Exclude<PackageId, 'CUSTOM'>;
+  isPaymentConfirmed: boolean;
+  createdAt: string;
+}) {
+  const productName = PACKAGES[params.packageId].name;
+  upsertPurchaseInvoiceDraft({
+    ...params,
+    currency: 'TRY',
+    packageId: params.packageId,
+    productName,
+    itemDescription: `${productName} bayi kayıt paketi`,
+    orderType: 'DEALER_REGISTRATION',
+  });
 }
 
 function resetToCleanSlate(includeAdmin = true) {
@@ -7243,10 +7294,10 @@ async function startServer(options: { listen?: boolean } = {}) {
   app.post('/api/v1/orders/process', handleOrderWebhook);
 
   // Atomik Bayi Kredisi Düşüm Uç Noktası (PostgreSQL-18 FOR UPDATE + Idempotency)
-  app.post('/api/v1/resellers/deduct-credits', async (req, res) => {
+  app.post('/api/v1/members/:userId/deduct-scan-credit', requireAdminOrOwnMember, async (req, res) => {
     try {
-      const { userId, user_id, dealerId, dealer_id, amount, credits_to_deduct, requestId, request_id } = req.body || {};
-      const targetId = String(dealerId || dealer_id || userId || user_id || '').trim();
+      const { amount, credits_to_deduct, requestId, request_id } = req.body || {};
+      const targetId = String(req.params.userId || '').trim();
       if (!targetId) {
         return res.status(400).json({ status: 'error', message: 'Geçersiz bayi kimliği.' });
       }
@@ -7259,11 +7310,13 @@ async function startServer(options: { listen?: boolean } = {}) {
       );
       if (matched && result.success) {
         matched.session_credits = result.remainingCredits;
+        creditsOwnedByServer.add(matched.user_id);
       }
 
       return res.json({
         status: result.success ? 'success' : 'error',
         ...result,
+        state: matched && result.success ? buildStateResponse() : undefined,
       });
     } catch (err: any) {
       return res.status(500).json({
@@ -7977,7 +8030,7 @@ async function startServer(options: { listen?: boolean } = {}) {
         member: newMember,
         amount: orderAmt,
         packageId: pkgKey,
-        isPaymentConfirmed: Boolean(skip_initial_order) && !isPendingPayment,
+        isPaymentConfirmed: !isPendingPayment && (Boolean(skip_initial_order) || Boolean(commissionTx)),
         createdAt: nowIso,
       });
 
@@ -8214,18 +8267,20 @@ async function startServer(options: { listen?: boolean } = {}) {
     });
   });
 
-  app.post('/api/v1/members/:userId/sync-credits', requireAdminJwt, (req, res) => {
+  app.post('/api/v1/members/:userId/sync-credits', requireAdminOrOwnMember, (req, res) => {
     const targetId = String(req.params.userId || '').trim();
     const { session_credits, email, ref_code } = req.body || {};
     const cleanEmail = String(email || '').trim().toLowerCase();
     const cleanCode = String(ref_code || '').trim().toUpperCase();
 
-    const member = members.find(
-      (m) =>
-        m.user_id === targetId ||
-        (cleanEmail && m.email && m.email.toLowerCase() === cleanEmail) ||
-        (cleanCode && m.ref_code && m.ref_code.toUpperCase() === cleanCode)
-    );
+    const member = members.find((m) => m.user_id === targetId) ||
+      (res.locals.adminUid
+        ? members.find(
+            (m) =>
+              (cleanEmail && m.email && m.email.toLowerCase() === cleanEmail) ||
+              (cleanCode && m.ref_code && m.ref_code.toUpperCase() === cleanCode)
+          )
+        : undefined);
     if (!member) {
       res.status(404).json({ status: 'error', message: 'Üye bulunamadı.' });
       return;
@@ -8239,7 +8294,7 @@ async function startServer(options: { listen?: boolean } = {}) {
     res.json({
       status: 'success',
       session_credits: member.session_credits,
-      state: buildStateResponse(true),
+      state: buildStateResponse(Boolean(res.locals.adminUid), member.user_id),
     });
   });
 

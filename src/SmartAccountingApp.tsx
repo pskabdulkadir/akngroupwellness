@@ -187,6 +187,12 @@ export default function SmartAccountingApp({
   const [accountingOrders, setAccountingOrders] = useState<any[]>([]);
   const [accountingEvents, setAccountingEvents] = useState<any[]>([]);
   const [taxRefundInvoices, setTaxRefundInvoices] = useState<any[]>([]);
+  const purchaseInvoiceEvents = accountingEvents.filter((event) =>
+    event.event_type === 'DEALER_REGISTRATION_PURCHASE' ||
+    event.event_type === 'ACTIVITY_RENEWAL_PURCHASE' ||
+    event.event_data?.order_type === 'ACTIVITY_RENEWAL' ||
+    event.event_data?.order_type === 'ACTIVATION'
+  );
   const taxRefundInvoiceTotal = taxRefundInvoices.reduce(
     (sum, invoice) => sum + Number(invoice.tax_deducted_amount || 0),
     0
@@ -961,6 +967,80 @@ export default function SmartAccountingApp({
               onSelectInvoice={(inv) => setSelectedInvoice(inv)}
               onNavigateTab={(tab) => setCurrentTab(tab)}
             />
+          )}
+
+          {currentTab === 'purchaseInvoices' && (
+            <div className="space-y-6">
+              <section className="rounded-2xl border border-indigo-200 bg-indigo-50/60 p-4 shadow-sm sm:p-5">
+                <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <h2 className="text-lg font-bold">Alışveriş Faturası</h2>
+                    <p className="mt-1 max-w-3xl text-sm text-slate-600">
+                      Bayi kayıtları, paket alımları ve aktiflik uzatmaları için sistemin otomatik hazırladığı alışveriş faturası taslakları. Resmi fatura kesimi mali müşavir incelemesi ve onayı sonrası yapılır.
+                    </p>
+                  </div>
+                  <span className="rounded-full border border-indigo-300 bg-white px-3 py-1.5 text-xs font-bold text-indigo-800">
+                    {purchaseInvoiceEvents.length} alışveriş · {purchaseInvoiceEvents.filter((event) => event.invoice_status === 'DRAFT_PREPARED').length} taslak hazır
+                  </span>
+                </div>
+
+                <div className="space-y-3">
+                  {purchaseInvoiceEvents.map((event) => {
+                    const draft = event.event_data?.invoice_draft;
+                    const items = Array.isArray(draft?.items) ? draft.items : [];
+                    const missingFields = Array.isArray(draft?.missing_fields) ? draft.missing_fields : [];
+                    const isRegistration = event.event_type === 'DEALER_REGISTRATION_PURCHASE';
+                    const isTestEvent = isTestAccountingEvent(event);
+                    return (
+                      <article key={event.source_event_id} className="rounded-xl border border-indigo-100 bg-white p-4">
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <h3 className="text-sm font-bold text-slate-900">
+                                {event.event_data?.customer_name || event.event_data?.user_id || 'Bayi'} · {isRegistration ? 'Bayi kayıt alışverişi' : 'Aktiflik / paket alışverişi'}
+                              </h3>
+                              {isTestEvent && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800">TEST</span>}
+                            </div>
+                            <p className="mt-1 break-all text-xs text-slate-500">
+                              {event.source_event_id} · {event.event_data?.customer_email || 'E-posta yok'} · {event.created_at?.slice(0, 10)}
+                            </p>
+                          </div>
+                          <div className="text-left sm:text-right">
+                            <p className="text-sm font-bold tabular-nums text-slate-900">
+                              {Number(event.amount || draft?.total || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2 })} {event.currency || draft?.currency || 'USD'}
+                            </p>
+                            <p className="mt-1 text-xs font-semibold text-indigo-800">
+                              {event.invoice_status === 'DRAFT_PREPARED' ? 'Fatura taslağı hazır' : 'Fatura taslağı hazırlanıyor'} · {event.accounting_status === 'AWAITING_PAYMENT' ? 'Ödeme bekliyor' : event.accounting_status === 'FRAUD_REVIEW' ? 'Risk incelemesi' : 'Muhasebe incelemesi bekliyor'}
+                            </p>
+                          </div>
+                        </div>
+
+                        {items.length > 0 && (
+                          <div className="mt-3 rounded-lg bg-slate-50 p-3">
+                            {items.map((item: any, index: number) => (
+                              <div key={`${event.source_event_id}-${index}`} className="flex flex-wrap justify-between gap-2 text-xs text-slate-700">
+                                <span>{item.description} × {item.quantity}</span>
+                                <span className="font-semibold tabular-nums">{Number(item.line_total || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2 })} {draft?.currency || event.currency || 'USD'}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
+                          <span>Müşteri: {draft?.customer?.name || event.event_data?.customer_name || 'Bilgi bekleniyor'}</span>
+                          <span>VKN/TCKN: {draft?.customer?.tax_id || 'Eksik'}</span>
+                          <span>{missingFields.length ? `Eksik bilgi: ${missingFields.join(', ')}` : 'Taslak bilgileri tamam'}</span>
+                          <span>Resmi kesim: mali müşavir onayı gerekli</span>
+                        </div>
+                      </article>
+                    );
+                  })}
+                  {!purchaseInvoiceEvents.length && (
+                    <p className="rounded-xl bg-white p-4 text-sm text-slate-500">Henüz bayi kaydı veya aktiflik alışverişi bulunmuyor.</p>
+                  )}
+                </div>
+              </section>
+            </div>
           )}
 
           {currentTab === 'invoices' && (

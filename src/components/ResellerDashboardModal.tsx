@@ -415,6 +415,8 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
               totalEarnings: matched.wallets.total_earnings,
               paidEarnings: matched.wallets.total_withdrawn,
               pendingEarnings: getMemberRegionalPendingUsd(matched),
+              isActive: matched.is_active,
+              activityExpiresAt: matched.activity_expires_at,
             };
           });
         }

@@ -202,24 +202,16 @@ export async function deductResellerCreditsAtomic(
         }
       }
 
-      // 2. Row-level Lock (FOR UPDATE)
-      const creditRes = await client.query(
-        'SELECT credits_balance FROM reseller_credits WHERE user_id = $1 FOR UPDATE',
+      // 2. Lock the member row, which is also the source used by package purchases and the dealer panel.
+      const memberRes = await client.query(
+        'SELECT scan_credits FROM users WHERE user_id = $1 FOR UPDATE',
         [userId]
       );
-
-      let currentBalance = 0;
-      if (creditRes.rows.length === 0) {
-        // Initialize reseller credits record if missing
-        await client.query(
-          'INSERT INTO reseller_credits (user_id, credits_balance) VALUES ($1, 0) ON CONFLICT DO NOTHING',
-          [userId]
-        );
-        currentBalance = 0;
-      } else {
-        currentBalance = creditRes.rows[0].credits_balance;
+      if (memberRes.rows.length === 0) {
+        return { success: false, remainingCredits: 0, message: 'Bayi kredi hesabı bulunamadı.' };
       }
 
+      const currentBalance = Number(memberRes.rows[0].scan_credits) || 0;
       if (currentBalance < amount) {
         return {
           success: false,
@@ -228,17 +220,22 @@ export async function deductResellerCreditsAtomic(
         };
       }
 
-      // 3. Atomically Deduct Credits
+      // 3. Atomically deduct and mirror the balance into the scan accounting table.
       const updatedBalance = currentBalance - amount;
       await client.query(
-        `UPDATE reseller_credits 
-         SET credits_balance = $1, 
-             total_consumed = total_consumed + $2,
-             last_deduction_request_id = $3,
-             last_scan_at = CURRENT_TIMESTAMP,
-             updated_at = CURRENT_TIMESTAMP
-         WHERE user_id = $4`,
-        [updatedBalance, amount, requestId || null, userId]
+        'UPDATE users SET scan_credits = $1, updated_at = CURRENT_TIMESTAMP WHERE user_id = $2',
+        [updatedBalance, userId]
+      );
+      await client.query(
+        `INSERT INTO reseller_credits (user_id, credits_balance, total_consumed, last_deduction_request_id, last_scan_at)
+         VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)
+         ON CONFLICT (user_id) DO UPDATE SET
+           credits_balance = EXCLUDED.credits_balance,
+           total_consumed = reseller_credits.total_consumed + EXCLUDED.total_consumed,
+           last_deduction_request_id = EXCLUDED.last_deduction_request_id,
+           last_scan_at = EXCLUDED.last_scan_at,
+           updated_at = CURRENT_TIMESTAMP`,
+        [userId, updatedBalance, amount, requestId || null]
       );
 
       // 4. Record Idempotency Key

@@ -753,10 +753,17 @@ export async function mirrorMonolineStateBackToFrekans(
             r.referralCode &&
             r.referralCode.toUpperCase() === activeRes.referralCode.toUpperCase())
       );
-      if (matchedActive && matchedActive.creditsBalance !== activeRes.creditsBalance) {
+      if (
+        matchedActive &&
+        (matchedActive.creditsBalance !== activeRes.creditsBalance ||
+          (matchedActive as any).isActive !== (activeRes as any).isActive ||
+          (matchedActive as any).activityExpiresAt !== (activeRes as any).activityExpiresAt)
+      ) {
         setActiveResellerSession({
           ...activeRes,
           creditsBalance: matchedActive.creditsBalance,
+          isActive: (matchedActive as any).isActive,
+          activityExpiresAt: (matchedActive as any).activityExpiresAt,
           updatedAt: new Date().toISOString(),
         });
         resellersChanged = true;
@@ -910,6 +917,8 @@ export async function recordMonolinePackageOrderToFrekans(
           creditsBalance: nextCredits,
           dealerPackageId: frekansPkgId,
           totalSalesAmount: (targetRes.totalSalesAmount || 0) + tx.order_amount,
+          isActive: buyerMember?.is_active ?? (targetRes as any).isActive,
+          activityExpiresAt: buyerMember?.activity_expires_at ?? (targetRes as any).activityExpiresAt,
           updatedAt: nowIso,
         };
         allResellers[rIdx] = updatedReseller;
@@ -964,6 +973,8 @@ export async function recordMonolinePackageOrderToFrekans(
         creditsBalance: nextCredits,
         dealerPackageId: frekansPkgId,
         totalSalesAmount: (activeRes.totalSalesAmount || 0) + tx.order_amount,
+        isActive: buyerMember?.is_active ?? (activeRes as any).isActive,
+        activityExpiresAt: buyerMember?.activity_expires_at ?? (activeRes as any).activityExpiresAt,
         updatedAt: nowIso,
       };
       saveLocalResellers([updatedActive, ...allResellers]);
@@ -995,11 +1006,18 @@ export async function recordMonolinePackageOrderToFrekans(
           latestActiveRes.resellerName &&
           latestActiveRes.resellerName.trim().toLowerCase() === buyerName))
     ) {
-      if ((latestActiveRes.creditsBalance ?? 0) < finalCreditsBalance) {
+      if (
+        (latestActiveRes.creditsBalance ?? 0) < finalCreditsBalance ||
+        (buyerMember &&
+          (latestActiveRes.activityExpiresAt !== buyerMember.activity_expires_at ||
+            latestActiveRes.isActive !== buyerMember.is_active))
+      ) {
         const syncedActive: Reseller = {
           ...latestActiveRes,
           creditsBalance: finalCreditsBalance,
           dealerPackageId: frekansPkgId,
+          isActive: buyerMember?.is_active ?? (latestActiveRes as any).isActive,
+          activityExpiresAt: buyerMember?.activity_expires_at ?? (latestActiveRes as any).activityExpiresAt,
           updatedAt: nowIso,
         };
         setActiveResellerSession(syncedActive);

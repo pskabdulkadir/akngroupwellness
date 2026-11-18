@@ -1097,12 +1097,12 @@ function appendLocalCreditLog(log: CreditTransaction): void {
 let activeScanDeduct: { key: string; promise: Promise<DeductScanResult> } | null = null;
 
 function resolveScanDealerId(userId?: string): string | null {
+  if (userId && typeof userId === 'string' && userId.trim()) {
+    return userId.trim();
+  }
   const activeReseller = getActiveResellerSession();
   if (activeReseller?.uid && typeof activeReseller.uid === 'string' && activeReseller.uid.trim()) {
     return activeReseller.uid.trim();
-  }
-  if (userId && typeof userId === 'string' && userId.trim()) {
-    return userId.trim();
   }
   return null;
 }
@@ -1110,10 +1110,7 @@ function resolveScanDealerId(userId?: string): string | null {
 /**
  * Deduct scan credits atomically from the Dealer's pool.
  *
- * Primary path uses a Firestore `runTransaction` so that concurrent scans or admin edits can
- * never double-spend a single credit (last-write-wins is eliminated). The balance and the
- * audit log (`credit_logs`) are written inside the SAME transaction (all-or-nothing).
- * If Firestore is unavailable, it falls back to a safe local deduction so scans can still run.
+ * The authenticated server transaction is authoritative; Firestore is used only when the API is unavailable.
  */
 export async function deductScanCreditFromDealer(
   userId?: string,
@@ -1161,12 +1158,15 @@ async function performAtomicScanDeduct(
 
     // 0) PRIMARY: Local PostgreSQL-18 Atomic Credit Deduction (ACID + FOR UPDATE + Idempotency)
     try {
-      const res = await fetch('/api/v1/resellers/deduct-credits', {
+      const { getMemberWalletToken } = await import('./authManager');
+      const token = getMemberWalletToken();
+      const res = await fetch(`/api/v1/members/${encodeURIComponent(targetDealerId)}/deduct-scan-credit`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({
-          userId,
-          dealerId: targetDealerId,
           amount: scanCost,
           requestId,
         }),
@@ -1174,10 +1174,12 @@ async function performAtomicScanDeduct(
       const data = await res.json().catch(() => ({}));
       if (res.ok && data?.status === 'success') {
         const remaining = typeof data.remainingCredits === 'number' ? data.remainingCredits : 99;
-        if (targetReseller) {
+        const activeReseller = getActiveResellerSession();
+        const resellerToUpdate = targetReseller || (activeReseller?.uid === targetDealerId ? activeReseller : null);
+        if (resellerToUpdate) {
           const nowIso = new Date().toISOString();
           const updatedReseller: Reseller = {
-            ...targetReseller,
+            ...resellerToUpdate,
             creditsBalance: remaining,
             totalScans: (targetReseller.totalScans || 0) + (data.isIdempotentReplay ? 0 : 1),
             lastScanAt: nowIso,
@@ -1188,6 +1190,9 @@ async function performAtomicScanDeduct(
           setActiveResellerSession(updatedReseller);
           await syncMemberUserCredits(updatedReseller.uid, remaining, updatedResellers);
           await pushCreditBalanceToServer(updatedReseller, remaining);
+        }
+        if (data.state) {
+          window.dispatchEvent(new CustomEvent('aurabio_monoline_state_updated', { detail: data.state }));
         }
         window.dispatchEvent(new CustomEvent('aurabio_credits_deducted', { detail: { remainingCredits: remaining } }));
         return {
@@ -1344,9 +1349,14 @@ async function performAtomicScanDeduct(
  */
 async function pushCreditBalanceToServer(reseller: Reseller, balance: number): Promise<void> {
   try {
+    const { getMemberWalletToken } = await import('./authManager');
+    const token = getMemberWalletToken();
     const res = await fetch(`/api/v1/members/${encodeURIComponent(reseller.uid)}/sync-credits`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
       body: JSON.stringify({
         session_credits: balance,
         email: reseller.email,
