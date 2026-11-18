@@ -1174,6 +1174,22 @@ async function performAtomicScanDeduct(
       const data = await res.json().catch(() => ({}));
       if (res.ok && data?.status === 'success') {
         const remaining = typeof data.remainingCredits === 'number' ? data.remainingCredits : 99;
+        if (targetReseller) {
+          const nowIso = new Date().toISOString();
+          const updatedReseller: Reseller = {
+            ...targetReseller,
+            creditsBalance: remaining,
+            totalScans: (targetReseller.totalScans || 0) + (data.isIdempotentReplay ? 0 : 1),
+            lastScanAt: nowIso,
+            updatedAt: nowIso,
+          };
+          const updatedResellers = [updatedReseller, ...allResellers.filter(r => r.uid !== updatedReseller.uid)];
+          saveLocalResellers(updatedResellers);
+          setActiveResellerSession(updatedReseller);
+          await syncMemberUserCredits(updatedReseller.uid, remaining, updatedResellers);
+          await pushCreditBalanceToServer(updatedReseller, remaining);
+        }
+        window.dispatchEvent(new CustomEvent('aurabio_credits_deducted', { detail: { remainingCredits: remaining } }));
         return {
           success: true,
           remainingCredits: remaining,
