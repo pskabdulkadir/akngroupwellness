@@ -92,6 +92,26 @@ export async function initPostgresDatabase(options: { applySchema?: boolean } = 
         event_data JSONB NOT NULL DEFAULT '{}'::jsonb
       );
       CREATE INDEX IF NOT EXISTS idx_accounting_events_created_at ON accounting_events(created_at DESC);
+      CREATE TABLE IF NOT EXISTS accounting_bank_accounts (
+        account_id VARCHAR(64) PRIMARY KEY,
+        bank_name VARCHAR(200) NOT NULL,
+        currency VARCHAR(10) NOT NULL,
+        iban_masked VARCHAR(64) NOT NULL DEFAULT '',
+        balance NUMERIC(15,2),
+        last_sync_at TIMESTAMP WITH TIME ZONE NOT NULL,
+        open_banking_status VARCHAR(20) NOT NULL DEFAULT 'IMPORTED'
+      );
+      CREATE TABLE IF NOT EXISTS accounting_bank_transactions (
+        transaction_id VARCHAR(64) PRIMARY KEY,
+        account_id VARCHAR(64) NOT NULL REFERENCES accounting_bank_accounts(account_id),
+        transaction_date DATE NOT NULL,
+        currency VARCHAR(10) NOT NULL,
+        amount NUMERIC(15,2) NOT NULL,
+        transaction_data JSONB NOT NULL,
+        created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+      CREATE INDEX IF NOT EXISTS idx_accounting_bank_transactions_date ON accounting_bank_transactions(transaction_date DESC);
+      CREATE INDEX IF NOT EXISTS idx_accounting_bank_transactions_account ON accounting_bank_transactions(account_id, transaction_date DESC);
     `);
     isPostgresAvailable = true;
     return true;

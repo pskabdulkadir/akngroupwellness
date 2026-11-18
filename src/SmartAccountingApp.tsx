@@ -205,6 +205,7 @@ export default function SmartAccountingApp({
   const [ossRecords, setOssRecords] = useState<OssDeclarationRecord[]>(() => []);
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>(() => INITIAL_BANK_ACCOUNTS);
   const [bankTransactions, setBankTransactions] = useState<BankTransaction[]>(() => []);
+  const [bankCashFlowTotals, setBankCashFlowTotals] = useState<Array<{ currency: string; incoming: number; outgoing: number }>>([]);
   const [expenses, setExpenses] = useState<ExpenseRecord[]>(() => []);
   const [payroll, setPayroll] = useState<PayrollRecord[]>(() => []);
   const [reconciliations, setReconciliations] = useState<B2BReconciliation[]>(() => []);
@@ -308,6 +309,9 @@ export default function SmartAccountingApp({
         setAccountingOrders(Array.isArray(data.orders) ? data.orders : []);
         setAccountingEvents(Array.isArray(data.accounting_events) ? data.accounting_events : []);
         setTaxRefundInvoices(Array.isArray(data.tax_refund_invoices) ? data.tax_refund_invoices : []);
+        setBankAccounts(Array.isArray(data.bank_accounts) ? data.bank_accounts : []);
+        setBankTransactions(Array.isArray(data.bank_transactions) ? data.bank_transactions : []);
+        setBankCashFlowTotals(Array.isArray(data.bank_cash_flow_totals) ? data.bank_cash_flow_totals : []);
 
         // 1. Üyelerden Bayi Listesini Güncelle
         if (Array.isArray(data.members) && data.members.length > 0) {
@@ -1055,9 +1059,8 @@ export default function SmartAccountingApp({
             <OpenBankingView
               bankAccounts={bankAccounts}
               transactions={bankTransactions}
-              onReconcileTransaction={(txId) => {
-                alert(`İşlem #${txId} Yevmiye Defteri 102.01 fişi ile eşleştirildi ve mutabakat sağlandı.`);
-              }}
+              cashFlowTotals={bankCashFlowTotals}
+              onImportCompleted={fetchLiveAccountingData}
             />
           )}
 

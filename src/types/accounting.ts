@@ -196,9 +196,9 @@ export interface BankAccount {
   accountNumber: string;
   iban: string;
   currency: Currency;
-  balance: number;
+  balance: number | null;
   lastSyncAt: string;
-  openBankingStatus: 'CONNECTED' | 'SYNCING' | 'ERROR';
+  openBankingStatus: 'CONNECTED' | 'SYNCING' | 'ERROR' | 'IMPORTED';
 }
 
 export interface BankTransaction {
@@ -210,7 +210,7 @@ export interface BankTransaction {
   amount: number;
   currency: Currency;
   flow: 'GIRIS_INFLOW' | 'CIKIS_OUTFLOW';
-  category: 'SANAL_POS_TAHSILAT' | 'BAYI_KOMISYON_EFT' | 'SWIFT_DOVIZ' | 'VERGI_ODEME' | 'GENEL_GIDER';
+  category: 'SANAL_POS_TAHSILAT' | 'BAYI_KOMISYON_EFT' | 'SWIFT_DOVIZ' | 'VERGI_ODEME' | 'GENEL_GIDER' | 'UNCATEGORIZED';
   counterparty: string;
   matchedLedgerEntryId?: string;
   matchStatus: 'MUTABIK' | 'ESLESTI' | 'ESLESMEDI';
@@ -609,5 +609,3 @@ export interface PendingPayoutItem {
   release_at: string;
   status: 'QUEUED' | 'READY_FOR_PAYOUT' | 'PAID_SETTLED';
 }
-
-

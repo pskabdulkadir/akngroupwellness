@@ -52,28 +52,7 @@ export const INITIAL_REFUNDS: RefundRecord[] = [];
 
 export const INITIAL_OSS_RECORDS: OssDeclarationRecord[] = [];
 
-export const INITIAL_BANK_ACCOUNTS: BankAccount[] = [
-  {
-    id: 'bank-01',
-    bankName: 'Garanti BBVA - Şirket Ana Tahsilat',
-    accountNumber: '6200142',
-    iban: 'TR33 0006 2000 0000 0123 4567 89',
-    currency: 'USD',
-    balance: 0.0,
-    lastSyncAt: new Date().toISOString().slice(0, 16).replace('T', ' '),
-    openBankingStatus: 'CONNECTED',
-  },
-  {
-    id: 'bank-02',
-    bankName: 'Akbank T.A.Ş. - Uluslararası İhracat USD',
-    accountNumber: '4820194',
-    iban: 'TR44 0004 6000 0000 0987 6543 21',
-    currency: 'USD',
-    balance: 0.0,
-    lastSyncAt: new Date().toISOString().slice(0, 16).replace('T', ' '),
-    openBankingStatus: 'CONNECTED',
-  },
-];
+export const INITIAL_BANK_ACCOUNTS: BankAccount[] = [];
 
 export const INITIAL_BANK_TRANSACTIONS: BankTransaction[] = [];
 

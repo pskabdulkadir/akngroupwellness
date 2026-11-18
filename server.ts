@@ -11753,15 +11753,146 @@ async function startServer(options: { listen?: boolean } = {}) {
     }
   });
 
+  app.get('/api/v1/accounting/bank-statements', requireAccountingOrAdmin, async (_req, res) => {
+    try {
+      const [accountRows, transactionRows, flowRows] = await Promise.all([
+        pgQuery('SELECT account_id, bank_name, currency, iban_masked, balance, last_sync_at, open_banking_status FROM accounting_bank_accounts ORDER BY bank_name'),
+        pgQuery('SELECT transaction_data FROM accounting_bank_transactions ORDER BY transaction_date DESC, transaction_id DESC LIMIT 10000'),
+        pgQuery(`SELECT currency,
+          SUM(CASE WHEN transaction_data->>'flow' = 'GIRIS_INFLOW' THEN amount ELSE 0 END) AS incoming,
+          SUM(CASE WHEN transaction_data->>'flow' = 'CIKIS_OUTFLOW' THEN amount ELSE 0 END) AS outgoing
+          FROM accounting_bank_transactions GROUP BY currency`),
+      ]);
+      const accounts = (accountRows?.rows || []).map((row: any) => ({
+        id: row.account_id,
+        bankName: row.bank_name,
+        accountNumber: '',
+        iban: row.iban_masked || '',
+        currency: row.currency,
+        balance: row.balance === null ? null : Number(row.balance),
+        lastSyncAt: new Date(row.last_sync_at).toISOString(),
+        openBankingStatus: row.open_banking_status,
+      }));
+      const transactions = (transactionRows?.rows || []).map((row: any) => row.transaction_data);
+      const cash_flow_totals = (flowRows?.rows || []).map((row: any) => ({
+        currency: row.currency,
+        incoming: Number(row.incoming) || 0,
+        outgoing: Number(row.outgoing) || 0,
+      }));
+      res.json({ status: 'success', bank_accounts: accounts, bank_transactions: transactions, cash_flow_totals });
+    } catch (error: any) {
+      res.status(503).json({ status: 'error', message: 'Banka ekstresi kayıtları okunamadı.' });
+    }
+  });
+
+  app.post('/api/v1/accounting/bank-statements', requireAccountingOrAdmin, async (req, res) => {
+    const account = req.body?.account;
+    const transactions = req.body?.transactions;
+    const currencies = ['TRY', 'USD', 'EUR'];
+    const categories = ['SANAL_POS_TAHSILAT', 'BAYI_KOMISYON_EFT', 'SWIFT_DOVIZ', 'VERGI_ODEME', 'GENEL_GIDER', 'UNCATEGORIZED'];
+    if (!account || typeof account.bankName !== 'string' || !account.bankName.trim() ||
+        typeof account.accountReference !== 'string' || !account.accountReference.trim() ||
+        !currencies.includes(account.currency) ||
+        (account.ibanLast4 !== undefined && account.ibanLast4 !== '' && !/^[0-9]{4}$/.test(String(account.ibanLast4))) ||
+        !Array.isArray(transactions) || transactions.length === 0 || transactions.length > 5000) {
+      res.status(400).json({ status: 'error', message: 'Banka adı, hesap etiketi, döviz ve 1–5000 hareket gereklidir.' });
+      return;
+    }
+    if (account.balance !== null && account.balance !== undefined && (!Number.isFinite(Number(account.balance)) || Math.abs(Number(account.balance)) >= 1e13)) {
+      res.status(400).json({ status: 'error', message: 'Ekstre kapanış bakiyesi geçersiz.' });
+      return;
+    }
+
+    const normalizedTransactions: any[] = [];
+    for (const [index, row] of transactions.entries()) {
+      const date = String(row?.date || '');
+      const amount = Number(row?.amount);
+      const dateParts = date.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      const parsedDate = dateParts ? new Date(Date.UTC(Number(dateParts[1]), Number(dateParts[2]) - 1, Number(dateParts[3]))) : null;
+      const validDate = Boolean(dateParts && parsedDate && parsedDate.getUTCFullYear() === Number(dateParts[1]) && parsedDate.getUTCMonth() + 1 === Number(dateParts[2]) && parsedDate.getUTCDate() === Number(dateParts[3]));
+      if (!validDate ||
+          !Number.isFinite(amount) || amount <= 0 || roundCurrency(amount) <= 0 || amount >= 1e13 ||
+          !['GIRIS_INFLOW', 'CIKIS_OUTFLOW'].includes(row?.flow) ||
+          !currencies.includes(row?.currency || account.currency) ||
+          typeof row?.description !== 'string' || !row.description.trim() ||
+          !categories.includes(row?.category)) {
+        res.status(400).json({ status: 'error', message: `${index + 1}. ekstre satırı geçersiz.` });
+        return;
+      }
+      normalizedTransactions.push({
+        date,
+        amount: roundCurrency(amount),
+        currency: row.currency || account.currency,
+        flow: row.flow,
+        description: row.description.trim().slice(0, 500),
+        counterparty: String(row.counterparty || '').trim().slice(0, 200),
+        category: row.category,
+        matchStatus: 'ESLESMEDI',
+      });
+    }
+
+    const bankName = account.bankName.trim().slice(0, 200);
+    const accountReference = account.accountReference.trim().slice(0, 120);
+    const currency = account.currency;
+    const accountId = createHash('sha256').update(`${bankName.toLocaleLowerCase('tr-TR')}|${accountReference.toLocaleLowerCase('tr-TR')}|${currency}`).digest('hex');
+    const maskedIban = String(account.ibanLast4 || '');
+    const ibanDisplay = /^[0-9]{4}$/.test(maskedIban) ? `•••• ${maskedIban}` : '';
+    const importOccurrence = new Map<string, number>();
+    const rowsWithIds = normalizedTransactions.map((row) => {
+      const signature = createHash('sha256').update(JSON.stringify([accountId, row.date, row.amount, row.currency, row.flow, row.description, row.counterparty])).digest('hex');
+      const occurrence = importOccurrence.get(signature) || 0;
+      importOccurrence.set(signature, occurrence + 1);
+      const id = createHash('sha256').update(`${signature}:${occurrence}`).digest('hex');
+      return { ...row, id, bankAccountId: accountId, bankName, matchedLedgerEntryId: undefined };
+    });
+
+    try {
+      const result = await withTransaction(async (client) => {
+        await client.query(
+          `INSERT INTO accounting_bank_accounts (account_id, bank_name, currency, iban_masked, balance, last_sync_at, open_banking_status)
+           VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP, 'IMPORTED')
+           ON CONFLICT (account_id) DO UPDATE SET bank_name = EXCLUDED.bank_name,
+             iban_masked = EXCLUDED.iban_masked, balance = EXCLUDED.balance,
+             last_sync_at = EXCLUDED.last_sync_at, open_banking_status = 'IMPORTED'`,
+          [accountId, bankName, currency, ibanDisplay, account.balance ?? null]
+        );
+        const inserted = await client.query(
+          `INSERT INTO accounting_bank_transactions (transaction_id, account_id, transaction_date, currency, amount, transaction_data)
+           SELECT x.id, $1, x.date, x.currency, x.amount, x.transaction_data
+           FROM jsonb_to_recordset($2::jsonb) AS x(id text, date date, currency text, amount numeric, transaction_data jsonb)
+           ON CONFLICT (transaction_id) DO NOTHING`,
+          [accountId, JSON.stringify(rowsWithIds.map((row) => ({
+            id: row.id,
+            date: row.date,
+            currency: row.currency,
+            amount: row.amount,
+            transaction_data: row,
+          })))]
+        );
+        return { insertedCount: inserted.rowCount || 0 };
+      });
+      res.json({ status: 'success', inserted_count: result.insertedCount, duplicate_count: rowsWithIds.length - result.insertedCount });
+    } catch (error: any) {
+      console.error('[Accounting bank statement import]:', error?.message);
+      res.status(503).json({ status: 'error', message: 'Banka ekstresi PostgreSQL’e kaydedilemedi.' });
+    }
+  });
+
   // 8. Gerçek Muhasebe ve Yevmiye Entegrasyonu Uç Noktası (Real PostgreSQL Ledger Data)
   app.get('/api/v1/integrations/accounting/sync-data', requireAccountingOrAdmin, async (_req, res) => {
     try {
-      const [stateMembers, ordersRes, commRes, journalRes, accountingEventsRes] = await Promise.all([
+      const [stateMembers, ordersRes, commRes, journalRes, accountingEventsRes, bankAccountsRes, bankTransactionsRes, bankFlowRes] = await Promise.all([
         queryMembersFromPostgres(),
         pgQuery('SELECT * FROM orders_log ORDER BY created_at DESC LIMIT 200'),
         pgQuery('SELECT * FROM commission_logs ORDER BY created_at DESC LIMIT 500'),
         pgQuery('SELECT * FROM journal_entries ORDER BY created_at DESC, id DESC LIMIT 1000'),
         pgQuery('SELECT * FROM accounting_events ORDER BY created_at DESC LIMIT 500'),
+        pgQuery('SELECT account_id, bank_name, currency, iban_masked, balance, last_sync_at, open_banking_status FROM accounting_bank_accounts ORDER BY bank_name'),
+        pgQuery('SELECT transaction_data FROM accounting_bank_transactions ORDER BY transaction_date DESC, transaction_id DESC LIMIT 10000'),
+        pgQuery(`SELECT currency,
+          SUM(CASE WHEN transaction_data->>'flow' = 'GIRIS_INFLOW' THEN amount ELSE 0 END) AS incoming,
+          SUM(CASE WHEN transaction_data->>'flow' = 'CIKIS_OUTFLOW' THEN amount ELSE 0 END) AS outgoing
+          FROM accounting_bank_transactions GROUP BY currency`),
       ]);
       const canonicalMembers = stateMembers.map((m) => ({
         user_id: m.user_id,
@@ -11807,6 +11938,22 @@ async function startServer(options: { listen?: boolean } = {}) {
           amount: Number(row.amount),
           currency: row.currency,
           created_at: row.created_at,
+        })),
+        bank_accounts: (bankAccountsRes?.rows || []).map((row: any) => ({
+          id: row.account_id,
+          bankName: row.bank_name,
+          accountNumber: '',
+          iban: row.iban_masked || '',
+          currency: row.currency,
+          balance: row.balance === null ? null : Number(row.balance),
+          lastSyncAt: new Date(row.last_sync_at).toISOString(),
+          openBankingStatus: row.open_banking_status,
+        })),
+        bank_transactions: (bankTransactionsRes?.rows || []).map((row: any) => row.transaction_data),
+        bank_cash_flow_totals: (bankFlowRes?.rows || []).map((row: any) => ({
+          currency: row.currency,
+          incoming: Number(row.incoming) || 0,
+          outgoing: Number(row.outgoing) || 0,
         })),
         expense_vouchers: (await pgQuery('SELECT voucher_data FROM expense_vouchers ORDER BY created_at DESC, id DESC'))?.rows.map((row: any) => row.voucher_data).filter((row: any) => row && Object.keys(row).length > 0) || [],
         payout_batches: (await pgQuery('SELECT batch_data FROM payout_batches ORDER BY created_at DESC'))?.rows.map((row: any) => row.batch_data).filter((row: any) => row && Object.keys(row).length > 0) || [],

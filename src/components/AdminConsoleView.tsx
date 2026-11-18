@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   AlertTriangle,
   ArrowDown,
@@ -62,6 +62,7 @@ import {
   PackageId,
   PoolDistributionRecord,
   SystemDistributionParameters,
+  SystemStateResponse,
   SystemWalletRecord,
   TaxRefundInvoiceRecord,
   UserRewardRecord,
@@ -73,6 +74,7 @@ import {
 import { getAdminToken } from '../utils/adminSession';
 import { getMemberRegionalPendingUsd, getMemberRegionalUsdBalance } from '../utils/walletRegion';
 import { BUSINESS_RULES } from '../config/businessRules';
+import type { BankAccount } from '../types/accounting';
 import { CommissionEngineSettingsView } from './CommissionEngineSettingsView';
 
 export type AdminConsoleSection =
@@ -110,6 +112,7 @@ interface AdminConsoleViewProps {
   webhookLogs: WebhookLogRecord[];
   commissionLogs: CommissionLogRecord[];
   systemWallet?: SystemWalletRecord;
+  systemMetrics: SystemStateResponse['system_metrics'];
   ordersLog?: OrderLogRecord[];
   cronLogs: CronJobExecutionRecord[];
   poolDistributions: PoolDistributionRecord[];
@@ -265,6 +268,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
   webhookLogs,
   commissionLogs,
   systemWallet,
+  systemMetrics,
   ordersLog = [],
   cronLogs,
   poolDistributions,
@@ -299,6 +303,36 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
   const [accountingPassword, setAccountingPassword] = useState('');
   const [accountingCredentialMessage, setAccountingCredentialMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [isSavingAccountingCredentials, setIsSavingAccountingCredentials] = useState(false);
+  const [financeSearch, setFinanceSearch] = useState('');
+  const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
+  const [bankCashFlowTotals, setBankCashFlowTotals] = useState<Array<{ currency: string; incoming: number; outgoing: number }>>([]);
+
+  useEffect(() => {
+    if (adminSection !== 'finance' && adminSection !== 'tax_refunds') return;
+    let active = true;
+    const loadBankStatements = async () => {
+      try {
+        const response = await fetch('/api/v1/accounting/bank-statements');
+        if (!response.ok) return;
+        const data = await response.json();
+        if (active) {
+          setBankAccounts(Array.isArray(data.bank_accounts) ? data.bank_accounts : []);
+          setBankCashFlowTotals(Array.isArray(data.cash_flow_totals) ? data.cash_flow_totals : []);
+        }
+      } catch {
+        if (active) {
+          setBankAccounts([]);
+          setBankCashFlowTotals([]);
+        }
+      }
+    };
+    void loadBankStatements();
+    const interval = window.setInterval(() => void loadBankStatements(), 15000);
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+    };
+  }, [adminSection]);
 
   React.useEffect(() => {
     fetch('/api/v1/admin/exchange-rate', {
@@ -901,6 +935,70 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
   }, [careerTiers]);
 
   const sortedMembers = [...members].sort((a, b) => a.global_line_id - b.global_line_id);
+  const bankBalancesByCurrency = bankAccounts.reduce<Record<string, number>>((totals, account) => {
+    if (account.balance !== null) totals[account.currency] = (totals[account.currency] || 0) + account.balance;
+    return totals;
+  }, {});
+  const totalAvailableWalletBalance = members.reduce((sum, member) => sum + getMemberRegionalUsdBalance(member), 0);
+  const totalMemberEarnings = systemMetrics.total_field_payout_amount ?? members.reduce((sum, member) => sum + member.wallets.total_earnings, 0);
+  const companyRemainderBeforeCosts = systemMetrics.total_order_volume - totalMemberEarnings;
+  const formatFinanceAmount = (amount: number) =>
+    `${amount.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $`;
+  const directSponsorRate = distributionParams.direct_sponsor_percent ?? BUSINESS_RULES.DIRECT_SPONSOR_BONUS_PERCENT;
+  const systemFundRate = distributionParams.system_fund_percent ?? BUSINESS_RULES.SYSTEM_FUND_PERCENT;
+  const unilevelRates = distributionParams.unilevel_depth_percentages ?? BUSINESS_RULES.UNILEVEL_DEPTH_PERCENTAGES;
+  const monolineRates = distributionParams.monoline_incentive_percentages ?? BUSINESS_RULES.MONOLINE_INCENTIVE_PERCENTAGES;
+  const commissionRateRows = [
+    { engine: 'Direkt sponsor', level: 'Doğrudan', rate: directSponsorRate },
+    ...unilevelRates.map((rate, index) => ({ engine: 'Unilevel', level: `${index + 1}. derinlik`, rate })),
+    ...monolineRates.map((rate, index) => ({ engine: 'Monoline teşvik', level: `${index + 1}. sıra`, rate })),
+    { engine: 'Sistem fonu', level: 'Sipariş başı', rate: systemFundRate },
+  ];
+  const plannedCommissionRate = commissionRateRows.reduce((sum, row) => sum + row.rate, 0);
+  const financeRows = sortedMembers.map((member) => {
+    const fastRoi = member.wallets.fast_roi_wallet || 0;
+    const matching = member.wallets.matching_wallet || 0;
+    const breakdown = [
+      Math.max(0, (member.wallets.sponsor_wallet || 0) - fastRoi),
+      fastRoi,
+      member.wallets.unilevel_wallet || 0,
+      member.wallets.monoline_incentive_wallet || 0,
+      member.wallets.infinity_wallet || 0,
+      matching,
+      Math.max(0, (member.wallets.career_pool_wallet || 0) - matching),
+    ];
+    const total = member.wallets.total_earnings || 0;
+    return {
+      member,
+      breakdown,
+      other: Math.max(0, total - breakdown.reduce((sum, amount) => sum + amount, 0)),
+      total,
+    };
+  });
+  const visibleFinanceRows = financeRows.filter(({ member }) => {
+    const search = financeSearch.trim().toLocaleLowerCase('tr-TR');
+    return !search || `${member.full_name} ${member.user_id} ${member.ref_code}`.toLocaleLowerCase('tr-TR').includes(search);
+  });
+  const financeCategoryTotals = financeRows.reduce(
+    (totals, row) => {
+      row.breakdown.forEach((amount, index) => {
+        totals[index] = (totals[index] || 0) + amount;
+      });
+      totals[7] = (totals[7] || 0) + row.other;
+      return totals;
+    },
+    [] as number[]
+  );
+  const financeCategoryLabels = [
+    'Sponsor ve başlangıç bonusları',
+    'FAST-ROI',
+    'Unilevel',
+    'Monoline teşvik',
+    'Unilevel Infinity',
+    'Liderlik eşleşme',
+    'Kariyer/havuz ödülleri',
+    'Diğer kazanım/düzeltme',
+  ];
 
   const handleSaveCareerTiers = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -3217,6 +3315,191 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
       {/* SECTION 2: FİNANS, KOMİSYON ÇEKİM & %20 VERGİ İADESİ (FATURA ONAY) YÖNETİMİ */}
       {(adminSection === 'finance' || adminSection === 'tax_refunds') && (
         <div className="space-y-8">
+          <section className="space-y-5 rounded-2xl border border-indigo-200 bg-white p-4 shadow-2xs sm:p-6" aria-label="Şirket ve bayi finans özeti">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <div className="text-xs font-bold uppercase tracking-wider text-indigo-700">Yönetici finans ve cüzdan mutabakatı</div>
+                <h3 className="mt-1 text-lg font-bold text-slate-900">Şirket payı, komisyonlar ve bayi hakedişleri</h3>
+                <p className="mt-1 max-w-4xl text-xs leading-relaxed text-slate-600">
+                  Kümülatif kazanımlar; bekleyen ve çekilebilir bakiyelerden ayrıdır. Sistem ve devir havuzları ayrı defter alanlarıdır; mükerrer sayım olmaması için toplanmaz. Şirket banka hesabı bu ekrana bağlı değildir.
+                </p>
+              </div>
+              <div className="shrink-0 rounded-lg bg-slate-100 px-3 py-2 text-xs font-medium text-slate-600">
+                {systemMetrics.total_orders_count.toLocaleString('tr-TR')} işlem · {formatFinanceAmount(systemMetrics.total_order_volume)} kayıtlı ciro
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <div className="text-xs text-slate-500">Bayi toplam kazanımı</div>
+                <div className="mt-1 text-xl font-bold tabular-nums text-slate-900">{formatFinanceAmount(totalMemberEarnings)}</div>
+                <div className="mt-1 text-[11px] text-slate-500">Tüm üyelerin kümülatif hakedişi</div>
+              </div>
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+                <div className="text-xs text-amber-800">14 günlük bekleyen komisyon</div>
+                <div className="mt-1 text-xl font-bold tabular-nums text-amber-950">{formatFinanceAmount(systemMetrics.total_pending_clawback_balance || 0)}</div>
+                <div className="mt-1 text-[11px] text-amber-800">Vadesi gelince çekilebilir bakiyeye aktarılır</div>
+              </div>
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+                <div className="text-xs text-emerald-800">Bayi çekilebilir bakiyeleri</div>
+                <div className="mt-1 text-xl font-bold tabular-nums text-emerald-950">{formatFinanceAmount(totalAvailableWalletBalance)}</div>
+                <div className="mt-1 text-[11px] text-emerald-800">Bölgesel cüzdanların güncel toplamı</div>
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <div className="text-xs text-slate-500">Bayilere ödenmiş/çekilmiş</div>
+                <div className="mt-1 text-xl font-bold tabular-nums text-slate-900">{formatFinanceAmount(systemMetrics.total_withdrawn_amount)}</div>
+                <div className="mt-1 text-[11px] text-slate-500">Onaylanmış çekimlerin kümülatif tutarı</div>
+              </div>
+              <div className="rounded-xl border border-rose-200 bg-rose-50 p-4">
+                <div className="text-xs text-rose-800">Çekim onayı bekleyen</div>
+                <div className="mt-1 text-xl font-bold tabular-nums text-rose-950">{formatFinanceAmount(systemMetrics.pending_withdrawals_amount)}</div>
+                <div className="mt-1 text-[11px] text-rose-800">{systemMetrics.pending_withdrawals_count} talep</div>
+              </div>
+              <div className="rounded-xl border border-indigo-200 bg-indigo-50 p-4">
+                <div className="text-xs text-indigo-800">Sistem/kariyer fonu bakiyesi</div>
+                <div className="mt-1 text-xl font-bold tabular-nums text-indigo-950">{formatFinanceAmount(systemWallet?.system_pool_balance ?? systemFundBalance)}</div>
+                <div className="mt-1 text-[11px] text-indigo-800">İç sistem fonu; banka bakiyesi değildir</div>
+              </div>
+              <div className="rounded-xl border border-orange-200 bg-orange-50 p-4">
+                <div className="text-xs text-orange-800">Dağıtım bekleyen devir havuzu</div>
+                <div className="mt-1 text-xl font-bold tabular-nums text-orange-950">{formatFinanceAmount(systemWallet?.unclaimed_pool_balance || 0)}</div>
+                <div className="mt-1 text-[11px] text-orange-800">Sistem fonu bakiyesine ekleyerek toplam hesaplamayın</div>
+              </div>
+              <div className="rounded-xl border border-violet-200 bg-violet-50 p-4">
+                <div className="text-xs text-violet-800">Sistem fonu kümülatif girişi</div>
+                <div className="mt-1 text-xl font-bold tabular-nums text-violet-950">{formatFinanceAmount(systemMetrics.system_career_fund_cumulative)}</div>
+                <div className="mt-1 text-[11px] text-violet-800">Mevcut havuz bakiyesinden ayrı sayaç</div>
+              </div>
+              <div className="rounded-xl border border-fuchsia-200 bg-fuchsia-50 p-4">
+                <div className="text-xs text-fuchsia-800">Kaydedilen vergi kesintileri</div>
+                <div className="mt-1 text-xl font-bold tabular-nums text-fuchsia-950">{formatFinanceAmount(systemMetrics.total_tax_withheld_amount || 0)}</div>
+                <div className="mt-1 text-[11px] text-fuchsia-800">Vergi iadesi talepleri ayrıca izlenir</div>
+              </div>
+              <div className={`rounded-xl border p-4 ${companyRemainderBeforeCosts < 0 ? 'border-red-200 bg-red-50' : 'border-cyan-200 bg-cyan-50'}`}>
+                <div className="text-xs text-cyan-900">Ciro − bayi toplam kazanımı</div>
+                <div className="mt-1 text-xl font-bold tabular-nums text-slate-950">{formatFinanceAmount(companyRemainderBeforeCosts)}</div>
+                <div className="mt-1 text-[11px] text-cyan-900">Gider/vergi öncesi gösterge; net kâr değildir</div>
+              </div>
+            </div>
+
+            <section className="rounded-xl border border-sky-200 bg-sky-50 p-4" aria-label="Banka ekstresi mutabakatı">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <h4 className="text-sm font-bold text-sky-950">Banka ekstresi nakit akışı</h4>
+                  <p className="mt-1 text-[11px] text-sky-800">İçe aktarılan ekstrelerin kümülatif giriş − çıkışı; muhasebe net kârı değildir.</p>
+                </div>
+                <span className="text-xs font-semibold text-sky-900">{bankAccounts.length} hesap</span>
+              </div>
+              {bankCashFlowTotals.length === 0 ? (
+                <p className="mt-3 rounded-lg bg-white/70 p-3 text-xs text-slate-600">Henüz ekstre içe aktarılmadı; banka bakiyesi/net nakit akışı gösterilmiyor.</p>
+              ) : (
+                <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
+                  {bankCashFlowTotals.map(({ currency, incoming, outgoing }) => (
+                    <div key={currency} className="rounded-lg bg-white/80 p-3">
+                      <div className="text-[11px] text-slate-500">Net hareket · {currency}</div>
+                      <div className="mt-1 font-mono text-base font-bold text-slate-950">{(incoming - outgoing).toLocaleString('tr-TR', { minimumFractionDigits: 2 })} {currency}</div>
+                      <div className="mt-1 text-[10px] text-slate-500">Giriş {incoming.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} · Çıkış {outgoing.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}</div>
+                      {bankBalancesByCurrency[currency] !== undefined && <div className="mt-1 text-[10px] font-semibold text-sky-900">Son aktarılan kapanış bakiyesi: {bankBalancesByCurrency[currency].toLocaleString('tr-TR', { minimumFractionDigits: 2 })} {currency}</div>}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-8">
+              {financeCategoryLabels.map((label, index) => (
+                <div key={label} className="min-w-0 rounded-lg border border-slate-200 bg-slate-50 p-3">
+                  <div className="text-[10px] leading-snug text-slate-500">{label}</div>
+                  <div className="mt-1 truncate font-mono text-xs font-bold tabular-nums text-slate-900">{formatFinanceAmount(financeCategoryTotals[index] || 0)}</div>
+                </div>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
+              <div className="min-w-0 rounded-xl border border-slate-200 p-4">
+                <div className="mb-3">
+                  <h4 className="text-sm font-bold text-slate-900">Sipariş başına dağıtım oranları</h4>
+                  <p className="mt-1 text-[11px] text-slate-500">Gerçek ödeme; aktiflik, kariyer derinliği, iade ve havuza devir durumlarına göre değişebilir.</p>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[420px] text-left text-xs">
+                    <thead><tr className="border-b border-slate-200 text-slate-500"><th className="py-2 pr-2">Kalem</th><th className="py-2 px-2">Kademe</th><th className="py-2 px-2 text-right">Oran</th><th className="py-2 pl-2 text-right">Ciroya göre teorik</th></tr></thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {commissionRateRows.map((row) => (
+                        <tr key={`${row.engine}-${row.level}`}>
+                          <td className="py-2 pr-2 font-medium text-slate-800">{row.engine}</td>
+                          <td className="py-2 px-2 text-slate-600">{row.level}</td>
+                          <td className="py-2 px-2 text-right font-mono font-bold text-indigo-700">%{row.rate.toLocaleString('tr-TR', { maximumFractionDigits: 2 })}</td>
+                          <td className="py-2 pl-2 text-right font-mono text-slate-700">{formatFinanceAmount(systemMetrics.total_order_volume * row.rate / 100)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot><tr className="border-t-2 border-slate-200 font-bold"><td className="py-2" colSpan={2}>Temel oran toplamı</td><td className="py-2 px-2 text-right">%{plannedCommissionRate.toLocaleString('tr-TR', { maximumFractionDigits: 2 })}</td><td className="py-2 pl-2 text-right">{formatFinanceAmount(systemMetrics.total_order_volume * plannedCommissionRate / 100)}</td></tr></tfoot>
+                  </table>
+                </div>
+              </div>
+
+              <div className="min-w-0 rounded-xl border border-slate-200 p-4">
+                <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-900">Bayi bazında cüzdan ve komisyon dökümü</h4>
+                    <p className="mt-1 text-[11px] text-slate-500">Alt kalemler üst sayaçlarla çakışmayacak şekilde ayrıştırılır.</p>
+                  </div>
+                  <input value={financeSearch} onChange={(event) => setFinanceSearch(event.target.value)} placeholder="Bayi, ID veya referans ara" className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs sm:max-w-64" />
+                </div>
+                <div className="max-h-[32rem] overflow-auto rounded-lg border border-slate-200">
+                  <table className="w-full min-w-[1500px] text-left text-[11px] tabular-nums">
+                    <thead className="sticky top-0 bg-slate-100 text-slate-600"><tr>
+                      <th className="p-2">Bayi / ID</th><th className="p-2 text-right">Sponsor</th><th className="p-2 text-right">FAST-ROI</th><th className="p-2 text-right">Unilevel</th><th className="p-2 text-right">Monoline</th><th className="p-2 text-right">Infinity</th><th className="p-2 text-right">Eşleşme</th><th className="p-2 text-right">Kariyer/havuz</th><th className="p-2 text-right">Diğer</th><th className="p-2 text-right">Toplam kazanım</th><th className="p-2 text-right">Bekleyen</th><th className="p-2 text-right">Çekilebilir</th><th className="p-2 text-right">Çekilmiş</th>
+                    </tr></thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {visibleFinanceRows.map(({ member, breakdown, other, total }) => (
+                        <tr key={member.user_id} className="hover:bg-slate-50">
+                          <td className="p-2 font-semibold text-slate-800">{member.full_name}<span className="block font-normal text-slate-500">{member.user_id}</span></td>
+                          {breakdown.map((amount, index) => <td key={index} className="p-2 text-right">{formatFinanceAmount(amount)}</td>)}
+                          <td className="p-2 text-right">{formatFinanceAmount(other)}</td>
+                          <td className="p-2 text-right font-bold">{formatFinanceAmount(total)}</td>
+                          <td className="p-2 text-right text-amber-800">{formatFinanceAmount(getMemberRegionalPendingUsd(member))}</td>
+                          <td className="p-2 text-right text-emerald-800">{formatFinanceAmount(getMemberRegionalUsdBalance(member))}</td>
+                          <td className="p-2 text-right">{formatFinanceAmount(member.wallets.total_withdrawn)}</td>
+                        </tr>
+                      ))}
+                      {visibleFinanceRows.length === 0 && <tr><td colSpan={13} className="p-5 text-center text-slate-500">Aramaya uygun bayi bulunamadı.</td></tr>}
+                    </tbody>
+                  </table>
+                </div>
+                <p className="mt-2 text-[11px] text-slate-500">Toplam kazanım kümülatiftir; bekleyen, çekilebilir ve çekilmiş tutarlarla toplanmamalıdır. Çekimler toplam kazanım sayacından düşülmez.</p>
+              </div>
+            </div>
+
+            <div className="min-w-0 rounded-xl border border-slate-200 p-4">
+              <div className="mb-3">
+                <h4 className="text-sm font-bold text-slate-900">Son komisyon kayıtları</h4>
+                <p className="mt-1 text-[11px] text-slate-500">İşlem, hak sahibi, tutar, durum ve planlanan serbest bırakma zamanı.</p>
+              </div>
+              <div className="max-h-80 overflow-auto rounded-lg border border-slate-200">
+                <table className="w-full min-w-[900px] text-left text-[11px] tabular-nums">
+                  <thead className="sticky top-0 bg-slate-100 text-slate-600"><tr><th className="p-2">Bayi</th><th className="p-2">Kaynak işlem</th><th className="p-2">Komisyon</th><th className="p-2 text-right">Tutar</th><th className="p-2">Durum</th><th className="p-2">Serbest bırakma</th><th className="p-2">Kayıt zamanı</th></tr></thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {commissionLogs.slice(0, 50).map((log) => (
+                      <tr key={log.id}>
+                        <td className="p-2 font-medium text-slate-800">{log.target_user_name || log.target_external_id}</td>
+                        <td className="p-2 text-slate-600">{log.order_id}</td>
+                        <td className="p-2 text-slate-700">{log.commission_type}{log.depth_level ? ` · ${log.depth_level}. kademe` : ''}</td>
+                        <td className="p-2 text-right font-mono font-semibold">{formatFinanceAmount(log.amount_usd ?? log.amount)}</td>
+                        <td className="p-2 text-slate-700">{log.status || '—'}</td>
+                        <td className="p-2 text-slate-600">{log.release_at ? new Date(log.release_at).toLocaleString('tr-TR') : '—'}</td>
+                        <td className="p-2 text-slate-600">{new Date(log.created_at).toLocaleString('tr-TR')}</td>
+                      </tr>
+                    ))}
+                    {commissionLogs.length === 0 && <tr><td colSpan={7} className="p-5 text-center text-slate-500">Komisyon kaydı bulunmuyor.</td></tr>}
+                  </tbody>
+                </table>
+              </div>
+              <p className="mt-2 text-[11px] text-slate-500">Liste en son 50 kaydı gösterir; tüm kayıtlar SQL / komisyon günlüğü bölümünde incelenebilir.</p>
+            </div>
+          </section>
+
           {/* YÖNETİCİ PANELİ: %20 VERGİ İADESİ & YÜKLENEN BAYİ FATURALARI ONAY PANELİ */}
           <div className="min-w-0 bg-gradient-to-br from-emerald-950 via-slate-900 to-teal-950 text-white border-2 border-emerald-500/40 rounded-2xl p-4 sm:p-6 space-y-5 shadow-md">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-white/15 pb-4">

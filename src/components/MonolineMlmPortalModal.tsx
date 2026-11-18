@@ -456,8 +456,11 @@ export const MonolineMlmPortalModal: React.FC<MonolineMlmPortalModalProps> = ({
   const handleReleasePendingBalance = async (userId: string) => {
     setIsSubmitting(true);
     try {
+      const token = getAdminToken() || getMemberWalletToken();
+      if (!token) throw new Error('Güvenli oturum bulunamadı; yeniden giriş yapın.');
       const res = await fetch(`/api/v1/members/${userId}/release-pending`, {
         method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'İşlem başarısız.');
@@ -1520,6 +1523,7 @@ export const MonolineMlmPortalModal: React.FC<MonolineMlmPortalModalProps> = ({
                 webhookLogs={state.webhook_logs}
                 commissionLogs={state.commission_logs}
                 systemWallet={state.system_wallet}
+                systemMetrics={state.system_metrics}
                 ordersLog={state.orders_log}
                 cronLogs={state.cron_logs}
                 poolDistributions={state.pool_distributions}
