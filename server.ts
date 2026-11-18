@@ -4959,9 +4959,11 @@ async function hydrateStateFromPostgres(): Promise<void> {
         loadedMembers.sort((a, b) => a.global_line_id - b.global_line_id);
         members = loadedMembers;
         const walletRows = await pgQuery('SELECT user_id, balance, pending_balance, total_withdrawn, total_earned, unilevel_earnings, monoline_incentive_earnings, wallet_data FROM wallets');
+        const persistedPendingBalances = new Map<string, number>();
         for (const row of walletRows?.rows || []) {
           const member = members.find((item) => item.user_id === row.user_id);
           if (!member) continue;
+          persistedPendingBalances.set(member.user_id, Number(row.pending_balance) || 0);
           const walletData = row.wallet_data && typeof row.wallet_data === 'object' ? row.wallet_data : {};
           member.wallets = { ...member.wallets, ...walletData };
           member.wallets.unilevel_wallet =
@@ -5034,6 +5036,34 @@ async function hydrateStateFromPostgres(): Promise<void> {
             created_at: row.created_at ? new Date(row.created_at).toISOString() : new Date().toISOString(),
           };
         });
+        const pendingByUserAndRegion = new Map<string, { domestic: number; international: number }>();
+        for (const log of commissionLogs) {
+          if (log.status !== 'PENDING_14D' && log.status !== 'FRAUD_REVIEW') continue;
+          const member = members.find((item) => item.user_id === log.target_external_id);
+          if (!member) continue;
+          const region = log.region ?? resolveMemberRegion(member.country_code);
+          const amount = log.amount_usd ?? toUsdForRegion(log.amount, region);
+          const pending = pendingByUserAndRegion.get(member.user_id) || { domestic: 0, international: 0 };
+          if (region === 'DOMESTIC') pending.domestic = roundCurrency(pending.domestic + amount);
+          else pending.international = roundCurrency(pending.international + amount);
+          pendingByUserAndRegion.set(member.user_id, pending);
+        }
+        for (const member of members) {
+          const loggedPending = pendingByUserAndRegion.get(member.user_id) || { domestic: 0, international: 0 };
+          const loggedPendingTotal = roundCurrency(loggedPending.domestic + loggedPending.international);
+          const pendingTotal = Math.max(
+            persistedPendingBalances.get(member.user_id) || 0,
+            loggedPendingTotal
+          );
+          const unloggedPending = roundCurrency(pendingTotal - loggedPendingTotal);
+          const defaultPendingRegion = resolveMemberRegion(member.country_code);
+          member.wallets.pending_domestic_usd = roundCurrency(
+            loggedPending.domestic + (defaultPendingRegion === 'DOMESTIC' ? unloggedPending : 0)
+          );
+          member.wallets.pending_international_usd = roundCurrency(
+            loggedPending.international + (defaultPendingRegion === 'INTERNATIONAL' ? unloggedPending : 0)
+          );
+        }
         const journalRows = await pgQuery('SELECT * FROM journal_entries ORDER BY created_at DESC, id DESC');
         if (journalRows?.rows.length) {
           journalEntries = journalRows.rows.map((row: any) => row.entry_data || {
