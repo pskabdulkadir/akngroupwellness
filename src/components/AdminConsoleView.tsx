@@ -1005,43 +1005,66 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
     await onUpdateCareers(editableTiers);
   };
 
-  const handleDownloadWithdrawalsCsv = () => {
-    const headers = [
-      'id',
-      'user_id',
-      'external_app_user_id',
-      'ad_soyad',
-      'monoline_position',
-      'career_title',
-      'amount',
-      'payout_method',
-      'payout_address',
-      'status',
-      'created_at',
-    ];
-    const rows = withdrawalRequests.map((w) => [
-      w.id,
-      w.user_id,
-      w.external_user_id,
-      `"${w.user_full_name}"`,
-      w.monoline_position,
-      `"${w.career_title}"`,
-      w.amount.toFixed(2),
-      w.payout_method,
-      `"${w.payout_address}"`,
-      w.status,
-      w.created_at,
-    ]);
-    const csvContent =
-      'data:text/csv;charset=utf-8,' +
-      [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `cekim_talepleri_${new Date().toISOString().slice(0, 10)}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const handleDownloadWithdrawalsCsv = async () => {
+    setIsDownloadingWithdrawalsCsv(true);
+    setWithdrawalCsvFeedback(null);
+    try {
+      const response = await fetch('/api/v1/admin/withdrawals', {
+        headers: { Authorization: `Bearer ${getAdminToken() || ''}` },
+        cache: 'no-store',
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.message || 'Çekim kayıtları alınamadı.');
+
+      const rows = Array.isArray(result.data) ? result.data : [];
+      if (rows.length === 0) {
+        setWithdrawalCsvFeedback('İndirilecek çekim kaydı bulunamadı.');
+        return;
+      }
+
+      const headers = [
+        'id',
+        'user_id',
+        'external_app_user_id',
+        'ad_soyad',
+        'monoline_position',
+        'career_title',
+        'amount',
+        'payout_method',
+        'payout_address',
+        'status',
+        'created_at',
+      ];
+      const escapeCsvValue = (value: unknown) => `"${String(value ?? '').replace(/"/g, '""')}"`;
+      const csvRows = rows.map((w: WithdrawalRequestRecord) => [
+        w.id,
+        w.user_id,
+        w.external_user_id,
+        w.user_full_name,
+        w.monoline_position,
+        w.career_title,
+        (w.gross_amount ?? w.amount).toFixed(2),
+        w.payout_method || w.method,
+        w.payout_address,
+        w.status,
+        w.created_at,
+      ]);
+      const csvContent = [headers, ...csvRows].map((row) => row.map(escapeCsvValue).join(',')).join('\r\n');
+      const blob = new Blob([`\uFEFF${csvContent}`], { type: 'text/csv;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `cekim_talepleri_${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+      setWithdrawalCsvFeedback(`${rows.length} çekim kaydı CSV dosyasına aktarıldı.`);
+    } catch (error: any) {
+      setWithdrawalCsvFeedback(error?.message || 'CSV indirilirken hata oluştu.');
+    } finally {
+      setIsDownloadingWithdrawalsCsv(false);
+    }
   };
 
   const handleDownloadMigrationSql = () => {
@@ -1099,6 +1122,8 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
   const [previewInvoice, setPreviewInvoice] = useState<TaxRefundInvoiceRecord | null>(null);
   const [taxRefundBusyId, setTaxRefundBusyId] = useState<number | null>(null);
   const [taxRefundFeedback, setTaxRefundFeedback] = useState<string | null>(null);
+  const [isDownloadingWithdrawalsCsv, setIsDownloadingWithdrawalsCsv] = useState(false);
+  const [withdrawalCsvFeedback, setWithdrawalCsvFeedback] = useState<string | null>(null);
 
   const handleDecideTaxRefund = async (
     invId: number,
@@ -3824,13 +3849,19 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
 
                 <button
                   type="button"
+                  disabled={isDownloadingWithdrawalsCsv}
                   onClick={handleDownloadWithdrawalsCsv}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-xl transition-colors cursor-pointer"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-xl transition-colors cursor-pointer disabled:opacity-50"
                 >
                   <Download className="w-4 h-4" />
-                  <span>Toplu Ödeme / CSV Çıktı Al</span>
+                  <span>{isDownloadingWithdrawalsCsv ? 'CSV Hazırlanıyor...' : 'Toplu Ödeme / CSV Çıktı Al'}</span>
                 </button>
               </div>
+              {withdrawalCsvFeedback && (
+                <p role="status" className="mt-2 text-xs font-medium text-slate-600">
+                  {withdrawalCsvFeedback}
+                </p>
+              )}
             </div>
 
             <div className="overflow-x-auto">
