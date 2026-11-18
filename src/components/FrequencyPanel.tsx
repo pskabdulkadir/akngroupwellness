@@ -76,7 +76,7 @@ export const FrequencyPanel: React.FC<FrequencyPanelProps> = ({
   });
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+    <div className="mx-auto min-w-0 max-w-7xl space-y-6 px-3 py-4 sm:px-6 sm:py-6 lg:px-8">
       
       {/* Top Navigation Bar with Back & Home Buttons */}
       <PageNavBar
@@ -132,7 +132,7 @@ export const FrequencyPanel: React.FC<FrequencyPanelProps> = ({
           <button
             key={cat}
             onClick={() => setSelectedCategory(cat)}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap transition-all border cursor-pointer ${
+            className={`min-h-11 px-3.5 py-2 rounded-xl text-xs font-medium whitespace-nowrap transition-all border cursor-pointer ${
               selectedCategory === cat
                 ? activeSubTab === 'esma'
                   ? 'bg-amber-500/20 text-amber-300 border-amber-500/50'
@@ -206,7 +206,7 @@ export const FrequencyPanel: React.FC<FrequencyPanelProps> = ({
                         details: esma,
                       });
                     }}
-                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shadow-md shadow-amber-500/20 transition-all hover:scale-105"
+                    className="flex min-h-11 items-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shadow-md shadow-amber-500/20 transition-all hover:scale-105"
                   >
                     <Play className="w-3.5 h-3.5 fill-current" />
                     <span>Frekans Yükle</span>
@@ -288,7 +288,7 @@ export const FrequencyPanel: React.FC<FrequencyPanelProps> = ({
                         details: ayet,
                       });
                     }}
-                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-teal-500 hover:bg-teal-400 text-slate-950 font-bold text-xs shadow-md shadow-teal-500/20 transition-all hover:scale-105"
+                    className="flex min-h-11 items-center gap-1.5 px-4 py-2 rounded-xl bg-teal-500 hover:bg-teal-400 text-slate-950 font-bold text-xs shadow-md shadow-teal-500/20 transition-all hover:scale-105"
                   >
                     <Play className="w-3.5 h-3.5 fill-current" />
                     <span>Frekansı Yükle</span>

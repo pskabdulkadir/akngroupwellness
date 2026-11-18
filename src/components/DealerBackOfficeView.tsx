@@ -1525,7 +1525,11 @@ export const DealerBackOfficeView: React.FC<DealerBackOfficeViewProps> = ({
       return member.wallets.unilevel_wallet;
     }
     return memberCommissionLogs
-      .filter((c) => c.commission_type === 'UNILEVEL_COMMISSION')
+      .filter(
+        (c) =>
+          c.commission_type === 'UNILEVEL_COMMISSION' &&
+          (c.status === 'RELEASED' || c.status === 'PENDING_14D')
+      )
       .reduce((sum, c) => sum + (c.amount || 0), 0);
   }, [member.wallets.unilevel_wallet, memberCommissionLogs]);
 
@@ -1534,7 +1538,11 @@ export const DealerBackOfficeView: React.FC<DealerBackOfficeViewProps> = ({
       return member.wallets.monoline_incentive_wallet;
     }
     return memberCommissionLogs
-      .filter((c) => c.commission_type === 'MONOLINE_INCENTIVE')
+      .filter(
+        (c) =>
+          c.commission_type === 'MONOLINE_INCENTIVE' &&
+          (c.status === 'RELEASED' || c.status === 'PENDING_14D')
+      )
       .reduce((sum, c) => sum + (c.amount || 0), 0);
   }, [member.wallets.monoline_incentive_wallet, memberCommissionLogs]);
 
@@ -1915,7 +1923,7 @@ export const DealerBackOfficeView: React.FC<DealerBackOfficeViewProps> = ({
 
           {/* Sağ: Canlı Geri Sayım Sayacı (Gün : Saat : Dakika : Saniye) + Aksiyon Butonları */}
           <div className="flex flex-col sm:flex-row xl:flex-col items-stretch sm:items-center xl:items-end justify-between gap-4 shrink-0">
-            <div className="grid grid-cols-4 gap-2 text-center font-mono tabular-nums">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center font-mono tabular-nums">
               <div className="px-3.5 py-2.5 rounded-xl bg-slate-950/80 border border-white/15 min-w-[68px]">
                 <div className="text-2xl font-extrabold text-white">
                   {String(countdownDays).padStart(2, '0')}
@@ -1946,7 +1954,7 @@ export const DealerBackOfficeView: React.FC<DealerBackOfficeViewProps> = ({
               <button
                 type="button"
                 onClick={() => setSubTab('activity')}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold transition-colors cursor-pointer"
+                className="inline-flex w-full sm:w-auto items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold shadow-md shadow-emerald-950/40 transition-colors cursor-pointer"
               >
                 <Timer className="w-4 h-4" />
                 <span>Aktiflik Süresi &amp; Bayi Ekleme Paneline Git</span>
@@ -2523,7 +2531,7 @@ export const DealerBackOfficeView: React.FC<DealerBackOfficeViewProps> = ({
                         phone: member.phone,
                       })
                     }
-                    className="py-3 px-4 bg-slate-900 hover:bg-slate-800 text-emerald-300 font-semibold rounded-xl flex items-center justify-center gap-2 transition-colors cursor-pointer text-xs"
+                    className="w-full sm:w-auto py-3 px-4 bg-slate-900 hover:bg-slate-800 text-emerald-300 font-semibold rounded-xl flex items-center justify-center gap-2 text-center transition-colors cursor-pointer text-xs"
                   >
                     <ExternalLink className="w-3.5 h-3.5" />
                     <span>Kayıt Portalı Üzerinden Aç</span>
@@ -3372,14 +3380,14 @@ Paket Alarak Aktifliği Yenile →
                     value={invoiceNo}
                     onChange={(e) => setInvoiceNo(e.target.value)}
                     placeholder="Fatura No (GIB2026...)"
-                    className="px-2.5 py-1.5 bg-white border border-teal-300 rounded-lg font-mono text-xs"
+                    className="w-full min-w-0 px-2.5 py-2.5 sm:py-1.5 bg-white border border-teal-300 rounded-lg font-mono text-xs"
                   />
                   <input
                     type="text"
                     value={taxOfficeAndId}
                     onChange={(e) => setTaxOfficeAndId(e.target.value)}
                     placeholder="Vergi Dairesi / VKN-TCKN"
-                    className="px-2.5 py-1.5 bg-white border border-teal-300 rounded-lg text-xs"
+                    className="w-full min-w-0 px-2.5 py-2.5 sm:py-1.5 bg-white border border-teal-300 rounded-lg text-xs"
                   />
                   <input
                     type="file"
@@ -3396,7 +3404,7 @@ Paket Alarak Aktifliği Yenile →
                 <button
                   type="submit"
                   disabled={invoiceUploadBusy}
-                  className="w-full py-2 px-3 bg-teal-700 hover:bg-teal-800 text-white font-bold rounded-lg cursor-pointer transition-colors disabled:opacity-50"
+                  className="w-full py-2.5 sm:py-2 px-3 bg-teal-700 hover:bg-teal-800 text-white font-bold rounded-lg cursor-pointer transition-colors disabled:opacity-50"
                 >
                   {invoiceUploadBusy
                     ? 'Fatura Yükleniyor...'
@@ -3752,7 +3760,7 @@ Paket Alarak Aktifliği Yenile →
                     phone: member.phone,
                   });
                 }}
-                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg transition-colors cursor-pointer shadow-xs"
+                className="inline-flex max-w-full items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg transition-colors cursor-pointer shadow-md"
               >
                 <UserPlus className="w-4 h-4" />
                 <span>Alt Bayi Ekle</span>

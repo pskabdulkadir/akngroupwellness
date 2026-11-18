@@ -139,6 +139,8 @@ test('Motor 1: Sponsorlu Unilevel 7 basamağı tarar, 8. basamağa geçmez ve ki
 
   const result = distributeUnilevelCommissions(order, members[0], ctx);
 
+  assert.ok(result.unclaimedRecords.every((record) => record.commission_type === 'UNILEVEL_COMMISSION'));
+
   // Kesinlikle tam 7 derinlik çıktısı olmalı
   assert.equal(result.payouts.length, 7);
 
@@ -205,6 +207,7 @@ test('Motor 2: Küresel Monoline üst sıradaki 7 üyeyi sıralı tarar, eksik v
 
   const result = distributeMonolineIncentive(order, members[0], ctx);
 
+  assert.ok(result.unclaimedRecords.every((record) => record.commission_type === 'MONOLINE_INCENTIVE'));
   assert.equal(result.payouts.length, 7);
 
   // 1. Üst Sıra (#49): %1.50 -> 15 USD, aktif üye ödendi
@@ -351,4 +354,3 @@ test('Motor 2: Dinamik Aktif Tarama (skipPassiveMonoline: true) pasif üyeyi atl
   assert.equal(result.payouts[2].recipient_user_id, 'USER-46');
   assert.equal(result.payouts[2].status, 'PAID_TO_MEMBER');
 });
-

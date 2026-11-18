@@ -594,7 +594,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/95 backdrop-blur-xl animate-fade-in overflow-y-auto">
-      <div className="relative w-full max-w-5xl bg-slate-900 border border-emerald-500/50 rounded-3xl p-5 sm:p-8 shadow-2xl shadow-emerald-950/80 space-y-6 max-h-[94vh] overflow-y-auto">
+      <div className="relative w-full max-w-5xl bg-slate-900 border border-emerald-500/50 rounded-2xl sm:rounded-3xl p-4 sm:p-8 shadow-2xl shadow-emerald-950/80 space-y-6 max-h-[90vh] overflow-y-auto overflow-x-hidden">
         
         {allowClose && onClose && (
           <button
@@ -733,7 +733,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                 return (
                   <div
                     key={pkg.id}
-                    className={`relative p-5 rounded-2xl transition-all flex flex-col justify-between border ${
+                    className={`relative p-4 sm:p-5 rounded-2xl transition-all flex flex-col justify-between border ${
                       qtyInCart > 0
                         ? 'bg-gradient-to-b from-amber-950/70 to-slate-900 border-amber-400 shadow-lg shadow-amber-950/50'
                         : 'bg-slate-950/70 border-slate-800 hover:border-slate-700'
@@ -852,7 +852,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                 return (
                   <div
                     key={pkg.id}
-                    className={`relative p-5 rounded-2xl transition-all flex flex-col justify-between border ${
+                    className={`relative p-4 sm:p-5 rounded-2xl transition-all flex flex-col justify-between border ${
                       qtyInCart > 0
                         ? 'bg-gradient-to-b from-emerald-950/70 to-slate-900 border-emerald-400 shadow-lg shadow-emerald-950/50'
                         : 'bg-slate-950/70 border-slate-800 hover:border-slate-700'

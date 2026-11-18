@@ -1779,22 +1779,22 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
       }`}
     >
       <div
-        className={`relative w-full bg-slate-900 overflow-hidden flex flex-col ${
+        className={`relative w-full bg-slate-900 overflow-x-hidden overflow-y-auto sm:overflow-hidden flex flex-col ${
           isFullPageAdmin
-            ? 'max-w-none h-screen max-h-screen rounded-none border-0'
-            : 'max-w-5xl border border-emerald-500/40 rounded-3xl shadow-2xl shadow-emerald-950/60 max-h-[92vh]'
+            ? 'mobile-viewport-height max-w-none rounded-none border-0'
+            : 'max-w-5xl border border-emerald-500/40 rounded-3xl shadow-2xl shadow-emerald-950/60 max-h-[90vh] sm:max-h-[92vh]'
         }`}
       >
         
         {/* Header */}
-        <div className="px-6 py-4 bg-slate-950/95 border-b border-slate-800 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 flex items-center justify-center shadow-inner">
+        <div className="px-3 py-3 sm:px-6 sm:py-4 bg-slate-950/95 border-b border-slate-800 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 shrink-0 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 flex items-center justify-center shadow-inner">
               <ShieldCheck className="w-5 h-5 text-emerald-400" />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-lg font-bold text-slate-100">7 Nefis Kariyer Piramidi, Organizasyon &amp; SQL Yönetimi</h2>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="text-base sm:text-lg font-bold text-slate-100">7 Nefis Kariyer Piramidi, Organizasyon &amp; SQL Yönetimi</h2>
                 <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-bold">
                   Canlı Supabase &amp; SQL
                 </span>
@@ -1805,13 +1805,13 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {isAuthenticated && (
               <>
                 <button
                   type="button"
                   onClick={() => setShowDataBackupModal(true)}
-                  className="px-3 py-1.5 rounded-xl bg-cyan-600/30 hover:bg-cyan-600/50 text-cyan-200 border border-cyan-500/50 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs"
+                  className="px-3 py-2.5 sm:py-1.5 rounded-xl bg-cyan-600/30 hover:bg-cyan-600/50 text-cyan-200 border border-cyan-500/50 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs"
                   title="Tüm sistem verilerini indir veya geri yükle"
                 >
                   <Database className="w-3.5 h-3.5 text-cyan-400" />
@@ -1821,7 +1821,7 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
                 <button
                   type="button"
                   onClick={() => setShowResetConfirmModal(true)}
-                  className="px-3 py-1.5 rounded-xl bg-rose-950/80 hover:bg-rose-900 text-rose-300 border border-rose-500/50 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs"
+                  className="px-3 py-2.5 sm:py-1.5 rounded-xl bg-rose-950/80 hover:bg-rose-900 text-rose-300 border border-rose-500/50 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs"
                   title="Sistemdeki tüm simülasyon ve test verilerini sıfırla"
                 >
                   <RotateCcw className="w-3.5 h-3.5 text-rose-400" />
@@ -1832,7 +1832,7 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
 
             <button
               onClick={onClose}
-              className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-slate-200 transition-colors cursor-pointer"
+              className="p-2.5 sm:p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-slate-200 transition-colors cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
@@ -2098,7 +2098,7 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
 
         {/* Login Barrier if not authenticated */}
         {!isAuthenticated ? (
-          <div className="p-8 sm:p-12 flex flex-col items-center justify-center space-y-6 text-center">
+          <div className="p-5 sm:p-12 flex flex-col items-center justify-center space-y-6 text-center">
             <div className="w-16 h-16 rounded-2xl bg-slate-800 border border-slate-700 text-slate-300 flex items-center justify-center">
               <Lock className="w-8 h-8 text-amber-400" />
             </div>
@@ -2121,7 +2121,7 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
                   value={adminEmailInput}
                   onChange={(e) => setAdminEmailInput(e.target.value)}
                   placeholder="psikologabdulkadirkan@gmail.com"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 focus:border-emerald-500 text-xs text-slate-100"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 focus:border-emerald-500 text-base sm:text-xs text-slate-100"
                 />
               </div>
 
@@ -2136,7 +2136,7 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
                   value={adminPasswordInput}
                   onChange={(e) => setAdminPasswordInput(e.target.value)}
                   placeholder="••••••••••••"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 focus:border-emerald-500 text-xs text-slate-100"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 focus:border-emerald-500 text-base sm:text-xs text-slate-100"
                   autoFocus
                 />
               </div>
@@ -2157,17 +2157,17 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
           </div>
         ) : (
           /* Main Admin Workspace */
-          <div className="flex-1 min-h-0 flex flex-col w-full h-full">
+          <div className="flex-1 sm:min-h-0 flex flex-col w-full h-full">
             {isSinglePageView ? (
               /* BÜYÜK TEK SAYFA PANEL (100% Full Width, Prominent Back Button) */
-              <div className="flex-1 min-h-0 flex flex-col w-full h-full overflow-hidden">
+              <div className="flex-1 sm:min-h-0 flex flex-col w-full h-full overflow-visible sm:overflow-hidden">
                 {/* Sticky Top Header with Geri Butonu and Module Info */}
-                <div className="sticky top-0 z-30 flex flex-wrap items-center justify-between gap-3 bg-slate-950/95 backdrop-blur-md px-4 sm:px-6 py-3 border-b border-slate-800 shadow-md shrink-0">
-                  <div className="flex items-center gap-3">
+                <div className="sticky top-0 z-30 flex flex-wrap items-center justify-between gap-3 bg-slate-950/95 backdrop-blur-md px-3 sm:px-6 py-3 border-b border-slate-800 shadow-md shrink-0">
+                  <div className="flex flex-wrap items-center gap-3 w-full min-w-0 sm:w-auto">
                     <button
                       type="button"
                       onClick={() => setIsSinglePageView(false)}
-                      className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs flex items-center gap-2 shadow-lg shadow-emerald-950/40 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer border border-emerald-400/50"
+                      className="w-full sm:w-auto justify-center px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs flex items-center gap-2 shadow-lg shadow-emerald-950/40 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer border border-emerald-400/50"
                       title="Yönetim modülleri ana menüsüne dön"
                     >
                       <ArrowLeft className="w-4 h-4 text-white" />
@@ -2176,8 +2176,8 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
 
                     <div className="h-6 w-px bg-slate-700 hidden sm:block" />
 
-                    <div className="flex items-center gap-2">
-                      <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
                         {adminTab === 'monoline_sql' ? (
                           <Award className="h-4 w-4" />
                         ) : (
@@ -2199,7 +2199,7 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
                   </div>
 
                   {/* Module quick jumper pills */}
-                  <div className="flex items-center gap-1.5 overflow-x-auto max-w-full py-1">
+                  <div className="flex w-full min-w-0 sm:w-auto items-center gap-1.5 overflow-x-auto max-w-full py-1">
                     <button
                       type="button"
                       onClick={() => {
@@ -2207,7 +2207,7 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
                         if (onOpenSmartAccounting) onOpenSmartAccounting();
                         else window.dispatchEvent(new CustomEvent('open-smart-accounting'));
                       }}
-                      className="px-2.5 py-1.5 rounded-lg text-[11px] font-bold whitespace-nowrap bg-gradient-to-r from-amber-500/20 to-emerald-500/20 text-amber-300 border border-amber-500/40 hover:border-amber-300 transition-all cursor-pointer flex items-center gap-1.5"
+                      className="shrink-0 px-2.5 py-2.5 sm:py-1.5 rounded-lg text-[11px] font-bold whitespace-nowrap bg-gradient-to-r from-amber-500/20 to-emerald-500/20 text-amber-300 border border-amber-500/40 hover:border-amber-300 transition-all cursor-pointer flex items-center gap-1.5"
                     >
                       <Receipt className="w-3.5 h-3.5 text-amber-400" />
                       <span>Akıllı Muhasebe (CFO)</span>
@@ -2215,7 +2215,7 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
                     <button
                       type="button"
                       onClick={() => openSinglePageSection('monoline_sql')}
-                      className={`px-2.5 py-1.5 rounded-lg text-[11px] font-bold whitespace-nowrap transition-all cursor-pointer ${
+                      className={`shrink-0 px-2.5 py-2.5 sm:py-1.5 rounded-lg text-[11px] font-bold whitespace-nowrap transition-all cursor-pointer ${
                         adminTab === 'monoline_sql'
                           ? 'bg-emerald-500/25 text-emerald-200 border border-emerald-500/50 shadow-xs'
                           : 'bg-slate-900/80 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-700/60'
@@ -2228,7 +2228,7 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
                         key={link.id}
                         type="button"
                         onClick={() => openSinglePageSection(link.id)}
-                        className={`px-2.5 py-1.5 rounded-lg text-[11px] font-semibold whitespace-nowrap transition-all cursor-pointer ${
+                        className={`shrink-0 px-2.5 py-2.5 sm:py-1.5 rounded-lg text-[11px] font-semibold whitespace-nowrap transition-all cursor-pointer ${
                           adminTab === link.id
                             ? 'bg-emerald-500/25 text-emerald-200 border border-emerald-500/50 shadow-xs'
                             : 'bg-slate-900/80 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-700/60'
@@ -2245,7 +2245,7 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
                     <button
                       type="button"
                       onClick={() => setIsDocumentsOpen(true)}
-                      className="px-2.5 py-1.5 rounded-lg text-[11px] font-semibold whitespace-nowrap bg-slate-900/80 hover:bg-slate-800 text-fuchsia-300 border border-slate-700/60 transition-all cursor-pointer flex items-center gap-1"
+                      className="shrink-0 px-2.5 py-2.5 sm:py-1.5 rounded-lg text-[11px] font-semibold whitespace-nowrap bg-slate-900/80 hover:bg-slate-800 text-fuchsia-300 border border-slate-700/60 transition-all cursor-pointer flex items-center gap-1"
                     >
                       <FileText className="w-3.5 h-3.5 text-fuchsia-400" />
                       <span>Dökümanlar</span>
@@ -2254,7 +2254,7 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
                 </div>
 
                 {/* Main Content Area in Large Single Page View */}
-                <main className="w-full flex-1 overflow-auto overscroll-contain p-4 sm:p-6 space-y-6">
+                <main className="w-full flex-1 sm:overflow-auto overscroll-contain p-3 sm:p-6 space-y-6">
             {/* Notification Banner */}
             {actionSuccessMsg && (
               <div className="p-4 rounded-2xl bg-emerald-950/80 border border-emerald-500/50 text-xs text-emerald-300 flex items-center justify-between animate-fade-in shadow-lg">
@@ -5000,14 +5000,14 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
               </div>
             ) : (
               /* HUB MENU SCREEN (Left navigation buttons + Comprehensive interactive cards) */
-              <div className="grid h-full min-h-0 grid-cols-1 xl:grid-cols-[280px_minmax(0,1fr)]">
-                <aside className="max-h-64 overflow-y-auto border-b border-slate-800 bg-gradient-to-b from-slate-950 to-slate-900 p-4 xl:max-h-none xl:border-b-0 xl:border-r xl:p-5">
+              <div className="grid h-full sm:min-h-0 grid-cols-1 xl:grid-cols-[280px_minmax(0,1fr)]">
+                <aside className="max-h-64 overflow-y-auto border-b border-slate-800 bg-gradient-to-b from-slate-950 to-slate-900 p-3 sm:p-4 xl:max-h-none xl:border-b-0 xl:border-r xl:p-5">
                   <div className="mb-4 px-2">
                     <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-emerald-300">Yönetim Merkezi</p>
                     <h3 className="mt-1 text-lg font-extrabold text-white">Kontrol Paneli</h3>
                     <p className="mt-1 text-xs text-slate-400">Herhangi bir butona tıklayarak büyük tek sayfa paneli açın.</p>
                   </div>
-                  <nav className="space-y-1.5" aria-label="Yönetici bölümleri">
+                  <nav className="flex gap-2 overflow-x-auto pb-1 xl:block xl:space-y-1.5 xl:overflow-visible xl:pb-0" aria-label="Yönetici bölümleri">
                     {/* Akıllı Muhasebe (CFO Suite) Butonu */}
                     <button
                       type="button"
@@ -5019,7 +5019,7 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
                           window.dispatchEvent(new CustomEvent('open-smart-accounting'));
                         }
                       }}
-                      className="flex w-full items-center justify-between gap-2.5 rounded-xl border border-amber-400/80 bg-gradient-to-r from-emerald-600/40 via-teal-700/35 to-amber-500/30 px-3 py-3 text-left text-xs font-bold text-white shadow-xl shadow-emerald-950/50 hover:border-amber-300 hover:from-emerald-600/50 hover:to-amber-500/40 transition-all group cursor-pointer"
+                      className="flex shrink-0 items-center justify-between gap-2.5 whitespace-nowrap xl:w-full xl:whitespace-normal rounded-xl border border-amber-400/80 bg-gradient-to-r from-emerald-600/40 via-teal-700/35 to-amber-500/30 px-3 py-3 text-left text-xs font-bold text-white shadow-xl shadow-emerald-950/50 hover:border-amber-300 hover:from-emerald-600/50 hover:to-amber-500/40 transition-all group cursor-pointer"
                     >
                       <div className="flex items-center gap-3">
                         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-amber-400/30 to-emerald-400/30 text-amber-300 border border-amber-400/50 group-hover:scale-105 transition-transform">
@@ -5039,7 +5039,7 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
                     <button
                       type="button"
                       onClick={() => openSinglePageSection('monoline_sql')}
-                      className={`flex w-full items-center gap-3 rounded-xl border px-3 py-3 text-left text-xs font-bold transition-all cursor-pointer ${
+                      className={`flex shrink-0 items-center gap-3 whitespace-nowrap xl:w-full xl:whitespace-normal rounded-xl border px-3 py-3 text-left text-xs font-bold transition-all cursor-pointer ${
                         adminTab === 'monoline_sql'
                           ? 'border-emerald-300/50 bg-gradient-to-r from-emerald-500/25 to-teal-500/15 text-white shadow-lg shadow-emerald-950/30'
                           : 'border-slate-800 bg-slate-900/70 text-slate-300 hover:border-emerald-400/40 hover:bg-slate-800'
@@ -5068,7 +5068,7 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
                           key={id}
                           type="button"
                           onClick={() => openSinglePageSection(id)}
-                          className={`flex w-full items-center gap-3 rounded-xl border px-3 py-3 text-left text-xs font-semibold transition-all cursor-pointer ${
+                          className={`flex shrink-0 items-center gap-3 whitespace-nowrap xl:w-full xl:whitespace-normal rounded-xl border px-3 py-3 text-left text-xs font-semibold transition-all cursor-pointer ${
                             isActive
                               ? 'border-indigo-300/50 bg-gradient-to-r from-indigo-500/25 to-violet-500/15 text-white shadow-lg shadow-indigo-950/30'
                               : 'border-slate-800 bg-slate-900/70 text-slate-300 hover:border-slate-600 hover:bg-slate-800'
@@ -5088,7 +5088,7 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
                     <button
                       type="button"
                       onClick={() => setIsDocumentsOpen(true)}
-                      className="flex w-full items-center gap-3 rounded-xl border border-slate-800 bg-slate-900/70 px-3 py-3 text-left text-xs font-semibold text-slate-300 transition-all hover:border-emerald-400/40 hover:bg-slate-800 cursor-pointer"
+                      className="flex shrink-0 items-center gap-3 whitespace-nowrap xl:w-full xl:whitespace-normal rounded-xl border border-slate-800 bg-slate-900/70 px-3 py-3 text-left text-xs font-semibold text-slate-300 transition-all hover:border-emerald-400/40 hover:bg-slate-800 cursor-pointer"
                     >
                       <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-fuchsia-400/15 text-fuchsia-300"><FileText className="h-4 w-4" /></span>
                       <span>Dökümanlar</span>
@@ -5097,16 +5097,16 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
                 </aside>
 
                 {/* Hub Central View: Cards for All Modules */}
-                <div className="min-w-0 min-h-0 max-w-full overflow-auto overscroll-contain p-4 sm:p-6 space-y-6">
+                <div className="min-w-0 sm:min-h-0 max-w-full sm:overflow-auto overscroll-contain p-3 sm:p-6 space-y-6">
                   {/* Top Stats Banner */}
-                  <div className="rounded-2xl border border-emerald-500/30 bg-gradient-to-r from-emerald-950/60 via-slate-900/90 to-teal-950/50 p-5 shadow-xl">
+                  <div className="rounded-2xl border border-emerald-500/30 bg-gradient-to-r from-emerald-950/60 via-slate-900/90 to-teal-950/50 p-4 sm:p-5 shadow-xl">
                     <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                       <div>
                         <div className="flex items-center gap-2">
                           <span className="flex h-3 w-3 rounded-full bg-emerald-400 animate-pulse" />
                           <span className="text-xs font-bold text-emerald-300 uppercase tracking-wider">Merkezi Yönetim Konsolu</span>
                         </div>
-                        <h2 className="mt-1 text-xl font-black text-white">AKN Biyo-Rezonans &amp; Monoline Sistem Yönetimi</h2>
+                        <h2 className="mt-1 text-lg sm:text-xl font-black text-white">AKN Biyo-Rezonans &amp; Monoline Sistem Yönetimi</h2>
                         <p className="mt-1 text-xs text-slate-300">
                           Aşağıdaki modüllerden birine veya sol menüdeki butonlara tıklayarak <strong>Büyük Tek Sayfa Paneli</strong> açabilirsiniz.
                         </p>
@@ -5137,7 +5137,7 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
                   {/* Module Cards Grid */}
                   <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                     {/* 0. Unilevel & Monoline Ağaç Yönetimi (Yeni Kapsamlı Modül) */}
-                    <div className="rounded-2xl border-2 border-emerald-500/60 bg-gradient-to-br from-slate-900/95 via-emerald-950/40 to-slate-900/95 p-5 space-y-4 hover:border-emerald-400 transition-all flex flex-col justify-between group shadow-xl">
+                    <div className="rounded-2xl border-2 border-emerald-500/60 bg-gradient-to-br from-slate-900/95 via-emerald-950/40 to-slate-900/95 p-4 sm:p-5 space-y-4 hover:border-emerald-400 transition-all flex flex-col justify-between group shadow-xl">
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
                           <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/25 text-emerald-300 border border-emerald-400/50 group-hover:scale-105 transition-transform">
@@ -5167,7 +5167,7 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
                     </div>
 
                     {/* 1. Akıllı Muhasebe (CFO) */}
-                    <div className="rounded-2xl border border-amber-500/40 bg-gradient-to-br from-slate-900/90 to-amber-950/30 p-5 space-y-4 hover:border-amber-400 transition-all flex flex-col justify-between group shadow-lg">
+                    <div className="rounded-2xl border border-amber-500/40 bg-gradient-to-br from-slate-900/90 to-amber-950/30 p-4 sm:p-5 space-y-4 hover:border-amber-400 transition-all flex flex-col justify-between group shadow-lg">
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
                           <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/40">
@@ -5201,7 +5201,7 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
                     </div>
 
                     {/* 2. Monoline Yönetimi */}
-                    <div className="rounded-2xl border border-emerald-500/40 bg-gradient-to-br from-slate-900/90 to-emerald-950/30 p-5 space-y-4 hover:border-emerald-400 transition-all flex flex-col justify-between group shadow-lg">
+                    <div className="rounded-2xl border border-emerald-500/40 bg-gradient-to-br from-slate-900/90 to-emerald-950/30 p-4 sm:p-5 space-y-4 hover:border-emerald-400 transition-all flex flex-col justify-between group shadow-lg">
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
                           <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
@@ -5231,7 +5231,7 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
                     </div>
 
                     {/* 3. Üyeler & Ödeme Onayları */}
-                    <div className="rounded-2xl border border-indigo-500/40 bg-gradient-to-br from-slate-900/90 to-indigo-950/30 p-5 space-y-4 hover:border-indigo-400 transition-all flex flex-col justify-between group shadow-lg">
+                    <div className="rounded-2xl border border-indigo-500/40 bg-gradient-to-br from-slate-900/90 to-indigo-950/30 p-4 sm:p-5 space-y-4 hover:border-indigo-400 transition-all flex flex-col justify-between group shadow-lg">
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
                           <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-500/20 text-indigo-300 border border-indigo-500/40">
@@ -5264,7 +5264,7 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
                               setStatusFilter('pending');
                               openSinglePageSection('members');
                             }}
-                            className="flex-1 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-300 text-[10px] font-bold text-center border border-slate-700 cursor-pointer"
+                            className="flex-1 py-2.5 sm:py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-300 text-[10px] font-bold text-center border border-slate-700 cursor-pointer"
                           >
                             Bekleyen Onaylar ({members.filter(m => !m.isAllowed).length})
                           </button>
@@ -5274,7 +5274,7 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
                               setStatusFilter('all');
                               openSinglePageSection('members');
                             }}
-                            className="flex-1 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-bold text-center border border-slate-700 cursor-pointer"
+                            className="flex-1 py-2.5 sm:py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-bold text-center border border-slate-700 cursor-pointer"
                           >
                             Tüm Üyeler
                           </button>
@@ -5283,7 +5283,7 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
                     </div>
 
                     {/* 4. Dinamik Paket Yönetimi */}
-                    <div className="rounded-2xl border border-teal-500/40 bg-gradient-to-br from-slate-900/90 to-teal-950/30 p-5 space-y-4 hover:border-teal-400 transition-all flex flex-col justify-between group shadow-lg">
+                    <div className="rounded-2xl border border-teal-500/40 bg-gradient-to-br from-slate-900/90 to-teal-950/30 p-4 sm:p-5 space-y-4 hover:border-teal-400 transition-all flex flex-col justify-between group shadow-lg">
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
                           <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-500/20 text-teal-300 border border-teal-500/40">
@@ -5313,7 +5313,7 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
                     </div>
 
                     {/* 5. Bayi & Komisyon Yönetimi */}
-                    <div className="rounded-2xl border border-cyan-500/40 bg-gradient-to-br from-slate-900/90 to-cyan-950/30 p-5 space-y-4 hover:border-cyan-400 transition-all flex flex-col justify-between group shadow-lg">
+                    <div className="rounded-2xl border border-cyan-500/40 bg-gradient-to-br from-slate-900/90 to-cyan-950/30 p-4 sm:p-5 space-y-4 hover:border-cyan-400 transition-all flex flex-col justify-between group shadow-lg">
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
                           <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">
@@ -5343,7 +5343,7 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
                     </div>
 
                     {/* 6. Bayi Başvuruları */}
-                    <div className="rounded-2xl border border-amber-500/40 bg-gradient-to-br from-slate-900/90 to-amber-950/30 p-5 space-y-4 hover:border-amber-400 transition-all flex flex-col justify-between group shadow-lg">
+                    <div className="rounded-2xl border border-amber-500/40 bg-gradient-to-br from-slate-900/90 to-amber-950/30 p-4 sm:p-5 space-y-4 hover:border-amber-400 transition-all flex flex-col justify-between group shadow-lg">
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
                           <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/40">
@@ -5373,7 +5373,7 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
                     </div>
 
                     {/* 7. Cihaz Demo Yönetimi */}
-                    <div className="rounded-2xl border border-blue-500/40 bg-gradient-to-br from-slate-900/90 to-blue-950/30 p-5 space-y-4 hover:border-blue-400 transition-all flex flex-col justify-between group shadow-lg">
+                    <div className="rounded-2xl border border-blue-500/40 bg-gradient-to-br from-slate-900/90 to-blue-950/30 p-4 sm:p-5 space-y-4 hover:border-blue-400 transition-all flex flex-col justify-between group shadow-lg">
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
                           <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500/20 text-blue-300 border border-blue-500/40">
@@ -5403,7 +5403,7 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
                     </div>
 
                     {/* 8. Dijital E-Fatura Yönetimi */}
-                    <div className="rounded-2xl border border-violet-500/40 bg-gradient-to-br from-slate-900/90 to-violet-950/30 p-5 space-y-4 hover:border-violet-400 transition-all flex flex-col justify-between group shadow-lg">
+                    <div className="rounded-2xl border border-violet-500/40 bg-gradient-to-br from-slate-900/90 to-violet-950/30 p-4 sm:p-5 space-y-4 hover:border-violet-400 transition-all flex flex-col justify-between group shadow-lg">
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
                           <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-500/20 text-violet-300 border border-violet-500/40">
@@ -5433,7 +5433,7 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
                     </div>
 
                     {/* 9. Kampanyalar & Fırsatlar */}
-                    <div className="rounded-2xl border border-pink-500/40 bg-gradient-to-br from-slate-900/90 to-pink-950/30 p-5 space-y-4 hover:border-pink-400 transition-all flex flex-col justify-between group shadow-lg">
+                    <div className="rounded-2xl border border-pink-500/40 bg-gradient-to-br from-slate-900/90 to-pink-950/30 p-4 sm:p-5 space-y-4 hover:border-pink-400 transition-all flex flex-col justify-between group shadow-lg">
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
                           <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-pink-500/20 text-pink-300 border border-pink-500/40">
@@ -5463,7 +5463,7 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
                     </div>
 
                     {/* 10. Site İçerikleri */}
-                    <div className="rounded-2xl border border-sky-500/40 bg-gradient-to-br from-slate-900/90 to-sky-950/30 p-5 space-y-4 hover:border-sky-400 transition-all flex flex-col justify-between group shadow-lg">
+                    <div className="rounded-2xl border border-sky-500/40 bg-gradient-to-br from-slate-900/90 to-sky-950/30 p-4 sm:p-5 space-y-4 hover:border-sky-400 transition-all flex flex-col justify-between group shadow-lg">
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
                           <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-sky-500/20 text-sky-300 border border-sky-500/40">
@@ -5493,7 +5493,7 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
                     </div>
 
                     {/* 11. Etik Kurallar */}
-                    <div className="rounded-2xl border border-orange-500/40 bg-gradient-to-br from-slate-900/90 to-orange-950/30 p-5 space-y-4 hover:border-orange-400 transition-all flex flex-col justify-between group shadow-lg">
+                    <div className="rounded-2xl border border-orange-500/40 bg-gradient-to-br from-slate-900/90 to-orange-950/30 p-4 sm:p-5 space-y-4 hover:border-orange-400 transition-all flex flex-col justify-between group shadow-lg">
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
                           <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-500/20 text-orange-300 border border-orange-500/40">
@@ -5523,7 +5523,7 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
                     </div>
 
                     {/* 12. Tarama Kayıtları */}
-                    <div className="rounded-2xl border border-rose-500/40 bg-gradient-to-br from-slate-900/90 to-rose-950/30 p-5 space-y-4 hover:border-rose-400 transition-all flex flex-col justify-between group shadow-lg">
+                    <div className="rounded-2xl border border-rose-500/40 bg-gradient-to-br from-slate-900/90 to-rose-950/30 p-4 sm:p-5 space-y-4 hover:border-rose-400 transition-all flex flex-col justify-between group shadow-lg">
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
                           <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-rose-500/20 text-rose-300 border border-rose-500/40">

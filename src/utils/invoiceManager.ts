@@ -281,6 +281,14 @@ function invoiceMatchesReseller(inv: DigitalInvoice, clean: string): boolean {
   return rUid === clean || rEmail === clean || rCode === clean || (clean.length > 3 && rName.includes(clean));
 }
 
+function resolveInvoiceRecipientFilter(filter: string): { field: string; value: string } {
+  const raw = filter.trim();
+  if (raw.includes('@')) return { field: 'recipient.email', value: raw.toLowerCase() };
+  const upper = raw.toUpperCase();
+  if (upper.startsWith('AURA-') || upper.startsWith('BAYI-')) return { field: 'recipient.referralCode', value: upper };
+  return { field: 'recipient.uid', value: raw };
+}
+
 export async function getInvoicesForReseller(resellerIdOrEmailOrCode: string): Promise<DigitalInvoice[]> {
   const raw = (resellerIdOrEmailOrCode || '').trim();
   const clean = raw.toLowerCase();
@@ -288,8 +296,8 @@ export async function getInvoicesForReseller(resellerIdOrEmailOrCode: string): P
 
   const local = getLocalDigitalInvoices().filter(inv => invoiceMatchesReseller(inv, clean));
   try {
-    const field = clean.includes('@') ? 'recipient.email' : clean.startsWith('AURA-') || clean.startsWith('BAYI-') ? 'recipient.referralCode' : 'recipient.uid';
-    const snapshot = await getDocs(query(collection(db, 'digital_invoices'), where(field, '==', raw), limit(100)));
+    const { field, value } = resolveInvoiceRecipientFilter(raw);
+    const snapshot = await getDocs(query(collection(db, 'digital_invoices'), where(field, '==', value), limit(100)));
     const cloud = snapshot.docs.map(docSnap => {
       const data = docSnap.data() as DigitalInvoice;
       return { ...data, id: docSnap.id };
@@ -384,8 +392,8 @@ export function subscribeToDigitalInvoices(
   try {
     if (cleanFilter) {
       const rawFilter = (resellerFilter || '').trim();
-      const field = cleanFilter.includes('@') ? 'recipient.email' : cleanFilter.startsWith('AURA-') || cleanFilter.startsWith('BAYI-') ? 'recipient.referralCode' : 'recipient.uid';
-      const q = query(collection(db, 'digital_invoices'), where(field, '==', rawFilter), limit(100));
+      const { field, value } = resolveInvoiceRecipientFilter(rawFilter);
+      const q = query(collection(db, 'digital_invoices'), where(field, '==', value), limit(100));
       const unsub = onSnapshot(q, (snapshot) => {
         const list = snapshot.docs.map((docSnap: any) => ({ ...docSnap.data(), id: docSnap.id } as DigitalInvoice));
         list.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());

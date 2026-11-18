@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { getAdminToken } from '../utils/adminSession';
-import { getMemberRegionalPendingUsd, getMemberRegionalUsdBalance } from '../utils/walletRegion';
+import { getMemberRegionalPendingUsd, getMemberRegionalUsdBalance, getMonolineOnlyWallet } from '../utils/walletRegion';
 import {
   ActivationVoucherRecord,
   BullMqJobRecord,
@@ -2907,7 +2907,7 @@ const canWithdraw =
                             $
                           </td>
                           <td className="py-2 px-2.5 text-right text-indigo-700 font-semibold">
-                            {m.wallets.monoline_wallet.toLocaleString('tr-TR', {
+                            {getMonolineOnlyWallet(m.wallets).toLocaleString('tr-TR', {
                               minimumFractionDigits: 2,
                             })}{' '}
                             $

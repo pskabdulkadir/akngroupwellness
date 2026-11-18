@@ -4,9 +4,7 @@ import {
   setDoc, 
   updateDoc, 
   collection, 
-  getDocs, 
-  query, 
-  where, 
+  getDocs,
   deleteDoc, 
   onSnapshot, 
   Unsubscribe,
@@ -777,18 +775,19 @@ export async function checkIfDemoAlreadyUsed(phone: string, email: string, fullN
     const usersCol = collection(db, 'users');
     
     // Check by email
-    const qEmail = query(usersCol, where('email', '==', cleanEmail));
-    const snapEmail = await getDocs(qEmail);
-    for (const docSnap of snapEmail.docs) {
+    const usersSnap = await getDocs(usersCol);
+    const emailDocs = cleanEmail
+      ? usersSnap.docs.filter(d => String(d.data()?.email || '').trim().toLowerCase() === cleanEmail)
+      : [];
+    for (const docSnap of emailDocs) {
       const data = docSnap.data() as UserMember;
       if (data.demoUsed) return true;
     }
 
     // Check by phone
     if (cleanPhone) {
-      const qPhone = query(usersCol, where('phone', '==', phone.trim()));
-      const snapPhone = await getDocs(qPhone);
-      for (const docSnap of snapPhone.docs) {
+      const phoneDocs = usersSnap.docs.filter(d => String(d.data()?.phone || '').trim() === phone.trim());
+      for (const docSnap of phoneDocs) {
         const data = docSnap.data() as UserMember;
         if (data.demoUsed) return true;
       }
@@ -1141,10 +1140,11 @@ export async function registerMember(
       
       // Check Firestore uniqueness if online & permitted
       try {
-        const usersCol = collection(db, 'users');
-        const q = query(usersCol, where('email', '==', cleanEmail));
-        const snap = await getDocs(q);
-        if (!snap.empty) {
+        const snap = await getDocs(collection(db, 'users'));
+        const emailTaken = snap.docs.some(
+          (d) => String(d.data()?.email || '').trim().toLowerCase() === cleanEmail
+        );
+        if (emailTaken) {
           return { success: false, message: 'Bu e-posta adresi ile zaten kayıtlı bir bayi bulunmaktadır.' };
         }
       } catch (checkErr) {
@@ -1902,12 +1902,11 @@ export async function getMemberOrders(uid: string): Promise<MemberOrder[]> {
 
   // Also query Firestore collection 'orders'
   try {
-    const colRef = collection(db, 'orders');
-    const q = query(colRef, where('userId', '==', uid));
-    const snap = await getDocs(q);
-    if (!snap.empty) {
+    const snap = await getDocs(collection(db, 'orders'));
+    const userDocs = snap.docs.filter(d => d.data()?.userId === uid);
+    if (userDocs.length > 0) {
       const map = new Map<string, MemberOrder>();
-      snap.forEach(d => {
+      userDocs.forEach(d => {
         const item = d.data() as MemberOrder;
         if (item.id) map.set(item.id, item);
       });
@@ -2056,12 +2055,10 @@ export async function loginMember(
     let userData: UserMember | null = null;
     try {
       await ensureFirebaseAuthUser(cleanEmail, cleanPassword);
-      const usersCol = collection(db, 'users');
-      const q = query(usersCol, where('email', '==', cleanEmail));
-      const snap = await getDocs(q);
+      const snap = await getDocs(collection(db, 'users'));
+      const userDoc = snap.docs.find(d => String(d.data()?.email || '').trim().toLowerCase() === cleanEmail);
 
-      if (!snap.empty) {
-        const userDoc = snap.docs[0];
+      if (userDoc) {
         // Firestore document data may not contain uid in legacy records; the document ID is authoritative.
         userData = { ...userDoc.data(), uid: userDoc.id } as UserMember;
       }

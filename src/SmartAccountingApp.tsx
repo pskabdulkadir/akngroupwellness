@@ -829,13 +829,13 @@ export default function SmartAccountingApp({
               {!accountingEvents.length && <p className="rounded-xl bg-white p-4 text-sm text-slate-500">Henüz muhasebe incelemesi bekleyen sipariş yok.</p>}
             </div>
           </section>
-          <section className="rounded-2xl border border-teal-200 bg-teal-50/60 p-5 shadow-sm">
+          <section className="rounded-2xl border border-teal-200 bg-teal-50/60 p-4 shadow-sm sm:p-5">
             <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
               <div>
                 <h2 className="text-lg font-bold">Bayi vergi iadesi faturaları</h2>
                 <p className="mt-1 text-sm text-slate-600">Backoffice’ten yüklenen faturalar burada listelenir. Bu panel yalnızca inceleme içindir; iade onayı mevcut yönetici onay akışında yapılır.</p>
               </div>
-              <span className="rounded-full border border-teal-300 bg-white px-3 py-1 text-xs font-bold text-teal-800">{taxRefundInvoices.length} fatura · {taxRefundInvoices.filter((invoice) => invoice.status === 'PENDING_ADMIN_APPROVAL').length} bekliyor · Toplam {taxRefundInvoiceTotal.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} $</span>
+              <span className="max-w-full whitespace-normal break-words rounded-xl border border-teal-300 bg-white px-3 py-1.5 text-xs font-bold leading-relaxed text-teal-800">{taxRefundInvoices.length} fatura · {taxRefundInvoices.filter((invoice) => invoice.status === 'PENDING_ADMIN_APPROVAL').length} bekliyor · Toplam {taxRefundInvoiceTotal.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} $</span>
             </div>
             {invoiceDownloadError && <p role="alert" className="mb-3 rounded-lg border border-rose-200 bg-rose-50 p-2 text-xs text-rose-700">{invoiceDownloadError}</p>}
             <div className="max-h-96 space-y-2 overflow-auto">
@@ -843,7 +843,7 @@ export default function SmartAccountingApp({
                 <article key={invoice.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-teal-100 bg-white p-3">
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold">{invoice.user_full_name} · {invoice.invoice_no}</p>
-                    <p className="text-xs text-slate-500">{invoice.refund_code} · {invoice.invoice_file_name} · {invoice.requested_at?.slice(0, 10)}</p>
+                    <p className="break-words text-xs text-slate-500">{invoice.refund_code} · {invoice.invoice_file_name} · {invoice.requested_at?.slice(0, 10)}</p>
                     <p className="mt-1 text-xs font-medium text-teal-800">{invoice.status === 'PENDING_ADMIN_APPROVAL' ? 'Yönetici onayı bekliyor' : invoice.status === 'APPROVED_CREDITED' ? 'Onaylandı ve iade aktarıldı' : 'Reddedildi'} · İade tutarı: {Number(invoice.tax_deducted_amount || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2 })} $</p>
                   </div>
                   <button type="button" onClick={() => void handleDownloadTaxRefundInvoice(invoice)} disabled={invoiceDownloadBusyId === invoice.id} className="rounded-lg border border-teal-300 bg-teal-50 px-3 py-2 text-xs font-semibold text-teal-900 disabled:opacity-50">
@@ -961,13 +961,13 @@ export default function SmartAccountingApp({
 
           {currentTab === 'invoices' && (
             <div className="space-y-6">
-              <section className="rounded-2xl border border-teal-200 bg-teal-50/60 p-5 shadow-sm">
+              <section className="rounded-2xl border border-teal-200 bg-teal-50/60 p-4 shadow-sm sm:p-5">
                 <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <h2 className="text-lg font-bold">Bayi vergi iadesi faturaları</h2>
                     <p className="mt-1 text-sm text-slate-600">Backoffice’ten yüklenen faturalar burada toplanır. Bu panel inceleme içindir; iade kararı mevcut yönetici onay akışında kalır.</p>
                   </div>
-                  <span className="rounded-full border border-teal-300 bg-white px-3 py-1 text-xs font-bold text-teal-800">{taxRefundInvoices.length} fatura · {taxRefundInvoices.filter((invoice) => invoice.status === 'PENDING_ADMIN_APPROVAL').length} bekliyor · Toplam {taxRefundInvoiceTotal.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} $</span>
+                  <span className="max-w-full whitespace-normal break-words rounded-xl border border-teal-300 bg-white px-3 py-1.5 text-xs font-bold leading-relaxed text-teal-800">{taxRefundInvoices.length} fatura · {taxRefundInvoices.filter((invoice) => invoice.status === 'PENDING_ADMIN_APPROVAL').length} bekliyor · Toplam {taxRefundInvoiceTotal.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} $</span>
                 </div>
                 {invoiceDownloadError && <p role="alert" className="mb-3 rounded-lg border border-rose-200 bg-rose-50 p-2 text-xs text-rose-700">{invoiceDownloadError}</p>}
                 <div className="max-h-80 space-y-2 overflow-auto">
@@ -975,7 +975,7 @@ export default function SmartAccountingApp({
                     <article key={invoice.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-teal-100 bg-white p-3">
                       <div className="min-w-0">
                         <p className="truncate text-sm font-semibold">{invoice.user_full_name} · {invoice.invoice_no}</p>
-                        <p className="text-xs text-slate-500">{invoice.refund_code} · {invoice.invoice_file_name} · {invoice.requested_at?.slice(0, 10)}</p>
+                        <p className="break-words text-xs text-slate-500">{invoice.refund_code} · {invoice.invoice_file_name} · {invoice.requested_at?.slice(0, 10)}</p>
                         <p className="mt-1 text-xs font-medium text-teal-800">{invoice.status === 'PENDING_ADMIN_APPROVAL' ? 'Yönetici onayı bekliyor' : invoice.status === 'APPROVED_CREDITED' ? 'Onaylandı ve iade aktarıldı' : 'Reddedildi'} · İade tutarı: {Number(invoice.tax_deducted_amount || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2 })} $</p>
                       </div>
                       <button type="button" onClick={() => void handleDownloadTaxRefundInvoice(invoice)} disabled={invoiceDownloadBusyId === invoice.id} className="rounded-lg border border-teal-300 bg-teal-50 px-3 py-2 text-xs font-semibold text-teal-900 disabled:opacity-50">

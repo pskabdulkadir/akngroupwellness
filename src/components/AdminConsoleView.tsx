@@ -1296,19 +1296,19 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
   return (
     <div className={`grid min-w-0 max-w-full grid-cols-1 items-start gap-6 ${isSectionDetailOpen ? 'lg:grid-cols-1' : 'lg:grid-cols-[280px_minmax(0,1fr)]'}`}>
       {/* MODÜL 6 Header & Sub-navigation */}
-      {!isSectionDetailOpen && <div className="self-start rounded-2xl border border-indigo-900/70 bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-900 p-5 shadow-xl lg:sticky lg:top-4">
+      {!isSectionDetailOpen && <div className="self-start min-w-0 w-full max-w-full rounded-2xl border border-indigo-900/70 bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-900 p-3 sm:p-5 shadow-xl lg:sticky lg:top-4">
         <div>
-          <div className="text-xs font-mono text-emerald-300 font-bold">
+          <div className="text-xs font-mono text-emerald-300 font-bold break-words">
             TAM SAYFA YÖNETİCİ KONSOLU · MONOLINE 7 NEFİS MLM · BAYİ, HAT SIRALAMA & BONUS YÖNETİMİ
           </div>
-          <h2 className="text-xl font-bold text-white mt-0.5">
+          <h2 className="text-lg sm:text-xl font-bold text-white mt-0.5 break-words">
             Bayi Ekleme/Silme, Monoline Sıra & Sponsor Değiştirme, Kariyer Bonus Yönetimi & SQL
           </h2>
           <div className="mt-4 flex flex-col items-stretch gap-2">
             <button
               type="button"
               onClick={() => openAdminSection('data_management')}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-blue-900 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-xl cursor-pointer"
+              className="inline-flex w-full sm:w-auto items-center justify-center gap-1.5 px-3 py-2.5 sm:py-1.5 text-xs font-bold text-blue-900 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-xl cursor-pointer"
             >
               <Database className="w-3.5 h-3.5 text-blue-600" />
               <span>Veri / Data Yönetim Portalı</span>
@@ -1317,7 +1317,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
               type="button"
               onClick={handleDownloadAllData}
               disabled={isExportingData}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-emerald-900 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl cursor-pointer disabled:opacity-50"
+              className="inline-flex w-full sm:w-auto items-center justify-center gap-1.5 px-3 py-2.5 sm:py-1.5 text-xs font-bold text-emerald-900 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl cursor-pointer disabled:opacity-50"
             >
               <Download className="w-3.5 h-3.5 text-emerald-600" />
               <span>{isExportingData ? 'İndiriliyor...' : 'Veri İndir (JSON/Kod)'}</span>
@@ -1325,7 +1325,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
             <button
               type="button"
               onClick={() => openAdminSection('data_management')}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-purple-900 bg-purple-50 hover:bg-purple-100 border border-purple-200 rounded-xl cursor-pointer"
+              className="inline-flex w-full sm:w-auto items-center justify-center gap-1.5 px-3 py-2.5 sm:py-1.5 text-xs font-bold text-purple-900 bg-purple-50 hover:bg-purple-100 border border-purple-200 rounded-xl cursor-pointer"
             >
               <Upload className="w-3.5 h-3.5 text-purple-600" />
               <span>Veri Yükle</span>
@@ -1333,7 +1333,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
             <button
               type="button"
               onClick={() => setShowResetWarningModal(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 rounded-xl cursor-pointer"
+              className="inline-flex w-full sm:w-auto items-center justify-center gap-1.5 px-3 py-2.5 sm:py-1.5 text-xs font-bold text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 rounded-xl cursor-pointer"
             >
               <RotateCcw className="w-3.5 h-3.5 text-red-600" />
               <span>Sistemi Sıfırla</span>
@@ -1345,7 +1345,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
           <button
             type="button"
             onClick={() => openAdminSection('members')}
-            className={`px-3 py-2 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
+            className={`px-3 py-2.5 sm:py-2 text-xs font-semibold rounded-lg transition-colors cursor-pointer break-words ${
               adminSection === 'members'
                 ? 'bg-slate-900 text-white shadow-xs'
                 : 'text-slate-200 hover:text-white hover:bg-white/10'
@@ -1356,7 +1356,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
           <button
             type="button"
             onClick={() => openAdminSection('bonuses')}
-            className={`px-3.5 py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer inline-flex items-center gap-1.5 ${
+            className={`px-3.5 py-2.5 sm:py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer inline-flex items-center gap-1.5 break-words ${
               adminSection === 'bonuses'
                 ? 'bg-emerald-600 text-white shadow-xs'
                 : 'bg-emerald-100 text-emerald-900 hover:bg-emerald-200'
@@ -1368,7 +1368,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
           <button
             type="button"
             onClick={() => openAdminSection('activity')}
-            className={`px-3.5 py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer inline-flex items-center gap-1.5 ${
+            className={`px-3.5 py-2.5 sm:py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer inline-flex items-center gap-1.5 break-words ${
               adminSection === 'activity'
                 ? 'bg-indigo-600 text-white shadow-xs'
                 : 'bg-indigo-100 text-indigo-900 hover:bg-indigo-200'
@@ -1380,7 +1380,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
           <button
             type="button"
             onClick={() => openAdminSection('params')}
-            className={`px-3.5 py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer inline-flex items-center gap-1.5 ${
+            className={`px-3.5 py-2.5 sm:py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer inline-flex items-center gap-1.5 break-words ${
               adminSection === 'params'
                 ? 'bg-amber-600 text-white shadow-xs'
                 : 'bg-amber-100 text-amber-950 hover:bg-amber-200'
@@ -1392,7 +1392,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
           <button
             type="button"
             onClick={() => openAdminSection('commission_engine_settings')}
-            className={`px-3.5 py-2.5 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center justify-between gap-1.5 ${
+            className={`px-3.5 py-2.5 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center justify-between gap-2 min-w-0 ${
               adminSection === 'commission_engine_settings'
                 ? 'bg-gradient-to-r from-indigo-600 via-purple-600 to-teal-600 text-white shadow-md ring-2 ring-indigo-400'
                 : 'bg-gradient-to-r from-indigo-950/70 to-teal-950/70 text-indigo-200 hover:text-white hover:from-indigo-900 hover:to-teal-900 border border-indigo-400/30'
@@ -1409,7 +1409,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
           <button
             type="button"
             onClick={() => openAdminSection('strategic_growth')}
-            className={`px-3.5 py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer inline-flex items-center gap-1.5 ${
+            className={`px-3.5 py-2.5 sm:py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer inline-flex items-center gap-1.5 break-words ${
               adminSection === 'strategic_growth'
                 ? 'bg-purple-700 text-white shadow-xs'
                 : 'bg-purple-100 text-purple-950 hover:bg-purple-200'
@@ -1421,7 +1421,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
           <button
             type="button"
             onClick={() => openAdminSection('finance')}
-            className={`px-3 py-2 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
+            className={`px-3 py-2.5 sm:py-2 text-xs font-semibold rounded-lg transition-colors cursor-pointer break-words ${
               adminSection === 'finance'
                 ? 'bg-slate-900 text-white shadow-xs'
                 : 'text-slate-200 hover:text-white hover:bg-white/10'
@@ -1432,7 +1432,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
           <button
             type="button"
             onClick={() => openAdminSection('tax_refunds')}
-            className={`px-3.5 py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer inline-flex items-center gap-1.5 ${
+            className={`px-3.5 py-2.5 sm:py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer inline-flex items-center gap-1.5 break-words ${
               adminSection === 'tax_refunds'
                 ? 'bg-teal-700 text-white shadow-xs'
                 : 'bg-teal-100 text-teal-950 hover:bg-teal-200 border border-teal-300'
@@ -1443,7 +1443,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
           <button
             type="button"
             onClick={() => openAdminSection('webhooks_sql')}
-            className={`px-3 py-2 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
+            className={`px-3 py-2.5 sm:py-2 text-xs font-semibold rounded-lg transition-colors cursor-pointer break-words ${
               adminSection === 'webhooks_sql'
                 ? 'bg-slate-900 text-white shadow-xs'
                 : 'text-slate-200 hover:text-white hover:bg-white/10'
@@ -1454,7 +1454,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
           <button
             type="button"
             onClick={() => openAdminSection('feedback_tickets')}
-            className={`px-3.5 py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer inline-flex items-center gap-1.5 ${
+            className={`px-3.5 py-2.5 sm:py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer inline-flex items-center gap-1.5 break-words ${
               adminSection === 'feedback_tickets'
                 ? 'bg-rose-700 text-white shadow-xs ring-2 ring-rose-400/50'
                 : 'bg-rose-100 text-rose-950 hover:bg-rose-200 border border-rose-300'
@@ -1477,7 +1477,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
             <button
               type="button"
               onClick={() => { setIsSectionDetailOpen(true); onOpenWebhookTab(); }}
-              className="px-3.5 py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer inline-flex items-center gap-1.5 bg-emerald-950 text-amber-300 hover:bg-slate-800 border border-amber-400/40"
+              className="px-3.5 py-2.5 sm:py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer inline-flex items-center gap-1.5 break-words bg-emerald-950 text-amber-300 hover:bg-slate-800 border border-amber-400/40"
             >
               <Play className="w-3.5 h-3.5" />
               <span>⚡ Webhook &amp; 7 Mertebe Komisyon Motoru</span>
@@ -1491,7 +1491,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                 handleTestEndpoint('Admin Stats', '/api/v1/admin/stats', 'GET', 'ADMIN');
               }
             }}
-            className={`px-3 py-2 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
+            className={`px-3 py-2.5 sm:py-2 text-xs font-semibold rounded-lg transition-colors cursor-pointer break-words ${
               adminSection === 'rest_api'
                 ? 'bg-slate-900 text-white shadow-xs'
                 : 'text-slate-200 hover:text-white hover:bg-white/10'
@@ -1502,7 +1502,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
           <button
             type="button"
             onClick={() => openAdminSection('data_management')}
-            className={`px-3.5 py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer inline-flex items-center gap-1.5 ${
+            className={`px-3.5 py-2.5 sm:py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer inline-flex items-center gap-1.5 break-words ${
               adminSection === 'data_management'
                 ? 'bg-blue-600 text-white shadow-xs'
                 : 'bg-blue-100 text-blue-950 hover:bg-blue-200 border border-blue-300'
@@ -1514,7 +1514,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
           <button
             type="button"
             onClick={() => openAdminSection('accounting_credentials')}
-            className={`inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-bold transition-colors cursor-pointer ${
+            className={`inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2.5 sm:py-2 text-xs font-bold transition-colors cursor-pointer break-words ${
               adminSection === 'accounting_credentials'
                 ? 'bg-amber-600 text-white shadow-xs'
                 : 'bg-amber-100 text-amber-950 hover:bg-amber-200 border border-amber-300'
@@ -1539,7 +1539,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
         </div>
       )}
       {adminSection === 'accounting_credentials' && (
-        <section className="max-w-2xl space-y-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <section className="w-full min-w-0 max-w-2xl space-y-5 rounded-2xl border border-slate-200 bg-white p-4 sm:p-6 shadow-sm">
           <div>
             <h3 className="text-lg font-bold text-slate-900">Muhasebe giriş bilgileri</h3>
             <p className="mt-1 text-sm text-slate-600">Yeni şifre kaydedildiğinde mevcut muhasebe oturumları anında geçersiz olur. Şifre PostgreSQL’de açık metin olarak saklanmaz.</p>
@@ -1547,14 +1547,14 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
           <form onSubmit={handleSaveAccountingCredentials} className="space-y-4">
             <label className="block space-y-1 text-sm font-semibold text-slate-700">
               E-posta adresi
-              <input type="email" required value={accountingEmail} onChange={(event) => setAccountingEmail(event.target.value)} className="w-full rounded-lg border border-slate-300 px-3 py-2" />
+              <input type="email" required value={accountingEmail} onChange={(event) => setAccountingEmail(event.target.value)} className="w-full min-w-0 rounded-lg border border-slate-300 px-3 py-2.5 sm:py-2" />
             </label>
             <label className="block space-y-1 text-sm font-semibold text-slate-700">
               Yeni şifre
-              <input type="password" required minLength={12} autoComplete="new-password" value={accountingPassword} onChange={(event) => setAccountingPassword(event.target.value)} className="w-full rounded-lg border border-slate-300 px-3 py-2" />
+              <input type="password" required minLength={12} autoComplete="new-password" value={accountingPassword} onChange={(event) => setAccountingPassword(event.target.value)} className="w-full min-w-0 rounded-lg border border-slate-300 px-3 py-2.5 sm:py-2" />
               <span className="block text-xs font-normal text-slate-500">En az 12 karakter olmalıdır.</span>
             </label>
-            <button type="submit" disabled={isSavingAccountingCredentials} className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">
+            <button type="submit" disabled={isSavingAccountingCredentials} className="w-full sm:w-auto rounded-lg bg-slate-900 px-4 py-2.5 sm:py-2 text-sm font-bold text-white disabled:opacity-50">
               {isSavingAccountingCredentials ? 'Kaydediliyor…' : 'Bilgileri Kaydet'}
             </button>
           </form>
@@ -1564,13 +1564,13 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
       {/* SECTION: 🚀 BÜYÜMEYİ 2-3 KATINA ÇIKARAN 5 STRATEJİK İYİLEŞTİRME ÖNERİSİ & V2.2 SİSTEM AYARLARI */}
       {adminSection === 'strategic_growth' && (
         <section className="space-y-6">
-          <div className="bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-900 text-white rounded-2xl p-6 space-y-6 border border-indigo-500/30 shadow-md">
+          <div className="min-w-0 bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-900 text-white rounded-2xl p-4 sm:p-6 space-y-6 border border-indigo-500/30 shadow-md">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-white/10 pb-5">
               <div>
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 border border-amber-400/40 text-amber-300 text-xs font-bold mb-2">
                   <span>🚀 YÖNETİCİ KONTROL MERKEZİ · BÜYÜMEYİ 2-3 KATINA ÇIKARAN 5 STRATEJİK İYİLEŞTİRME ÖNERİSİ (CANLI MODÜLLER)</span>
                 </div>
-                <h3 className="text-xl font-bold text-white">
+                <h3 className="text-lg sm:text-xl font-bold text-white break-words">
                   1️⃣ 48s FOMO Sayacı · 2️⃣ Hibrit Dinamik Sıkıştırma · 3️⃣ P2P &amp; Kupon · 4️⃣ İlk 30 Gün Duble Bonus · 5️⃣ WhatsApp Business Story
                 </h3>
                 <p className="text-xs text-slate-300 mt-1">
@@ -1578,15 +1578,15 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                 </p>
               </div>
 
-              <div className="flex flex-wrap items-center gap-3">
-                <div className="bg-white/10 border border-white/15 rounded-xl px-3.5 py-2">
+              <div className="flex flex-wrap items-center gap-3 min-w-0 w-full lg:w-auto">
+                <div className="w-full sm:w-auto min-w-0 bg-white/10 border border-white/15 rounded-xl px-3.5 py-2">
                   <label className="block text-[10px] font-mono uppercase text-amber-300 mb-1">
                     İşlem Yapılacak Hedef Bayi Seçin
                   </label>
                   <select
                     value={strategicTargetUserId}
                     onChange={(e) => setStrategicTargetUserId(e.target.value)}
-                    className="bg-slate-900 text-white text-xs font-bold px-2.5 py-1.5 rounded-lg border border-white/20"
+                    className="w-full sm:w-auto max-w-full bg-slate-900 text-white text-base sm:text-xs font-bold px-2.5 py-2.5 sm:py-1.5 rounded-lg border border-white/20"
                   >
                     {sortedMembers.map((m) => (
                       <option key={m.user_id} value={m.user_id}>
@@ -1600,7 +1600,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                   <button
                     type="button"
                     onClick={onOpenWebhookTab}
-                    className="px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-extrabold cursor-pointer inline-flex items-center gap-2 shadow-sm"
+                    className="w-full sm:w-auto justify-center px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-extrabold cursor-pointer inline-flex items-center gap-2 shadow-sm"
                   >
                     <Play className="w-4 h-4" />
                     <span>⚡ Webhook &amp; 7 Mertebe Motorunu Aç</span>
@@ -1610,7 +1610,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
             </div>
 
             {strategicActionMsg && (
-              <div className="p-3.5 rounded-xl bg-emerald-500/20 border border-emerald-400/50 text-emerald-200 text-xs font-bold flex items-center justify-between">
+              <div className="p-3.5 rounded-xl bg-emerald-500/20 border border-emerald-400/50 text-emerald-200 text-xs font-bold flex flex-wrap items-center justify-between gap-2 break-words">
                 <span>✅ {strategicActionMsg}</span>
                 <button
                   type="button"
@@ -1640,7 +1640,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                         fast_roi_3x15_enabled: !v2Config.fast_roi_3x15_enabled,
                       })
                     }
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer ${
+                    className={`px-3 py-2.5 sm:py-1.5 rounded-lg text-xs font-bold cursor-pointer ${
                       v2Config.fast_roi_3x15_enabled
                         ? 'bg-emerald-500 text-slate-950'
                         : 'bg-slate-700 text-slate-300'
@@ -1665,7 +1665,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                         welcome_30d_double_bonus_enabled: !v2Config.welcome_30d_double_bonus_enabled,
                       })
                     }
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer ${
+                    className={`px-3 py-2.5 sm:py-1.5 rounded-lg text-xs font-bold cursor-pointer ${
                       v2Config.welcome_30d_double_bonus_enabled
                         ? 'bg-amber-400 text-slate-950'
                         : 'bg-slate-700 text-slate-300'
@@ -1680,9 +1680,9 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
             {/* 5 Stratejik Modül Kartları */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
               {/* 1️⃣ 48s FOMO Geri Sayım Sayacı & Pasif Üye Dönüştürücü */}
-              <div className="lg:col-span-6 bg-red-950/60 border border-red-500/40 rounded-2xl p-5 space-y-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
+              <div className="lg:col-span-6 min-w-0 bg-red-950/60 border border-red-500/40 rounded-2xl p-4 sm:p-5 space-y-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1 break-words">
                     <span className="px-2 py-0.5 rounded bg-red-500/30 text-red-200 text-[10px] font-mono font-bold">
                       1️⃣ STRATEJİK ÖNERİ · PASİF ÜYE DÖNÜŞTÜRÜCÜ (%65 DÖNÜŞÜM)
                     </span>
@@ -1697,7 +1697,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                     type="button"
                     disabled={strategicBusy}
                     onClick={handleAdminCreateFomoAlert}
-                    className="px-3.5 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold cursor-pointer shrink-0"
+                    className="w-full sm:w-auto px-3.5 py-2.5 sm:py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold cursor-pointer shrink-0"
                   >
                     + 48s FOMO Sayacı Gönder
                   </button>
@@ -1725,9 +1725,9 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                     return (
                       <div
                         key={alert.id}
-                        className="p-3 rounded-xl bg-slate-950/80 border border-red-500/30 flex items-center justify-between gap-3 text-xs"
+                        className="p-3 rounded-xl bg-slate-950/80 border border-red-500/30 flex flex-wrap items-center justify-between gap-2 min-w-0 text-xs"
                       >
-                        <div>
+                        <div className="min-w-0 flex-1 break-words">
                           <div className="font-bold text-red-200">
                             {alert.user_full_name || m?.full_name || alert.external_user_id || alert.user_id} —{' '}
                             {amountVal.toLocaleString('tr-TR')} $
@@ -1744,7 +1744,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                             onClick={() =>
                               handleAdminConvertFomoAlert(alert.id, alert.external_user_id)
                             }
-                            className="px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-[11px] cursor-pointer shrink-0"
+                            className="px-3 py-2.5 sm:py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-[11px] cursor-pointer shrink-0"
                           >
                             Aktifleştir &amp; Kurtar
                           </button>
@@ -1756,7 +1756,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
               </div>
 
               {/* 2️⃣ Derinlik Ödemelerinde Dinamik Sıkıştırma (Dynamic Compression) */}
-              <div className="lg:col-span-6 bg-indigo-950/60 border border-indigo-400/30 rounded-2xl p-5 space-y-4">
+              <div className="lg:col-span-6 min-w-0 bg-indigo-950/60 border border-indigo-400/30 rounded-2xl p-4 sm:p-5 space-y-4">
                 <div>
                   <span className="px-2 py-0.5 rounded bg-indigo-500/30 text-indigo-200 text-[10px] font-mono font-bold">
                     2️⃣ STRATEJİK ÖNERİ · DYNAMIC COMPRESSION MOTORU
@@ -1820,7 +1820,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
               </div>
 
               {/* 3️⃣ P2P İç Bakiye Transferi & Aktivasyon Kodu (Wallet-to-Wallet / Voucher) */}
-              <div className="lg:col-span-7 bg-white/5 border border-white/15 rounded-2xl p-5 space-y-4">
+              <div className="lg:col-span-7 min-w-0 bg-white/5 border border-white/15 rounded-2xl p-4 sm:p-5 space-y-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
                     <span className="px-2 py-0.5 rounded bg-emerald-500/30 text-emerald-200 text-[10px] font-mono font-bold">
@@ -1845,7 +1845,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                       <select
                         value={adminP2pRecipientId}
                         onChange={(e) => setAdminP2pRecipientId(e.target.value)}
-                        className="w-full px-2.5 py-1.5 rounded-lg bg-slate-950 border border-white/15 text-white text-xs"
+                        className="w-full px-2.5 py-2.5 sm:py-1.5 rounded-lg bg-slate-950 border border-white/15 text-white text-base sm:text-xs"
                       >
                         {sortedMembers
                           .filter((m) => m.user_id !== strategicTargetUserId)
@@ -1864,7 +1864,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                           min={100}
                           value={adminP2pAmount}
                           onChange={(e) => setAdminP2pAmount(Number(e.target.value) || 0)}
-                          className="w-full px-2.5 py-1.5 rounded-lg bg-slate-950 border border-white/15 text-white font-mono text-xs"
+                          className="w-full px-2.5 py-2.5 sm:py-1.5 rounded-lg bg-slate-950 border border-white/15 text-white font-mono text-base sm:text-xs"
                         />
                       </div>
                       <div>
@@ -1876,7 +1876,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                               e.target.value as 'BALANCE_TRANSFER' | 'DIRECT_PACKAGE_ACTIVATION'
                             )
                           }
-                          className="w-full px-2 py-1.5 rounded-lg bg-slate-950 border border-white/15 text-white text-xs"
+                          className="w-full px-2 py-2.5 sm:py-1.5 rounded-lg bg-slate-950 border border-white/15 text-white text-base sm:text-xs"
                         >
                           <option value="BALANCE_TRANSFER">Nakit Bakiye</option>
                           <option value="DIRECT_PACKAGE_ACTIVATION">Direkt +30G Paket</option>
@@ -1886,7 +1886,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                     <button
                       type="submit"
                       disabled={strategicBusy}
-                      className="w-full py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs cursor-pointer"
+                      className="w-full py-2.5 sm:py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs cursor-pointer"
                     >
                       P2P Transferi Uygula
                     </button>
@@ -1896,13 +1896,13 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                     <div className="font-bold text-amber-300">
                       🎟️ Aktivasyon Kupon Kodu Üret &amp; Kullan
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex min-w-0 gap-2">
                       <select
                         value={adminVoucherPkgId}
                         onChange={(e) =>
                           setAdminVoucherPkgId(e.target.value as Exclude<PackageId, 'CUSTOM'>)
                         }
-                        className="flex-1 px-2.5 py-1.5 rounded-lg bg-slate-950 border border-white/15 text-white text-xs"
+                        className="min-w-0 flex-1 px-2.5 py-2.5 sm:py-1.5 rounded-lg bg-slate-950 border border-white/15 text-white text-base sm:text-xs"
                       >
                         {FREKANS_PACKAGES.map((pkg) => (
                           <option key={pkg.id} value={pkg.id}>
@@ -1914,25 +1914,25 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                         type="button"
                         disabled={strategicBusy}
                         onClick={handleAdminGenerateVoucher}
-                        className="px-3 py-1.5 rounded-lg bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold text-xs cursor-pointer shrink-0"
+                        className="px-3 py-2.5 sm:py-1.5 rounded-lg bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold text-xs cursor-pointer shrink-0"
                       >
                         + Kupon Üret
                       </button>
                     </div>
 
-                    <div className="flex gap-2">
+                    <div className="flex min-w-0 gap-2">
                       <input
                         type="text"
                         value={adminRedeemCode}
                         onChange={(e) => setAdminRedeemCode(e.target.value)}
                         placeholder="Kupon kodu girin (AKTIF-...)"
-                        className="flex-1 px-2.5 py-1.5 rounded-lg bg-slate-950 border border-white/15 text-white font-mono text-xs"
+                        className="min-w-0 flex-1 px-2.5 py-2.5 sm:py-1.5 rounded-lg bg-slate-950 border border-white/15 text-white font-mono text-base sm:text-xs"
                       />
                       <button
                         type="button"
                         disabled={strategicBusy}
                         onClick={() => handleAdminRedeemVoucher()}
-                        className="px-3 py-1.5 rounded-lg bg-indigo-500 hover:bg-indigo-400 text-white font-bold text-xs cursor-pointer shrink-0"
+                        className="px-3 py-2.5 sm:py-1.5 rounded-lg bg-indigo-500 hover:bg-indigo-400 text-white font-bold text-xs cursor-pointer shrink-0"
                       >
                         Kuponu Kullan
                       </button>
@@ -1947,7 +1947,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                         return (
                           <div
                             key={vCode || v.id}
-                            className="flex items-center justify-between text-[11px] bg-slate-950/70 px-2.5 py-1 rounded border border-white/10"
+                            className="flex flex-wrap items-center justify-between gap-2 text-[11px] bg-slate-950/70 px-2.5 py-1.5 rounded border border-white/10"
                           >
                             <span className="font-mono font-bold text-amber-300">{vCode}</span>
                             <span className="text-slate-300">
@@ -1957,7 +1957,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                               <button
                                 type="button"
                                 onClick={() => handleAdminRedeemVoucher(vCode)}
-                                className="text-emerald-400 underline cursor-pointer"
+                                className="py-1.5 px-1 text-emerald-400 underline cursor-pointer"
                               >
                                 Kullan
                               </button>
@@ -1971,7 +1971,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
               </div>
 
               {/* 4️⃣ İlk 30 Gün Duble Bonus & 5️⃣ WhatsApp Business API + İade/Clawback */}
-              <div className="lg:col-span-5 bg-white/5 border border-white/15 rounded-2xl p-5 space-y-4">
+              <div className="lg:col-span-5 min-w-0 bg-white/5 border border-white/15 rounded-2xl p-4 sm:p-5 space-y-4">
                 <div className="space-y-3">
                   <div>
                     <span className="px-2 py-0.5 rounded bg-amber-500/30 text-amber-200 text-[10px] font-mono font-bold">
@@ -1982,8 +1982,8 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                     </h4>
                   </div>
 
-                  <div className="p-3 rounded-xl bg-slate-900/90 border border-amber-400/30 flex items-center justify-between gap-3 text-xs">
-                    <div>
+                  <div className="p-3 rounded-xl bg-slate-900/90 border border-amber-400/30 flex flex-wrap items-center justify-between gap-2 min-w-0 text-xs">
+                    <div className="min-w-0 flex-1 break-words">
                       <div className="font-bold text-amber-300">
                         4️⃣ İlk 30 Gün Duble Bonus (+2.000 $ Hoşgeldin)
                       </div>
@@ -1995,14 +1995,14 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                       type="button"
                       disabled={strategicBusy}
                       onClick={handleAdminTriggerWelcomeDoubleBonus}
-                      className="px-3 py-2 rounded-lg bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold text-xs cursor-pointer shrink-0"
+                      className="w-full sm:w-auto px-3 py-2.5 sm:py-2 rounded-lg bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold text-xs cursor-pointer shrink-0"
                     >
                       +2.000 $ Tanımla
                     </button>
                   </div>
 
-                  <div className="p-3 rounded-xl bg-slate-900/90 border border-emerald-400/30 flex items-center justify-between gap-3 text-xs">
-                    <div>
+                  <div className="p-3 rounded-xl bg-slate-900/90 border border-emerald-400/30 flex flex-wrap items-center justify-between gap-2 min-w-0 text-xs">
+                    <div className="min-w-0 flex-1 break-words">
                       <div className="font-bold text-emerald-300">
                         5️⃣ WhatsApp Business API &amp; Story Bildirimi
                       </div>
@@ -2014,7 +2014,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                       type="button"
                       disabled={strategicBusy}
                       onClick={handleAdminTriggerWhatsAppPush}
-                      className="px-3 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs cursor-pointer shrink-0"
+                      className="w-full sm:w-auto px-3 py-2.5 sm:py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs cursor-pointer shrink-0"
                     >
                       WhatsApp Gönder
                     </button>
@@ -2024,20 +2024,20 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                     <div className="font-bold text-red-200">
                       🛡️ B) İade / Cayma Durumunda Komisyon İptali (handleOrderRefund Clawback)
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2">
                       <input
                         type="number"
                         min={500}
                         step={500}
                         value={adminRefundAmount}
                         onChange={(e) => setAdminRefundAmount(Number(e.target.value) || 5000)}
-                        className="w-32 px-2.5 py-1.5 rounded-lg bg-slate-950 border border-red-400/40 text-white font-mono text-xs"
+                        className="w-full sm:w-32 px-2.5 py-2.5 sm:py-1.5 rounded-lg bg-slate-950 border border-red-400/40 text-white font-mono text-base sm:text-xs"
                       />
                       <button
                         type="button"
                         disabled={strategicBusy}
                         onClick={handleAdminSimulateRefundClawback}
-                        className="flex-1 py-1.5 px-3 rounded-lg bg-red-600 hover:bg-red-500 text-white font-bold text-xs cursor-pointer"
+                        className="w-full sm:flex-1 py-2.5 sm:py-1.5 px-3 rounded-lg bg-red-600 hover:bg-red-500 text-white font-bold text-xs cursor-pointer break-words"
                       >
                         Sipariş İadesi &amp; Komisyon İptali (Clawback) Uygula
                       </button>
@@ -2054,7 +2054,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
       {adminSection === 'activity' && (
         <div className="space-y-8">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-            <section className="lg:col-span-6 bg-white border-2 border-indigo-500/40 rounded-2xl p-6 space-y-5 shadow-2xs">
+            <section className="lg:col-span-6 min-w-0 bg-white border-2 border-indigo-500/40 rounded-2xl p-4 sm:p-6 space-y-5 shadow-2xs">
               <div className="border-b border-slate-200 pb-4 flex items-center justify-between gap-2">
                 <div>
                   <div className="text-xs font-mono text-indigo-700 font-bold">SABİT AKTİFLİK KURALI</div>
@@ -2071,8 +2071,8 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
             </section>
 
             {/* Sağ 6 Sütun: Süresi Dolan Hesapları Otomatik Tespit Eden Cron Job & Özet */}
-            <div className="lg:col-span-6 space-y-6">
-              <div className="bg-slate-900 text-white rounded-2xl p-6 space-y-4 border border-slate-800">
+            <div className="lg:col-span-6 min-w-0 space-y-6">
+              <div className="min-w-0 bg-slate-900 text-white rounded-2xl p-4 sm:p-6 space-y-4 border border-slate-800">
                 <div className="flex items-start justify-between gap-4 border-b border-slate-800 pb-4">
                   <div>
                     <div className="text-xs font-mono text-amber-400 font-bold">
@@ -2091,7 +2091,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-3 text-center font-mono text-xs">
+                <div className="grid grid-cols-3 gap-2 sm:gap-3 text-center font-mono text-xs">
                   <div className="p-3 rounded-xl bg-slate-950 border border-slate-800">
                     <div className="text-lg font-bold text-emerald-400">
                       {sortedMembers.filter((m) => m.is_active).length}
@@ -2136,8 +2136,8 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
               </div>
 
               {/* Son Aktiflik Logları (SQL: activity_logs) */}
-              <div className="bg-white border border-slate-200 rounded-2xl p-6 space-y-3 shadow-2xs">
-                <div className="text-xs font-mono text-slate-500 font-bold">
+              <div className="min-w-0 bg-white border border-slate-200 rounded-2xl p-4 sm:p-6 space-y-3 shadow-2xs">
+                <div className="text-xs font-mono text-slate-500 font-bold break-words">
                   SQL: activity_logs · SON AKTİFLİK &amp; CRON HAREKETLERİ ({activityLogs.length})
                 </div>
                 <div className="max-h-52 overflow-y-auto space-y-2 text-xs">
@@ -2146,7 +2146,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                       key={log.id}
                       className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl flex items-start justify-between gap-2"
                     >
-                      <div>
+                      <div className="min-w-0 flex-1 break-words">
                         <span className="font-bold text-slate-900">{log.user_full_name}</span>{' '}
                         <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-slate-200 text-slate-800">
                           {log.action_type}
@@ -2169,7 +2169,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
           </div>
 
           {/* Bayi Bazlı Aktiflik Süresi Geri Sayım & Dönemlik Bayi Ekleme Sayacı Yönetim Tablosu */}
-          <section className="bg-white border border-slate-200 rounded-2xl p-6 space-y-4 shadow-2xs">
+          <section className="min-w-0 bg-white border border-slate-200 rounded-2xl p-4 sm:p-6 space-y-4 shadow-2xs">
             <div className="border-b border-slate-200 pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div>
                 <div className="text-xs font-mono text-slate-500">
@@ -2185,11 +2185,11 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
                   <tr className="border-b border-slate-200 text-slate-500">
-                    <th className="py-2.5 pr-2">Sıra &amp; Bayi</th>
-                    <th className="py-2.5 px-2">is_active</th>
-                    <th className="py-2.5 px-2">activity_expires_at (Bitiş Tarihi)</th>
-                    <th className="py-2.5 px-2">Çekim Middleware Durumu</th>
-                    <th className="py-2.5 pl-2 text-right">Yönetici Hızlı Müdahale</th>
+                    <th className="whitespace-nowrap py-2.5 pr-2">Sıra &amp; Bayi</th>
+                    <th className="whitespace-nowrap py-2.5 px-2">is_active</th>
+                    <th className="whitespace-nowrap py-2.5 px-2">activity_expires_at (Bitiş Tarihi)</th>
+                    <th className="whitespace-nowrap py-2.5 px-2">Çekim Middleware Durumu</th>
+                    <th className="whitespace-nowrap py-2.5 pl-2 text-right">Yönetici Hızlı Müdahale</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200 font-mono tabular-nums">
@@ -2260,7 +2260,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                               onClick={() =>
                                 onMemberActivityAction?.(m.user_id, { action: 'EXPIRE_NOW' })
                               }
-                              className="px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white text-[11px] font-bold rounded-lg cursor-pointer"
+                              className="px-2.5 py-2 sm:py-1 bg-red-600 hover:bg-red-700 text-white text-[11px] font-bold rounded-lg cursor-pointer"
                             >
                               Süreyi Doldur (Test)
                             </button>
@@ -2279,12 +2279,12 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
       {/* SECTION 1: SİSTEM & PARAMETRE YÖNETİMİ (`POST /api/v1/admin/settings`) */}
       {adminSection === 'params' && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          <div className="lg:col-span-12 flex flex-wrap items-end justify-between gap-4 rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50 to-teal-50 px-5 py-4 shadow-sm">
+          <div className="lg:col-span-12 flex flex-wrap items-end justify-between gap-4 rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50 to-teal-50 px-4 sm:px-5 py-4 shadow-sm">
             <div>
               <div className="text-xs font-bold uppercase tracking-wide text-emerald-800">
                 PostgreSQL Kur Ayarı
               </div>
-              <div className="mt-1 text-xl font-mono font-bold text-slate-900 tabular-nums">
+              <div className="mt-1 text-lg sm:text-xl font-mono font-bold text-slate-900 tabular-nums break-words">
                 {usdTryRate > 0 ? `1 USD = ${usdTryRate.toFixed(2)} TRY` : 'Kur yükleniyor...'}
               </div>
             </div>
@@ -2297,14 +2297,14 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                   step="0.01"
                   value={usdTryRateInput}
                   onChange={(event) => setUsdTryRateInput(event.target.value)}
-                  className="w-32 rounded-lg border border-slate-300 bg-white px-3 py-2 font-mono"
+                  className="w-full sm:w-32 max-w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 sm:py-2 font-mono"
                 />
               </label>
               <button
                 type="button"
                 onClick={handleSaveUsdTryRate}
                 disabled={isSavingUsdTryRate || !usdTryRateInput}
-                className="rounded-lg bg-emerald-700 px-4 py-2 text-xs font-bold text-white disabled:opacity-50"
+                className="w-full sm:w-auto rounded-lg bg-emerald-700 px-4 py-2.5 sm:py-2 text-xs font-bold text-white disabled:opacity-50"
               >
                 {isSavingUsdTryRate ? 'Kaydediliyor...' : 'Kuru Kaydet'}
               </button>
@@ -2326,11 +2326,11 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                   Komisyon &amp; Teşvik Dizin Tablosu
                 </h3>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2 min-w-0">
                 <button
                   type="button"
                   onClick={() => openAdminSection('commission_engine_settings')}
-                  className="text-xs px-2.5 py-1 bg-gradient-to-r from-indigo-600 to-teal-600 text-white font-bold rounded-lg cursor-pointer transition-all shadow-xs hover:from-indigo-500 hover:to-teal-500 flex items-center gap-1"
+                  className="text-xs px-2.5 py-2.5 sm:py-1 bg-gradient-to-r from-indigo-600 to-teal-600 text-white font-bold rounded-lg cursor-pointer transition-all shadow-xs hover:from-indigo-500 hover:to-teal-500 flex items-center gap-1"
                 >
                   <Sliders className="w-3 h-3 text-amber-300" />
                   <span>⚡ Motor Ayarları Sekmesi</span>
@@ -2338,7 +2338,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                 <button
                   type="button"
                   onClick={() => setIsEditingBusinessRules(!isEditingBusinessRules)}
-                  className="text-xs px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-bold rounded-lg cursor-pointer transition-colors"
+                  className="text-xs px-2.5 py-2.5 sm:py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-bold rounded-lg cursor-pointer transition-colors"
                 >
                   {isEditingBusinessRules ? 'Vazgeç' : '⚙️ Hızlı Düzenle'}
                 </button>
@@ -2366,7 +2366,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                   <div className="text-xs font-bold text-indigo-900">
                     Motor 1: Sponsorlu Unilevel 7 Derinlik Oranları (%)
                   </div>
-                  <div className="grid grid-cols-4 gap-2">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                     {editUnilevelPercentages.map((pct, idx) => (
                       <div key={idx} className="space-y-1">
                         <label className="text-[10px] text-slate-600 font-medium">{idx + 1}. Derinlik</label>
@@ -2381,7 +2381,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                             copy[idx] = parseFloat(e.target.value) || 0;
                             setEditUnilevelPercentages(copy);
                           }}
-                          className="w-full px-2 py-1 text-xs border border-slate-300 rounded-lg font-mono"
+                          className="w-full min-w-0 px-2 py-2.5 sm:py-1 text-base sm:text-xs border border-slate-300 rounded-lg font-mono"
                         />
                       </div>
                     ))}
@@ -2395,7 +2395,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                   <div className="text-xs font-bold text-emerald-900">
                     Motor 2: Küresel Monoline Teşvik 7 Sıra Oranları (%)
                   </div>
-                  <div className="grid grid-cols-4 gap-2">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                     {editMonolinePercentages.map((pct, idx) => (
                       <div key={idx} className="space-y-1">
                         <label className="text-[10px] text-slate-600 font-medium">{idx + 1}. Üst Sıra</label>
@@ -2410,7 +2410,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                             copy[idx] = parseFloat(e.target.value) || 0;
                             setEditMonolinePercentages(copy);
                           }}
-                          className="w-full px-2 py-1 text-xs border border-slate-300 rounded-lg font-mono"
+                          className="w-full min-w-0 px-2 py-2.5 sm:py-1 text-base sm:text-xs border border-slate-300 rounded-lg font-mono"
                         />
                       </div>
                     ))}
@@ -2429,7 +2429,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                       max="100"
                       value={editDirectSponsor}
                       onChange={(e) => setEditDirectSponsor(parseFloat(e.target.value) || 0)}
-                      className="w-full px-2 py-1 text-xs border border-slate-300 rounded-lg font-mono"
+                      className="w-full min-w-0 px-2 py-2.5 sm:py-1 text-base sm:text-xs border border-slate-300 rounded-lg font-mono"
                     />
                   </div>
                   <div className="space-y-1">
@@ -2440,7 +2440,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                       max="100"
                       value={editSystemFund}
                       onChange={(e) => setEditSystemFund(parseFloat(e.target.value) || 0)}
-                      className="w-full px-2 py-1 text-xs border border-slate-300 rounded-lg font-mono"
+                      className="w-full min-w-0 px-2 py-2.5 sm:py-1 text-base sm:text-xs border border-slate-300 rounded-lg font-mono"
                     />
                   </div>
                   <div className="space-y-1">
@@ -2451,7 +2451,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                       max="90"
                       value={editClawbackDays}
                       onChange={(e) => setEditClawbackDays(parseInt(e.target.value, 10) || 14)}
-                      className="w-full px-2 py-1 text-xs border border-slate-300 rounded-lg font-mono"
+                      className="w-full min-w-0 px-2 py-2.5 sm:py-1 text-base sm:text-xs border border-slate-300 rounded-lg font-mono"
                     />
                   </div>
                   <div className="space-y-1">
@@ -2462,23 +2462,23 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                       max="100"
                       value={editMaxSingleLeg}
                       onChange={(e) => setEditMaxSingleLeg(parseFloat(e.target.value) || 50)}
-                      className="w-full px-2 py-1 text-xs border border-slate-300 rounded-lg font-mono"
+                      className="w-full min-w-0 px-2 py-2.5 sm:py-1 text-base sm:text-xs border border-slate-300 rounded-lg font-mono"
                     />
                   </div>
                 </div>
 
-                <div className="flex items-center justify-end gap-2 pt-2">
+                <div className="flex flex-wrap items-center justify-end gap-2 pt-2">
                   <button
                     type="button"
                     onClick={() => setIsEditingBusinessRules(false)}
-                    className="px-3 py-1.5 text-xs text-slate-600 hover:text-slate-900 cursor-pointer"
+                    className="px-3 py-2.5 sm:py-1.5 text-xs text-slate-600 hover:text-slate-900 cursor-pointer"
                   >
                     Vazgeç
                   </button>
                   <button
                     type="submit"
                     disabled={isSavingRules}
-                    className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-lg cursor-pointer shadow-xs disabled:opacity-50"
+                    className="w-full sm:w-auto px-4 py-2.5 sm:py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-lg cursor-pointer shadow-xs disabled:opacity-50"
                   >
                     {isSavingRules ? 'Kaydediliyor...' : '💾 Ayarları Kaydet & Dağıtım Motoruna Uygula'}
                   </button>
@@ -2489,14 +2489,14 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                 <div className="grid grid-cols-2 gap-3 text-center">
                   <div className="p-3 rounded-xl bg-indigo-50/70 border border-indigo-200 text-left">
                     <div className="text-[11px] font-bold text-indigo-700">MOTOR 1: SPONSORLU UNILEVEL</div>
-                    <div className="text-xl font-black text-indigo-900 mt-0.5">
+                    <div className="text-lg sm:text-xl font-black text-indigo-900 mt-0.5 break-words">
                       %{editUnilevelPercentages.reduce((a, b) => a + Number(b), 0).toFixed(1)} Toplam
                     </div>
                     <div className="text-[11px] text-indigo-700/80 mt-1">7 Derinlik Dikey Ekip Cirosu</div>
                   </div>
                   <div className="p-3 rounded-xl bg-emerald-50/70 border border-emerald-200 text-left">
                     <div className="text-[11px] font-bold text-emerald-700">MOTOR 2: MONOLINE TEŞVİK</div>
-                    <div className="text-xl font-black text-emerald-900 mt-0.5">
+                    <div className="text-lg sm:text-xl font-black text-emerald-900 mt-0.5 break-words">
                       %{editMonolinePercentages.reduce((a, b) => a + Number(b), 0).toFixed(2)} Toplam
                     </div>
                     <div className="text-[11px] text-emerald-700/80 mt-1">7 Üst Sıra Sembolik Prim</div>
@@ -2504,7 +2504,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                 </div>
 
                 {/* Motor 1 & Motor 2 Oran Tablosu */}
-                <div className="border border-slate-200 rounded-xl overflow-hidden">
+                <div className="border border-slate-200 rounded-xl overflow-x-auto">
                   <table className="w-full text-left text-xs border-collapse">
                     <thead>
                       <tr className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
@@ -2576,7 +2576,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
           </section>
 
           {/* Right 7 cols: Dinamik Kariyer Piramidi & Organizasyon Özeti */}
-          <div className="lg:col-span-7 bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white border border-indigo-500/30 rounded-2xl p-6 space-y-4 shadow-md">
+          <div className="lg:col-span-7 min-w-0 bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white border border-indigo-500/30 rounded-2xl p-4 sm:p-6 space-y-4 shadow-md">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
               <div>
                 <div className="text-[11px] font-mono text-amber-400 font-bold uppercase">
@@ -2594,7 +2594,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                   setEditableTiers(resetCopy);
                   await onUpdateCareers(resetCopy);
                 }}
-                className="px-3 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/40 text-amber-200 text-xs font-semibold rounded-xl transition-colors cursor-pointer"
+                className="px-3 py-2.5 sm:py-1.5 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/40 text-amber-200 text-xs font-semibold rounded-xl transition-colors cursor-pointer"
               >
                 Varsayılan İdeal Piramit Matrisini Yükle
               </button>
@@ -2620,8 +2620,8 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                       key={tier.level}
                       className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 rounded-xl bg-slate-950/75 border border-slate-800 text-xs"
                     >
-                      <div className="flex items-center gap-2">
-                        <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 font-mono font-bold text-[11px]">
+                      <div className="flex flex-wrap items-center gap-2">
+                          <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 font-mono font-bold text-[11px]">
                           %{tier.idealNetworkPyramidPercent}
                         </span>
                         <span className="font-bold text-white">
@@ -2629,7 +2629,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                         </span>
                         <span className="text-slate-400 text-[11px]">({tier.subtitle})</span>
                       </div>
-                      <div className="flex items-center gap-2 font-mono text-[11px]">
+                      <div className="flex flex-wrap items-center gap-2 font-mono text-[11px]">
                         <span className="text-amber-300">
                           İdeal: {tier.idealCountPer1000} Bayi ({tier.idealNetworkRatioLabel})
                         </span>
@@ -2646,7 +2646,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
           {/* Full 12 cols: 7 Nefis Mertebesi Detaylı Organizasyon, PGV, %50 Kol & Alt Ekip Şartları Matrisi Yönetimi */}
           <form
             onSubmit={handleSaveCareerTiers}
-            className="lg:col-span-12 bg-white border border-slate-200 rounded-2xl p-6 space-y-6 shadow-2xs"
+            className="lg:col-span-12 min-w-0 bg-white border border-slate-200 rounded-2xl p-4 sm:p-6 space-y-6 shadow-2xs"
           >
             <div className="border-b border-slate-200 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
@@ -2664,7 +2664,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer disabled:opacity-50 shadow-sm"
+                  className="w-full sm:w-auto px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer disabled:opacity-50 shadow-sm"
                 >
                   Tüm Kariyer &amp; Organizasyon Matrisini Kaydet
                 </button>
@@ -2675,7 +2675,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
               {editableTiers.map((tier, idx) => (
                 <div
                   key={tier.level}
-                  className="border border-slate-200 rounded-2xl p-5 bg-slate-50/60 space-y-4"
+                  className="min-w-0 border border-slate-200 rounded-2xl p-4 sm:p-5 bg-slate-50/60 space-y-4"
                 >
                   <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-3">
                     <div className="flex items-center gap-3">
@@ -2699,7 +2699,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                     </div>
 
                     {tier.level > 1 && (
-                      <label className="inline-flex items-center gap-2 text-xs font-semibold text-slate-800 bg-white px-3 py-1.5 rounded-xl border border-slate-200 cursor-pointer">
+                      <label className="inline-flex items-center gap-2 text-xs font-semibold text-slate-800 bg-white px-3 py-2.5 sm:py-1.5 rounded-xl border border-slate-200 cursor-pointer">
                         <input
                           type="checkbox"
                           checked={tier.enforceStrictOrganizationRules !== false}
@@ -2735,7 +2735,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                           };
                           setEditableTiers(next);
                         }}
-                        className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-300 rounded-lg font-medium"
+                        className="w-full min-w-0 px-2.5 py-2.5 sm:py-1.5 text-base sm:text-xs bg-white border border-slate-300 rounded-lg font-medium"
                       >
                         {FREKANS_PACKAGES.map((pkg) => (
                           <option key={pkg.id} value={pkg.id}>
@@ -2755,7 +2755,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                           setEditableTiers(next);
                         }}
                         placeholder="Örn: Paket B + Aktiflik Süresi"
-                        className="w-full mt-1.5 px-2.5 py-1 text-[11px] bg-white border border-slate-200 rounded-lg text-slate-600"
+                        className="w-full min-w-0 mt-1.5 px-2.5 py-2.5 sm:py-1 text-base sm:text-[11px] bg-white border border-slate-200 rounded-lg text-slate-600"
                       />
                     </div>
 
@@ -2776,7 +2776,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                           };
                           setEditableTiers(next);
                         }}
-                        className="w-full px-2.5 py-1.5 text-xs font-mono bg-white border border-slate-300 rounded-lg"
+                        className="w-full min-w-0 px-2.5 py-2.5 sm:py-1.5 text-base sm:text-xs font-mono bg-white border border-slate-300 rounded-lg"
                       />
                       <span className="block text-[10px] text-emerald-600 font-medium mt-1">
                         Sadece 30 günlük aktiflik yeterlidir
@@ -2800,7 +2800,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                           };
                           setEditableTiers(next);
                         }}
-                        className="w-full px-2.5 py-1.5 text-xs font-mono font-bold bg-white border border-slate-300 rounded-lg"
+                        className="w-full min-w-0 px-2.5 py-2.5 sm:py-1.5 text-base sm:text-xs font-mono font-bold bg-white border border-slate-300 rounded-lg"
                       />
                       <span className="block text-[10px] text-slate-500 mt-1">
                         En az {tier.minActiveDirects} Aktif Üye
@@ -2824,7 +2824,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                           };
                           setEditableTiers(next);
                         }}
-                        className="w-full px-2.5 py-1.5 text-xs font-mono font-bold text-emerald-900 bg-emerald-50/70 border border-emerald-300 rounded-lg"
+                        className="w-full min-w-0 px-2.5 py-2.5 sm:py-1.5 text-base sm:text-xs font-mono font-bold text-emerald-900 bg-emerald-50/70 border border-emerald-300 rounded-lg"
                       />
                       <span className="block text-[10px] text-emerald-700 mt-1">
                         {tier.minGroupVolume > 0
@@ -2837,7 +2837,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                       <label className="block text-[11px] font-bold text-amber-800 mb-1">
                         %50 Dengeli Hat (Leg) Kuralı
                       </label>
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex min-w-0 items-center gap-1.5">
                         <input
                           type="checkbox"
                           checked={tier.enforceMaxSingleLegPercent}
@@ -2865,7 +2865,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                             };
                             setEditableTiers(next);
                           }}
-                          className="w-full px-2 py-1.5 text-xs font-mono bg-white border border-slate-300 rounded-lg disabled:opacity-50"
+                          className="w-full min-w-0 px-2 py-2.5 sm:py-1.5 text-base sm:text-xs font-mono bg-white border border-slate-300 rounded-lg disabled:opacity-50"
                         />
                         <span className="text-xs font-bold text-slate-600">%</span>
                       </div>
@@ -2880,7 +2880,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                       <label className="block text-[11px] font-bold text-indigo-800 mb-1">
                         Derinlik &amp; Havuz Payı (%)
                       </label>
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex min-w-0 items-center gap-1.5">
                         <span className="px-2 py-1.5 bg-slate-200 text-slate-800 rounded-lg text-xs font-bold shrink-0">
                           {tier.unlockedDepth}. Derinlik (%{tier.depthCommissionPercent})
                         </span>
@@ -2898,7 +2898,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                             };
                             setEditableTiers(next);
                           }}
-                          className="w-16 px-2 py-1.5 text-xs font-mono text-right bg-white border border-slate-300 rounded-lg"
+                          className="w-16 px-2 py-2.5 sm:py-1.5 text-base sm:text-xs font-mono text-right bg-white border border-slate-300 rounded-lg"
                         />
                       </div>
                       <span className="block text-[10px] text-slate-500 mt-1">
@@ -2909,8 +2909,8 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
 
                   {/* Alt Satır: Kariyerli Alt Ekip Şartları (Farklı Kollarda) & Organizasyon Özeti */}
                   <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 pt-3 border-t border-slate-200/80">
-                    <div className="lg:col-span-6 space-y-2">
-                      <div className="flex items-center justify-between">
+                    <div className="lg:col-span-6 min-w-0 space-y-2">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
                         <label className="text-[11px] font-bold text-slate-700">
                           Farklı Kollarda Zorunlu Alt Ekip Kariyer Şartları (Distinct Legs)
                         </label>
@@ -2936,7 +2936,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                               };
                               setEditableTiers(next);
                             }}
-                            className="text-[11px] font-bold text-indigo-700 hover:text-indigo-900 inline-flex items-center gap-1 cursor-pointer"
+                            className="py-2 text-[11px] font-bold text-indigo-700 hover:text-indigo-900 inline-flex items-center gap-1 cursor-pointer"
                           >
                             <Plus className="w-3.5 h-3.5" />
                             Alt Kariyer Şartı Ekle
@@ -2953,7 +2953,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                           {tier.requiredDownlineCareers.map((req, rIdx) => (
                             <div
                               key={rIdx}
-                              className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-xs"
+                              className="flex flex-wrap items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs"
                             >
                               <span className="text-slate-600 font-medium">Farklı kollarda en az</span>
                               <input
@@ -2971,7 +2971,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                                   next[idx] = { ...next[idx], requiredDownlineCareers: updatedReqs };
                                   setEditableTiers(next);
                                 }}
-                                className="w-14 px-2 py-1 font-mono font-bold bg-slate-50 border border-slate-300 rounded"
+                                className="w-14 px-2 py-2.5 sm:py-1 text-base sm:text-xs font-mono font-bold bg-slate-50 border border-slate-300 rounded"
                               />
                               <span className="text-slate-600">adet</span>
                               <select
@@ -2991,7 +2991,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                                   next[idx] = { ...next[idx], requiredDownlineCareers: updatedReqs };
                                   setEditableTiers(next);
                                 }}
-                                className="px-2 py-1 font-bold bg-indigo-50 text-indigo-900 border border-indigo-200 rounded"
+                                className="max-w-full px-2 py-2 sm:py-1 font-bold bg-indigo-50 text-indigo-900 border border-indigo-200 rounded"
                               >
                                 {editableTiers
                                   .filter((t) => t.level < tier.level)
@@ -3013,7 +3013,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                                   };
                                   setEditableTiers(next);
                                 }}
-                                className="ml-auto text-rose-600 hover:text-rose-800 p-1 cursor-pointer"
+                                className="ml-auto text-rose-600 hover:text-rose-800 p-2 sm:p-1 cursor-pointer"
                                 title="Şartı Kaldır"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
@@ -3024,7 +3024,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                       )}
                     </div>
 
-                    <div className="lg:col-span-6 grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                    <div className="lg:col-span-6 min-w-0 grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                       <div className="sm:col-span-2">
                         <label className="block text-[11px] font-bold text-slate-700 mb-1">
                           Organizasyon &amp; Alt Ekip Kural Açıklaması
@@ -3040,7 +3040,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                             };
                             setEditableTiers(next);
                           }}
-                          className="w-full px-3 py-1.5 text-xs bg-white border border-slate-300 rounded-lg"
+                          className="w-full min-w-0 px-3 py-2.5 sm:py-1.5 text-base sm:text-xs bg-white border border-slate-300 rounded-lg"
                         />
                       </div>
 
@@ -3048,7 +3048,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                         <label className="block text-[11px] font-bold text-slate-700 mb-1">
                           1.000 Ağda İdeal Bayi Sayısı
                         </label>
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex min-w-0 items-center gap-1.5">
                           <input
                             type="number"
                             min={1}
@@ -3064,7 +3064,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                               };
                               setEditableTiers(next);
                             }}
-                            className="w-20 px-2 py-1.5 text-xs font-mono font-bold bg-white border border-slate-300 rounded-lg"
+                            className="w-20 px-2 py-2.5 sm:py-1.5 text-base sm:text-xs font-mono font-bold bg-white border border-slate-300 rounded-lg"
                           />
                           <input
                             type="text"
@@ -3077,7 +3077,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                               };
                               setEditableTiers(next);
                             }}
-                            className="w-full px-2 py-1.5 text-xs font-mono bg-white border border-slate-300 rounded-lg"
+                            className="w-full min-w-0 px-2 py-2.5 sm:py-1.5 text-base sm:text-xs font-mono bg-white border border-slate-300 rounded-lg"
                             placeholder="%40 - %50"
                           />
                         </div>
@@ -3088,11 +3088,11 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
               ))}
             </div>
 
-            <div className="flex items-center justify-end gap-3 pt-2">
+            <div className="flex flex-wrap items-center justify-end gap-3 pt-2">
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="px-6 py-3 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer disabled:opacity-50 shadow-md"
+                className="w-full sm:w-auto text-center px-6 py-3 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer disabled:opacity-50 shadow-md"
               >
                 7 Nefis Kariyer &amp; Organizasyon Kurallarını Kaydet ve Tüm Bayileri Yeniden Değerlendir
               </button>
@@ -3100,7 +3100,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
           </form>
 
           {/* Full 12 cols: Canlı Bayi Organizasyon, Kol (Leg) Dengesi & Kariyer Uyumluluk Denetim Tablosu */}
-          <div className="lg:col-span-12 bg-white border border-slate-200 rounded-2xl p-6 space-y-4 shadow-2xs">
+          <div className="lg:col-span-12 min-w-0 bg-white border border-slate-200 rounded-2xl p-4 sm:p-6 space-y-4 shadow-2xs">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 pb-3">
               <div>
                 <div className="text-xs font-mono text-indigo-700 font-bold">
@@ -3114,7 +3114,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                 type="button"
                 onClick={onTriggerCareerCronJob}
                 disabled={isSubmitting}
-                className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer self-start sm:self-auto"
+                className="px-3.5 py-2.5 sm:py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer self-start sm:self-auto"
               >
                 Şimdi Tüm Ağda Kariyer Tarama Motorunu Çalıştır
               </button>
@@ -3124,13 +3124,13 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
                   <tr className="border-b border-slate-200 text-slate-500 bg-slate-50">
-                    <th className="py-2.5 px-3">Sıra &amp; Bayi</th>
-                    <th className="py-2.5 px-3">Mevcut Mertebe</th>
-                    <th className="py-2.5 px-3">Kişisel Hacim &amp; Paket</th>
-                    <th className="py-2.5 px-3">Aktif Direkt Kol (Leg)</th>
-                    <th className="py-2.5 px-3">Ekip Grup Cirosu (PGV)</th>
-                    <th className="py-2.5 px-3">En Güçlü Kol Payı</th>
-                    <th className="py-2.5 px-3">Kollardaki En Yüksek Kariyerler</th>
+                    <th className="whitespace-nowrap py-2.5 px-3">Sıra &amp; Bayi</th>
+                    <th className="whitespace-nowrap py-2.5 px-3">Mevcut Mertebe</th>
+                    <th className="whitespace-nowrap py-2.5 px-3">Kişisel Hacim &amp; Paket</th>
+                    <th className="whitespace-nowrap py-2.5 px-3">Aktif Direkt Kol (Leg)</th>
+                    <th className="whitespace-nowrap py-2.5 px-3">Ekip Grup Cirosu (PGV)</th>
+                    <th className="whitespace-nowrap py-2.5 px-3">En Güçlü Kol Payı</th>
+                    <th className="whitespace-nowrap py-2.5 px-3">Kollardaki En Yüksek Kariyerler</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200">
@@ -3218,13 +3218,13 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
       {(adminSection === 'finance' || adminSection === 'tax_refunds') && (
         <div className="space-y-8">
           {/* YÖNETİCİ PANELİ: %20 VERGİ İADESİ & YÜKLENEN BAYİ FATURALARI ONAY PANELİ */}
-          <div className="bg-gradient-to-br from-emerald-950 via-slate-900 to-teal-950 text-white border-2 border-emerald-500/40 rounded-2xl p-6 space-y-5 shadow-md">
+          <div className="min-w-0 bg-gradient-to-br from-emerald-950 via-slate-900 to-teal-950 text-white border-2 border-emerald-500/40 rounded-2xl p-4 sm:p-6 space-y-5 shadow-md">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-white/15 pb-4">
               <div>
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 text-xs font-bold mb-1.5">
                   <span>🧾 YÖNETİCİ VERGİ İADESİ &amp; FATURA ONAY PANELİ (%20 STOPAJ / VERGİ İADESİ)</span>
                 </div>
-                <h3 className="text-lg sm:text-xl font-bold text-white">
+                <h3 className="text-lg sm:text-xl font-bold text-white break-words">
                   Fatura Yükleyen Bayilerin %20 Vergi İadesi Talepleri ve Cüzdan Aktarım Merkezi
                 </h3>
                 <p className="text-xs text-slate-300 mt-1">
@@ -3232,7 +3232,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                 </p>
               </div>
 
-              <div className="grid grid-cols-3 gap-2.5 text-center font-mono shrink-0">
+              <div className="grid w-full lg:w-auto grid-cols-3 gap-2 sm:gap-2.5 text-center font-mono shrink-0">
                 <div className="px-3.5 py-2.5 rounded-xl bg-white/10 border border-white/15">
                   <div className="text-[10px] text-slate-300 uppercase">Toplam Fatura</div>
                   <div className="text-lg font-extrabold text-white">{taxRefundInvoices.length}</div>
@@ -3255,7 +3255,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
             </div>
 
             {taxRefundFeedback && (
-              <div className="p-3.5 rounded-xl bg-emerald-500/25 border border-emerald-400/50 text-emerald-100 text-xs font-bold flex items-center justify-between gap-3">
+              <div className="p-3.5 rounded-xl bg-emerald-500/25 border border-emerald-400/50 text-emerald-100 text-xs font-bold flex flex-wrap items-center justify-between gap-2 break-words">
                 <span>{taxRefundFeedback}</span>
                 <button
                   type="button"
@@ -3268,7 +3268,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
             )}
 
             {taxRefundInvoices.length === 0 ? (
-              <div className="p-8 text-center rounded-xl bg-white/5 border border-white/10 text-xs text-slate-300">
+              <div className="p-6 sm:p-8 text-center rounded-xl bg-white/5 border border-white/10 text-xs text-slate-300">
                 Henüz cihazdan yüklenmiş vergi iadesi faturası bulunmamaktadır.
               </div>
             ) : (
@@ -3276,16 +3276,16 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                 <table className="w-full text-left text-xs border-collapse">
                   <thead>
                     <tr className="border-b border-slate-200 bg-slate-50 text-slate-600">
-                      <th className="py-3 pl-4 pr-2">İade Kodu &amp; Çekim</th>
-                      <th className="py-3 px-2">Bayi Bilgisi</th>
-                      <th className="py-3 px-2">Fatura No &amp; Vergi Dairesi/VKN</th>
-                      <th className="py-3 px-2">Yüklenen Fatura Dosyası</th>
-                      <th className="py-3 px-2 text-right">Brüt Çekim</th>
-                      <th className="py-3 px-2 text-right text-emerald-700 font-bold">
+                      <th className="whitespace-nowrap py-3 pl-4 pr-2">İade Kodu &amp; Çekim</th>
+                      <th className="whitespace-nowrap py-3 px-2">Bayi Bilgisi</th>
+                      <th className="whitespace-nowrap py-3 px-2">Fatura No &amp; Vergi Dairesi/VKN</th>
+                      <th className="whitespace-nowrap py-3 px-2">Yüklenen Fatura Dosyası</th>
+                      <th className="whitespace-nowrap py-3 px-2 text-right">Brüt Çekim</th>
+                      <th className="whitespace-nowrap py-3 px-2 text-right text-emerald-700 font-bold">
                         İade Edilecek %20 Vergi
                       </th>
-                      <th className="py-3 px-2">Durum</th>
-                      <th className="py-3 pl-2 pr-4 text-right">Yönetici Onay / Aktarım</th>
+                      <th className="whitespace-nowrap py-3 px-2">Durum</th>
+                      <th className="whitespace-nowrap py-3 pl-2 pr-4 text-right">Yönetici Onay / Aktarım</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-200 font-mono tabular-nums">
@@ -3320,14 +3320,14 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                             <button
                               type="button"
                               onClick={() => setPreviewInvoice(inv)}
-                              className="px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border border-indigo-200 font-semibold text-[11px] cursor-pointer"
+                              className="px-2.5 py-2 sm:py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border border-indigo-200 font-semibold text-[11px] cursor-pointer"
                             >
                               📄 Faturayı Görüntüle ({inv.invoice_file_name})
                             </button>
                             <a
                               href={inv.invoice_data_url}
                               download={inv.invoice_file_name || `fatura_${inv.invoice_no}.pdf`}
-                              className="px-2 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-semibold"
+                              className="px-2.5 py-2 sm:py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-semibold"
                             >
                               İndir
                             </a>
@@ -3370,12 +3370,12 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                         </td>
                         <td className="py-3 pl-2 pr-4 text-right font-sans">
                           {inv.status === 'PENDING_ADMIN_APPROVAL' ? (
-                            <div className="inline-flex items-center gap-1.5">
+                            <div className="inline-flex flex-wrap items-center justify-end gap-1.5">
                               <button
                                 type="button"
                                 disabled={taxRefundBusyId === inv.id}
                                 onClick={() => handleDecideTaxRefund(inv.id, 'APPROVED')}
-                                className="inline-flex items-center gap-1 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg cursor-pointer shadow-2xs disabled:opacity-50"
+                                className="inline-flex items-center gap-1 px-3 py-2.5 sm:py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg cursor-pointer shadow-2xs disabled:opacity-50"
                               >
                                 <Check className="w-3.5 h-3.5" />
                                 <span>
@@ -3386,7 +3386,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                                 type="button"
                                 disabled={taxRefundBusyId === inv.id}
                                 onClick={() => handleDecideTaxRefund(inv.id, 'REJECTED')}
-                                className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-lg cursor-pointer disabled:opacity-50"
+                                className="inline-flex items-center gap-1 px-2.5 py-2.5 sm:py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-lg cursor-pointer disabled:opacity-50"
                               >
                                 <X className="w-3.5 h-3.5" />
                                 <span>Reddet</span>
@@ -3410,14 +3410,14 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
 
           {/* FATURA ÖNİZLEME MODALI */}
           {previewInvoice && (
-            <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4">
-              <div className="bg-white border border-slate-200 rounded-2xl max-w-3xl w-full p-6 space-y-4 shadow-2xl">
-                <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+            <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
+              <div className="bg-white border border-slate-200 rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto overflow-x-hidden p-3 sm:p-6 space-y-4 shadow-2xl min-w-0">
+                <div className="flex items-start justify-between gap-2 border-b border-slate-200 pb-3">
                   <div>
                     <div className="text-xs font-mono text-emerald-700 font-bold">
                       BAYİ VERGİ İADESİ FATURA BELGESİ · {previewInvoice.refund_code}
                     </div>
-                    <h4 className="text-base font-bold text-slate-900">
+                    <h4 className="text-base font-bold text-slate-900 break-words">
                       {previewInvoice.user_full_name} — Fatura No: {previewInvoice.invoice_no} (
                       {previewInvoice.invoice_file_name})
                     </h4>
@@ -3425,7 +3425,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                   <button
                     type="button"
                     onClick={() => setPreviewInvoice(null)}
-                    className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer"
+                    className="p-2 sm:p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer shrink-0"
                   >
                     <X className="w-4 h-4" />
                   </button>
@@ -3463,7 +3463,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                     <img
                       src={previewInvoice.invoice_data_url}
                       alt={previewInvoice.invoice_file_name}
-                      className="max-h-96 w-auto mx-auto rounded shadow-xs"
+                      className="max-h-96 max-w-full w-auto mx-auto rounded shadow-xs"
                     />
                   )}
                 </div>
@@ -3472,13 +3472,13 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                   <a
                     href={previewInvoice.invoice_data_url}
                     download={previewInvoice.invoice_file_name}
-                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-semibold"
+                    className="w-full sm:w-auto justify-center inline-flex items-center gap-1.5 px-4 py-2.5 sm:py-2 rounded-xl bg-slate-900 text-white text-xs font-semibold"
                   >
                     <Download className="w-3.5 h-3.5" />
                     <span>Fatura Dosyasını Cihaza İndir</span>
                   </a>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     {previewInvoice.status === 'PENDING_ADMIN_APPROVAL' && (
                       <>
                         <button
@@ -3487,7 +3487,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                             await handleDecideTaxRefund(previewInvoice.id, 'APPROVED');
                             setPreviewInvoice(null);
                           }}
-                          className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold cursor-pointer"
+                          className="px-4 py-2.5 sm:py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold cursor-pointer"
                         >
                           ✅ Faturayı Onayla &amp; +
                           {previewInvoice.tax_deducted_amount.toLocaleString('tr-TR')} $ Hesaba Aktar
@@ -3554,15 +3554,15 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
                   <tr className="border-b border-slate-200 text-slate-500">
-                    <th className="py-2.5 pr-3">Talep ID</th>
-                    <th className="py-2.5 px-3">Üye &amp; Monoline Sırası</th>
-                    <th className="py-2.5 px-3">Banka &amp; IBAN</th>
-                    <th className="py-2.5 px-3 text-right">Brüt Tutar</th>
-                    <th className="py-2.5 px-3 text-right">%20 Vergi (Sistem Fonu)</th>
-                    <th className="py-2.5 px-3 text-right">Net Ödenecek (%80)</th>
-                    <th className="py-2.5 px-3">%20 Vergi İadesi Faturası</th>
-                    <th className="py-2.5 px-3">Çekim Durumu</th>
-                    <th className="py-2.5 pl-3 text-right">Yönetici Aksiyonu</th>
+                    <th className="whitespace-nowrap py-2.5 pr-3">Talep ID</th>
+                    <th className="whitespace-nowrap py-2.5 px-3">Üye &amp; Monoline Sırası</th>
+                    <th className="whitespace-nowrap py-2.5 px-3">Banka &amp; IBAN</th>
+                    <th className="whitespace-nowrap py-2.5 px-3 text-right">Brüt Tutar</th>
+                    <th className="whitespace-nowrap py-2.5 px-3 text-right">%20 Vergi (Sistem Fonu)</th>
+                    <th className="whitespace-nowrap py-2.5 px-3 text-right">Net Ödenecek (%80)</th>
+                    <th className="whitespace-nowrap py-2.5 px-3">%20 Vergi İadesi Faturası</th>
+                    <th className="whitespace-nowrap py-2.5 px-3">Çekim Durumu</th>
+                    <th className="whitespace-nowrap py-2.5 pl-3 text-right">Yönetici Aksiyonu</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200 font-mono tabular-nums">
@@ -3846,12 +3846,12 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
                   <tr className="border-b border-slate-200 text-slate-500">
-                    <th className="py-3 pr-3">Kariyer Mertebesi</th>
-                    <th className="py-3 px-3">Bu Mertebedeki Aktif Bayiler</th>
-                    <th className="py-3 px-3">Hızlı Bayi Kariyer Atama</th>
-                    <th className="py-3 px-3">Yönetici Belirlenen Kariyer Bonusu ($ / Bayi)</th>
-                    <th className="py-3 px-3 text-right">Toplam Aktarılacak</th>
-                    <th className="py-3 pl-3 text-right">Anında Cüzdana Aktar</th>
+                    <th className="whitespace-nowrap py-3 pr-3">Kariyer Mertebesi</th>
+                    <th className="whitespace-nowrap py-3 px-3">Bu Mertebedeki Aktif Bayiler</th>
+                    <th className="whitespace-nowrap py-3 px-3">Hızlı Bayi Kariyer Atama</th>
+                    <th className="whitespace-nowrap py-3 px-3">Yönetici Belirlenen Kariyer Bonusu ($ / Bayi)</th>
+                    <th className="whitespace-nowrap py-3 px-3 text-right">Toplam Aktarılacak</th>
+                    <th className="whitespace-nowrap py-3 pl-3 text-right">Anında Cüzdana Aktar</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200">
@@ -3927,7 +3927,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                         </td>
 
                         <td className="py-3.5 px-3">
-                          <div className="flex items-center gap-1.5">
+                          <div className="flex min-w-0 items-center gap-1.5">
                             <input
                               type="number"
                               min={0}
@@ -4237,11 +4237,11 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                 <table className="w-full text-left text-xs border-collapse">
                   <thead>
                     <tr className="border-b border-slate-200 text-slate-500">
-                      <th className="py-2.5 pr-2">Sıra &amp; Bayi</th>
-                      <th className="py-2.5 px-2">Kariyer</th>
-                      <th className="py-2.5 px-2 text-right">Seans Kredisi</th>
-                      <th className="py-2.5 px-2 text-right">Net Çekilebilir Cüzdan</th>
-                      <th className="py-2.5 pl-2 text-right">Tek Tıkla Bonus Yükle</th>
+                      <th className="whitespace-nowrap py-2.5 pr-2">Sıra &amp; Bayi</th>
+                      <th className="whitespace-nowrap py-2.5 px-2">Kariyer</th>
+                      <th className="whitespace-nowrap py-2.5 px-2 text-right">Seans Kredisi</th>
+                      <th className="whitespace-nowrap py-2.5 px-2 text-right">Net Çekilebilir Cüzdan</th>
+                      <th className="whitespace-nowrap py-2.5 pl-2 text-right">Tek Tıkla Bonus Yükle</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-200 font-mono tabular-nums">
@@ -4656,12 +4656,12 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
                   <tr className="border-b border-slate-200 text-slate-500">
-                    <th className="py-2.5 pr-2">Monoline Hat Sırası (Değiştir)</th>
-                    <th className="py-2.5 px-2">Bayi Bilgisi & Cüzdan</th>
-                    <th className="py-2.5 px-2">Direkt Sponsor Değiştir</th>
-                    <th className="py-2.5 px-2">Kariyer Mertebesi Değiştir</th>
-                    <th className="py-2.5 px-2">Durum & Kilit</th>
-                    <th className="py-2.5 pl-2 text-right">Hızlı Bonus / Bayi Sil</th>
+                    <th className="whitespace-nowrap py-2.5 pr-2">Monoline Hat Sırası (Değiştir)</th>
+                    <th className="whitespace-nowrap py-2.5 px-2">Bayi Bilgisi & Cüzdan</th>
+                    <th className="whitespace-nowrap py-2.5 px-2">Direkt Sponsor Değiştir</th>
+                    <th className="whitespace-nowrap py-2.5 px-2">Kariyer Mertebesi Değiştir</th>
+                    <th className="whitespace-nowrap py-2.5 px-2">Durum & Kilit</th>
+                    <th className="whitespace-nowrap py-2.5 pl-2 text-right">Hızlı Bonus / Bayi Sil</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200">

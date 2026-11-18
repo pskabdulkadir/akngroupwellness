@@ -47,6 +47,15 @@ export const getMemberRegionalUsdBalance = (member?: RegionalWalletSource | null
 export const getMemberRegionalPendingUsd = (member?: RegionalWalletSource | null): number =>
   ((member?.wallets?.pending_domestic_usd ?? 0) + (member?.wallets?.pending_international_usd ?? 0));
 
+export const getMonolineOnlyWallet = (wallets?: {
+  monoline_wallet?: number;
+  unilevel_wallet?: number;
+  infinity_wallet?: number;
+} | null): number => {
+  const total = (wallets?.monoline_wallet ?? 0) - (wallets?.unilevel_wallet ?? 0) - (wallets?.infinity_wallet ?? 0);
+  return Math.max(0, Math.round(total * 100) / 100);
+};
+
 export const MEMBER_COUNTRY_OPTIONS: ReadonlyArray<{ code: string; label: string }> = [
   { code: 'TR', label: 'Türkiye' },
   { code: 'DE', label: 'Almanya' },

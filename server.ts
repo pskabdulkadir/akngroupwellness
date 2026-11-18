@@ -4958,13 +4958,17 @@ async function hydrateStateFromPostgres(): Promise<void> {
         });
         loadedMembers.sort((a, b) => a.global_line_id - b.global_line_id);
         members = loadedMembers;
-        const walletRows = await pgQuery('SELECT user_id, balance, pending_balance, total_withdrawn, total_earned, wallet_data FROM wallets');
+        const walletRows = await pgQuery('SELECT user_id, balance, pending_balance, total_withdrawn, total_earned, unilevel_earnings, monoline_incentive_earnings, wallet_data FROM wallets');
         for (const row of walletRows?.rows || []) {
           const member = members.find((item) => item.user_id === row.user_id);
           if (!member) continue;
-          if (row.wallet_data && typeof row.wallet_data === 'object') {
-            member.wallets = { ...member.wallets, ...row.wallet_data };
-          } else {
+          const walletData = row.wallet_data && typeof row.wallet_data === 'object' ? row.wallet_data : {};
+          member.wallets = { ...member.wallets, ...walletData };
+          member.wallets.unilevel_wallet =
+            Number(walletData.unilevel_wallet ?? row.unilevel_earnings) || 0;
+          member.wallets.monoline_incentive_wallet =
+            Number(walletData.monoline_incentive_wallet ?? row.monoline_incentive_earnings) || 0;
+          if (!row.wallet_data || typeof row.wallet_data !== 'object') {
             member.wallets.wallet_domestic_usd = Number(row.balance) || 0;
             member.wallets.pending_domestic_usd = Number(row.pending_balance) || 0;
             member.wallets.total_withdrawn = Number(row.total_withdrawn) || 0;

@@ -484,7 +484,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/90 backdrop-blur-xl animate-fade-in overflow-y-auto">
-      <div className="relative w-full max-w-lg bg-slate-900 border border-emerald-500/40 rounded-3xl p-5 sm:p-7 shadow-2xl shadow-emerald-950/70 space-y-5 max-h-[94vh] overflow-y-auto">
+      <div className="relative w-full max-w-lg bg-slate-900 border border-emerald-500/40 rounded-2xl sm:rounded-3xl p-4 sm:p-7 shadow-2xl shadow-emerald-950/70 space-y-5 max-h-[90vh] overflow-y-auto overflow-x-hidden">
         
         {allowClose && onClose && (
           <button
@@ -734,7 +734,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <div className="space-y-1">
                   <label className="text-[10px] font-semibold text-slate-300">
                     Vergi Kimlik No / TC:
@@ -941,7 +941,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 <div className="space-y-2.5 animate-fade-in">
 
                   {/* Hızlı Seçim Butonları (Pills) */}
-                  <div className="grid grid-cols-3 gap-1.5 text-[10px] font-bold">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5 text-[10px] font-bold">
                     <button
                       type="button"
                       onClick={() => {
@@ -1047,7 +1047,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   </label>
                   <span className="text-[10px] text-amber-400/90 font-mono">Hibrit Ağaç</span>
                 </div>
-                <div className="grid grid-cols-3 gap-1.5 text-xs">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5 text-xs">
                   <button
                     type="button"
                     onClick={() => setDealerAssignedLeg('AUTO')}

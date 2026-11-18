@@ -24,7 +24,7 @@ import {
   redirectToDealerRegistrationPortal,
 } from '../utils/monolineSyncBridge';
 import { formatUsd } from '../utils/currency';
-import { getCountryFlag, getRegionTierLabel, resolveMemberRegion } from '../utils/walletRegion';
+import { getCountryFlag, getMonolineOnlyWallet, getRegionTierLabel, resolveMemberRegion } from '../utils/walletRegion';
 
 const MemberRegionBadge: React.FC<{ countryCode?: string; isSelected?: boolean }> = ({
   countryCode,
@@ -375,7 +375,7 @@ export const MonolineTimelineView: React.FC<MonolineTimelineViewProps> = ({
               </div>
               <div className="text-xs text-slate-600 font-mono tabular-nums">
                 Sponsor: {formatUsd(selectedMember.wallets?.sponsor_wallet ?? 0)} ·
-                Monoline: {formatUsd(selectedMember.wallets?.monoline_wallet ?? 0)}
+                Monoline: {formatUsd(getMonolineOnlyWallet(selectedMember.wallets))}
               </div>
             </div>
           </div>

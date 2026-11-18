@@ -845,10 +845,10 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/90 backdrop-blur-xl animate-fade-in overflow-y-auto">
-      <div className="relative w-full max-w-5xl bg-slate-900 border border-emerald-500/40 rounded-3xl p-4 sm:p-7 shadow-2xl shadow-emerald-950/80 space-y-6 max-h-[95vh] overflow-y-auto">
+      <div className="relative w-full max-w-5xl bg-slate-900 border border-emerald-500/40 rounded-3xl p-4 sm:p-7 shadow-2xl shadow-emerald-950/80 space-y-6 max-h-[90vh] overflow-y-auto overflow-x-hidden overscroll-contain min-w-0">
         
         {/* Top Quick Navigation Bar (Geri, Ana Sayfa, Kapat & Aksiyonlar) */}
-        <div className="flex items-center justify-between gap-2 pb-1">
+        <div className="flex flex-wrap items-center justify-between gap-2 pb-1">
           {/* Left: Geri and Ana Sayfa navigation buttons */}
           <div className="flex items-center gap-2">
             <button
@@ -859,7 +859,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                   onClose();
                 }
               }}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800/90 hover:bg-slate-750 border border-slate-700 hover:border-emerald-500/50 text-slate-200 hover:text-white text-xs font-bold transition-all cursor-pointer shadow-sm active:scale-95 group"
+              className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl bg-slate-800/90 hover:bg-slate-750 border border-slate-700 hover:border-emerald-500/50 text-slate-200 hover:text-white text-xs font-bold transition-all cursor-pointer shadow-sm active:scale-95 group"
               title="Önceki ekrana veya ana özete geri dön"
             >
               <ArrowLeft className="w-4 h-4 text-emerald-400 group-hover:-translate-x-0.5 transition-transform" />
@@ -868,7 +868,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
 
             <button
               onClick={onClose}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800/90 hover:bg-slate-750 border border-slate-700 hover:border-teal-500/50 text-slate-200 hover:text-white text-xs font-bold transition-all cursor-pointer shadow-sm active:scale-95 group"
+              className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl bg-slate-800/90 hover:bg-slate-750 border border-slate-700 hover:border-teal-500/50 text-slate-200 hover:text-white text-xs font-bold transition-all cursor-pointer shadow-sm active:scale-95 group"
               title="AuraBio Ana Sayfasına Dön"
             >
               <Home className="w-4 h-4 text-teal-400 group-hover:scale-110 transition-transform" />
@@ -887,7 +887,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
             {activeReseller && (
               <button
                 onClick={handleLogout}
-                className="px-3 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 hover:border-rose-500/50 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95"
+                className="px-3 py-2.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 hover:border-rose-500/50 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95"
                 title="Bayi Panelinden Çıkış Yap"
               >
                 <LogOut className="w-3.5 h-3.5" />
@@ -896,7 +896,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
             )}
             <button
               onClick={onClose}
-              className="p-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-slate-200 transition-colors cursor-pointer"
+              className="p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-slate-200 transition-colors cursor-pointer"
               title="Pencereyi Kapat"
             >
               <X className="w-5 h-5" />
@@ -906,12 +906,12 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
 
         {/* Top Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-5">
-          <div className="flex items-center gap-3.5">
+          <div className="flex items-center gap-3.5 min-w-0">
             <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-600/30 to-teal-500/20 border border-emerald-500/50 text-emerald-400 flex items-center justify-center shadow-lg shadow-emerald-950/60 shrink-0">
               <Building2 className="w-6 h-6 text-emerald-400" />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
                 <h2 className="text-lg sm:text-xl font-bold bg-gradient-to-r from-emerald-300 via-teal-200 to-indigo-300 bg-clip-text text-transparent">
                   AuraBio Bayi & Komisyon Paneli
                 </h2>
@@ -935,7 +935,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
             <button
               type="button"
               onClick={() => onOpenMonolineModal?.('backoffice')}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 text-xs font-semibold transition-all cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-2.5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 text-xs font-semibold transition-all cursor-pointer"
             >
               <Briefcase className="w-3.5 h-3.5 text-amber-400" />
               <span>Bayi Back-Office</span>
@@ -945,7 +945,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-white text-xs font-semibold transition-all cursor-pointer"
+            className="inline-flex w-full sm:w-auto justify-center items-center gap-1.5 px-2.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-white text-xs font-semibold transition-all cursor-pointer"
           >
             <Home className="w-3.5 h-3.5 text-emerald-400" />
             <span>Frekans Uygulamasına Dön</span>
@@ -957,7 +957,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-2">
             
             {/* Quick Reseller Login */}
-            <div className="p-6 rounded-3xl bg-slate-950/80 border border-slate-800 space-y-4 shadow-lg flex flex-col justify-between">
+            <div className="p-5 sm:p-6 rounded-3xl bg-slate-950/80 border border-slate-800 space-y-4 shadow-lg flex flex-col justify-between">
               <div className="space-y-3">
                 <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 flex items-center justify-center">
                   <Lock className="w-5 h-5" />
@@ -1011,7 +1011,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
             </div>
 
             {/* Become a Reseller Application */}
-            <div className="p-6 rounded-3xl bg-slate-950/80 border border-emerald-500/30 space-y-4 shadow-lg">
+            <div className="p-5 sm:p-6 rounded-3xl bg-slate-950/80 border border-emerald-500/30 space-y-4 shadow-lg">
               <div className="w-10 h-10 rounded-xl bg-teal-500/20 border border-teal-500/40 text-teal-400 flex items-center justify-center">
                 <Sparkles className="w-5 h-5" />
               </div>
@@ -1022,8 +1022,8 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                 AuraBio Frekans sisteminin resmi bayisi ve çözüm ortağı olun. Üyelerinize frekans sağlarken her lisans yenilemesinden <strong className="text-emerald-400">%20-%25 komisyon</strong> kazanın.
               </p>
 
-              <div className="p-3 rounded-2xl bg-emerald-950/70 border border-emerald-500/40 flex items-center justify-between gap-2 text-xs">
-                <div className="flex items-center gap-2 text-emerald-300 font-bold">
+              <div className="p-3 rounded-2xl bg-emerald-950/70 border border-emerald-500/40 flex flex-wrap items-center justify-between gap-2 text-xs">
+                <div className="flex items-center gap-2 min-w-0 text-emerald-300 font-bold">
                   <Coins className="w-4 h-4 text-emerald-400 shrink-0" />
                   <span>🎁 Paket alımında paket kredilerine ek +32 seans kredisi bonusu</span>
                 </div>
@@ -1052,11 +1052,11 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                     value={regName}
                     onChange={(e) => setRegName(e.target.value)}
                     placeholder="Örn: BioRezonans Frekans Merkezi"
-                    className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 focus:border-emerald-500 text-xs text-slate-100 outline-none"
+                    className="w-full px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-700 focus:border-emerald-500 text-xs text-slate-100 outline-none"
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <div className="space-y-1">
                     <label className="text-[11px] font-semibold text-slate-300">E-Posta:</label>
                     <input
@@ -1065,7 +1065,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                       value={regEmail}
                       onChange={(e) => setRegEmail(e.target.value)}
                       placeholder="bayi@mail.com"
-                      className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 focus:border-emerald-500 text-xs text-slate-100 outline-none"
+                      className="w-full px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-700 focus:border-emerald-500 text-xs text-slate-100 outline-none"
                     />
                   </div>
                   <div className="space-y-1">
@@ -1076,13 +1076,13 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                       value={regPhone}
                       onChange={(e) => setRegPhone(e.target.value)}
                       placeholder="05XX XXX XX XX"
-                      className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 focus:border-emerald-500 text-xs text-slate-100 outline-none"
+                      className="w-full px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-700 focus:border-emerald-500 text-xs text-slate-100 outline-none"
                     />
                   </div>
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[11px] font-semibold text-slate-300 flex items-center justify-between">
+                  <label className="text-[11px] font-semibold text-slate-300 flex flex-wrap items-center justify-between gap-x-2">
                     <span>Tercih Edilen Referans Kodu (Opsiyonel):</span>
                     <span className="text-[10px] text-slate-500">Boş bırakılırsa otomatik üretilir</span>
                   </label>
@@ -1091,7 +1091,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                     value={regCustomCode}
                     onChange={(e) => setRegCustomCode(e.target.value)}
                     placeholder="Örn: AURA-BAYI-4820"
-                    className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 focus:border-emerald-500 text-xs text-slate-100 uppercase font-mono outline-none"
+                    className="w-full px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-700 focus:border-emerald-500 text-xs text-slate-100 uppercase font-mono outline-none"
                   />
                 </div>
 
@@ -1142,7 +1142,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
             <div className="flex flex-wrap items-center gap-2 p-1.5 bg-slate-950 rounded-2xl border border-slate-800 text-xs font-semibold">
               <button
                 onClick={() => setActiveTab('overview')}
-                className={`px-4 py-2 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${
+                className={`px-4 py-2.5 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${
                   activeTab === 'overview'
                     ? 'bg-emerald-600 text-white shadow-md'
                     : 'text-slate-400 hover:text-slate-200'
@@ -1154,7 +1154,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
 
               <button
                 onClick={() => setActiveTab('clients')}
-                className={`px-4 py-2 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${
+                className={`px-4 py-2.5 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${
                   activeTab === 'clients'
                     ? 'bg-emerald-600 text-white shadow-md'
                     : 'text-emerald-400 hover:text-emerald-200 bg-emerald-950/30 border border-emerald-500/20'
@@ -1169,7 +1169,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
 
               <button
                 onClick={() => setActiveTab('scans')}
-                className={`px-4 py-2 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${
+                className={`px-4 py-2.5 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${
                   activeTab === 'scans'
                     ? 'bg-gradient-to-r from-rose-600 to-orange-600 text-white shadow-md'
                     : 'text-rose-400 hover:text-rose-200 bg-rose-950/40 border border-rose-500/30'
@@ -1184,7 +1184,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
 
               <button
                 onClick={() => setActiveTab('bayilerim')}
-                className={`px-4 py-2 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${
+                className={`px-4 py-2.5 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${
                   activeTab === 'bayilerim'
                     ? 'bg-gradient-to-r from-teal-600 to-emerald-600 text-white shadow-md'
                     : 'text-teal-400 hover:text-teal-200 bg-teal-950/40 border border-teal-500/30'
@@ -1199,7 +1199,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
 
               <button
                 onClick={() => setActiveTab('presentation')}
-                className={`px-4 py-2 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${
+                className={`px-4 py-2.5 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${
                   activeTab === 'presentation'
                     ? 'bg-gradient-to-r from-teal-600 to-indigo-600 text-white shadow-md'
                     : 'text-indigo-400 hover:text-indigo-200 bg-indigo-950/40 border border-indigo-500/30'
@@ -1214,7 +1214,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
 
               <button
                 onClick={() => setActiveTab('packages')}
-                className={`px-4 py-2 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${
+                className={`px-4 py-2.5 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${
                   activeTab === 'packages'
                     ? 'bg-gradient-to-r from-teal-600 to-emerald-600 text-white shadow-md'
                     : activeReseller.creditsBalance !== undefined && activeReseller.creditsBalance <= 0
@@ -1237,7 +1237,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
 
               <button
                 onClick={() => setActiveTab('share')}
-                className={`px-4 py-2 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${
+                className={`px-4 py-2.5 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${
                   activeTab === 'share'
                     ? 'bg-emerald-600 text-white shadow-md'
                     : 'text-slate-400 hover:text-slate-200'
@@ -1249,7 +1249,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
 
               <button
                 onClick={() => setActiveTab('commissions')}
-                className={`px-4 py-2 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${
+                className={`px-4 py-2.5 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${
                   activeTab === 'commissions'
                     ? 'bg-emerald-600 text-white shadow-md'
                     : 'text-slate-400 hover:text-slate-200'
@@ -1264,7 +1264,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
 
               <button
                 onClick={() => setActiveTab('invoices')}
-                className={`px-4 py-2 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${
+                className={`px-4 py-2.5 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${
                   activeTab === 'invoices'
                     ? 'bg-purple-600 text-white shadow-md'
                     : 'text-purple-400 hover:text-purple-200 bg-purple-950/40 border border-purple-500/30'
@@ -1279,7 +1279,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
 
               <button
                 onClick={() => setActiveTab('documents')}
-                className={`px-4 py-2 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${
+                className={`px-4 py-2.5 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${
                   activeTab === 'documents'
                     ? 'bg-indigo-600 text-white shadow-md'
                     : 'text-indigo-400 hover:text-indigo-200 bg-indigo-950/40 border border-indigo-500/30'
@@ -1291,7 +1291,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
 
               <button
                 onClick={() => setActiveTab('bank')}
-                className={`px-4 py-2 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${
+                className={`px-4 py-2.5 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${
                   activeTab === 'bank'
                     ? 'bg-emerald-600 text-white shadow-md'
                     : 'text-slate-400 hover:text-slate-200'
@@ -1306,10 +1306,10 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
             {activeTab === 'overview' && (
               <div className="space-y-6 animate-fade-in">
                 {/* 5 Cards Metrics including Credits Balance */}
-                <div className="grid grid-cols-2 lg:grid-cols-6 gap-3 sm:gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 sm:gap-4">
                   
                   {/* Active Scan Credits Pool */}
-                  <div className={`p-4 rounded-2xl border space-y-2.5 col-span-2 sm:col-span-1 shadow-lg transition-all ${
+                  <div className={`p-4 rounded-2xl border space-y-2.5 sm:col-span-1 shadow-lg transition-all ${
                     activeReseller.creditsBalance !== undefined && activeReseller.creditsBalance <= 0
                       ? 'bg-gradient-to-br from-rose-950/90 to-slate-950 border-rose-500/60 shadow-rose-950/50 ring-1 ring-rose-500/40'
                       : 'bg-gradient-to-br from-teal-950/80 to-slate-950 border-teal-500/50 shadow-teal-950/40'
@@ -1448,7 +1448,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                     {onOpenBusinessPresentation && (
                       <button
                         onClick={onOpenBusinessPresentation}
-                        className="flex-1 md:flex-none px-4 py-2.5 rounded-xl bg-gradient-to-r from-teal-600 to-indigo-600 hover:from-teal-500 hover:to-indigo-500 text-white font-bold text-xs transition-all flex items-center justify-center gap-1.5 shadow-md shadow-indigo-950/50 cursor-pointer"
+                        className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-gradient-to-r from-teal-600 to-indigo-600 hover:from-teal-500 hover:to-indigo-500 text-white font-bold text-xs transition-all flex items-center justify-center gap-1.5 shadow-md shadow-indigo-950/50 cursor-pointer"
                         title="İş Sunum Raporunu ve Dijital Kataloğu Aç"
                       >
                         <BookOpen className="w-4 h-4 text-teal-200" />
@@ -1457,7 +1457,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                     )}
                     <button
                       onClick={handleCopyLink}
-                      className="flex-1 md:flex-none px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition-colors flex items-center justify-center gap-1.5 shadow-md shadow-emerald-950/50 cursor-pointer"
+                      className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition-colors flex items-center justify-center gap-1.5 shadow-md shadow-emerald-950/50 cursor-pointer"
                     >
                       {copiedLink ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                       <span>{copiedLink ? 'Link Kopyalandı!' : 'Davet Linkini Kopyala'}</span>
@@ -1466,7 +1466,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                       href={waUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="px-4 py-2.5 rounded-xl bg-emerald-700/80 hover:bg-emerald-600 text-white font-bold text-xs transition-colors flex items-center gap-1.5"
+                      className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-emerald-700/80 hover:bg-emerald-600 text-white font-bold text-xs transition-colors flex items-center justify-center gap-1.5"
                     >
                       <Smartphone className="w-4 h-4" />
                       <span>WhatsApp Paylaş</span>
@@ -1513,7 +1513,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                         setCopiedLink(true);
                         setTimeout(() => setCopiedLink(false), 2000);
                       }}
-                      className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-950/50 cursor-pointer"
+                      className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-950/50 cursor-pointer"
                     >
                       {copiedLink ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                       <span>{copiedLink ? 'Davet Linki Kopyalandı!' : 'Davet Linkimi Kopyala'}</span>
@@ -1564,14 +1564,14 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                 </div>
 
                 {/* Search Bar */}
-                <div className="flex items-center gap-3 p-3 bg-slate-950/80 rounded-2xl border border-slate-800">
-                  <div className="relative flex-1">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-3 bg-slate-950/80 rounded-2xl border border-slate-800">
+                  <div className="relative w-full sm:flex-1 min-w-0">
                     <input
                       type="text"
                       value={referredUserSearch}
                       onChange={(e) => setReferredUserSearch(e.target.value)}
                       placeholder="Danışan Adı, E-Posta veya Paket Ara..."
-                      className="w-full pl-9 pr-4 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-slate-100 placeholder:text-slate-500 outline-none"
+                      className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs text-slate-100 placeholder:text-slate-500 outline-none"
                     />
                     <Search className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" />
                   </div>
@@ -1593,12 +1593,12 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                   <table className="w-full text-left text-xs">
                     <thead>
                       <tr className="border-b border-slate-800 bg-slate-900/60 text-slate-400 font-semibold">
-                        <th className="py-3 px-4">Danışan / Üye Adı</th>
-                        <th className="py-3 px-4">İletişim & E-Posta</th>
-                        <th className="py-3 px-4">Seçilen Paket</th>
-                        <th className="py-3 px-4">Kayıt Tarihi</th>
-                        <th className="py-3 px-4">Durum</th>
-                        <th className="py-3 px-4 text-right">Referans Kodu</th>
+                        <th className="py-3 px-4 whitespace-nowrap">Danışan / Üye Adı</th>
+                        <th className="py-3 px-4 whitespace-nowrap">İletişim & E-Posta</th>
+                        <th className="py-3 px-4 whitespace-nowrap">Seçilen Paket</th>
+                        <th className="py-3 px-4 whitespace-nowrap">Kayıt Tarihi</th>
+                        <th className="py-3 px-4 whitespace-nowrap">Durum</th>
+                        <th className="py-3 px-4 whitespace-nowrap text-right">Referans Kodu</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-800/60 text-slate-300">
@@ -1725,7 +1725,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                           phone: activeReseller.phone,
                         });
                       }}
-                      className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition-colors flex items-center gap-1.5 cursor-pointer shadow-md"
+                      className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-md w-full sm:w-auto"
                     >
                       <Plus className="w-4 h-4" />
                       <span>Kendi Altınıza Yeni Bayi Kaydet</span>
@@ -1733,7 +1733,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                     <button
                       onClick={() => loadReferredUsersList()}
                       disabled={subResellersLoading}
-                      className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-60"
+                      className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-60 w-full sm:w-auto"
                     >
                       <RefreshCw className={`w-4 h-4 ${subResellersLoading ? 'animate-spin' : ''}`} />
                       <span>Yenile</span>
@@ -1743,17 +1743,17 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
 
                 {subDealerFeedback && (
                   <div
-                    className={`p-4 rounded-2xl border text-xs font-semibold flex items-center justify-between gap-3 ${
+                    className={`p-4 rounded-2xl border text-xs font-semibold flex flex-wrap items-center justify-between gap-3 ${
                       subDealerFeedback.type === 'success'
                         ? 'bg-emerald-950/90 border-emerald-500/50 text-emerald-200'
                         : 'bg-rose-950/90 border-rose-500/50 text-rose-200'
                     }`}
                   >
-                    <span>{subDealerFeedback.text}</span>
+                    <span className="min-w-0 break-words">{subDealerFeedback.text}</span>
                     <button
                       type="button"
                       onClick={() => setSubDealerFeedback(null)}
-                      className="text-xs underline cursor-pointer"
+                      className="text-xs underline cursor-pointer py-2.5 px-2 shrink-0"
                     >
                       Kapat
                     </button>
@@ -1820,8 +1820,8 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                     }}
                     className="p-5 rounded-3xl bg-slate-950/90 border border-emerald-500/40 space-y-4"
                   >
-                    <div className="flex items-center justify-between">
-                      <div>
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="min-w-0">
                         <h4 className="text-sm font-bold text-emerald-300">
                           Kendi Sponsorluğunuzda Yeni Alt Bayi Oluştur
                         </h4>
@@ -1837,7 +1837,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                       <button
                         type="button"
                         onClick={() => setShowAddSubDealerForm(false)}
-                        className="text-xs text-slate-400 hover:text-white cursor-pointer"
+                        className="text-xs text-slate-400 hover:text-white cursor-pointer py-2.5 px-2 shrink-0"
                       >
                         Kapat
                       </button>
@@ -1854,7 +1854,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                           value={subDealerName}
                           onChange={(e) => setSubDealerName(e.target.value)}
                           placeholder="Örn: Ege Frekans Merkezi"
-                          className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white outline-none focus:border-emerald-500"
+                          className="w-full px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white outline-none focus:border-emerald-500"
                         />
                       </div>
                       <div>
@@ -1867,7 +1867,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                           value={subDealerEmail}
                           onChange={(e) => setSubDealerEmail(e.target.value)}
                           placeholder="altbayi@mail.com"
-                          className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white outline-none focus:border-emerald-500"
+                          className="w-full px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white outline-none focus:border-emerald-500"
                         />
                       </div>
                       <div>
@@ -1880,16 +1880,16 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                           value={subDealerPhone}
                           onChange={(e) => setSubDealerPhone(e.target.value)}
                           placeholder="05XX XXX XX XX"
-                          className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white outline-none focus:border-emerald-500"
+                          className="w-full px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white outline-none focus:border-emerald-500"
                         />
                       </div>
                       <div>
                         <label className="block text-[11px] font-semibold text-slate-300 mb-1">
                           Direkt Sponsoru (Otomatik Kilitli)
                         </label>
-                        <div className="w-full px-3 py-2 rounded-xl bg-emerald-950/70 border border-emerald-500/40 text-xs font-bold text-emerald-300 flex items-center gap-1.5 truncate">
+                        <div className="w-full px-3 py-2.5 rounded-xl bg-emerald-950/70 border border-emerald-500/40 text-xs font-bold text-emerald-300 flex items-center gap-1.5 truncate">
                           <Lock className="w-3.5 h-3.5 shrink-0" />
-                          <span className="truncate">
+                          <span className="truncate min-w-0">
                             {activeReseller.resellerName} ({activeReseller.referralCode})
                           </span>
                         </div>
@@ -1900,7 +1900,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                       <button
                         type="submit"
                         disabled={isAddingSubDealer}
-                        className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs cursor-pointer disabled:opacity-50"
+                        className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs cursor-pointer disabled:opacity-50"
                       >
                         {isAddingSubDealer
                           ? 'Alt Bayi Kaydediliyor...'
@@ -1938,7 +1938,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                         {/* SOL KOL */}
                         <div className="p-5 rounded-3xl bg-slate-950/90 border border-emerald-500/40 space-y-3">
-                          <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
+                          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-2.5">
                             <div>
                               <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-bold">
                                 SOL KOL (1. ANA KOL · GÜÇLÜ HAT)
@@ -1956,7 +1956,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                               </div>
                             </div>
                           </div>
-                          <div className="flex items-center justify-between text-xs font-mono bg-slate-900/90 p-3 rounded-2xl border border-slate-800">
+                          <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-mono bg-slate-900/90 p-3 rounded-2xl border border-slate-800">
                             <span className="text-slate-300">Sol Kol Yeterliliği:</span>
                             <span
                               className={`font-bold ${
@@ -1972,7 +1972,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
 
                         {/* SAĞ KOL */}
                         <div className="p-5 rounded-3xl bg-slate-950/90 border border-indigo-500/40 space-y-3">
-                          <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
+                          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-2.5">
                             <div>
                               <span className="px-2.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 text-[10px] font-bold">
                                 SAĞ KOL (2. ANA KOL · DENGE HATTI)
@@ -1990,7 +1990,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                               </div>
                             </div>
                           </div>
-                          <div className="flex items-center justify-between text-xs font-mono bg-slate-900/90 p-3 rounded-2xl border border-slate-800">
+                          <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-mono bg-slate-900/90 p-3 rounded-2xl border border-slate-800">
                             <span className="text-slate-300">Sağ Kol Yeterliliği:</span>
                             <span
                               className={`font-bold ${
@@ -2168,14 +2168,14 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                 </div>
 
                 {/* Search */}
-                <div className="flex items-center gap-3 p-3 bg-slate-950/80 rounded-2xl border border-slate-800">
-                  <div className="relative flex-1">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-3 bg-slate-950/80 rounded-2xl border border-slate-800">
+                  <div className="relative w-full sm:flex-1 min-w-0">
                     <input
                       type="text"
                       value={subResellersSearch}
                       onChange={(e) => setSubResellersSearch(e.target.value)}
                       placeholder="Danışan adı, e-posta veya referans kodu ara..."
-                      className="w-full pl-9 pr-4 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-slate-100 placeholder:text-slate-500 outline-none"
+                      className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs text-slate-100 placeholder:text-slate-500 outline-none"
                     />
                     <Search className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" />
                   </div>
@@ -2207,12 +2207,12 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                     <table className="w-full text-left text-xs">
                       <thead>
                         <tr className="border-b border-slate-800 bg-slate-900/60 text-slate-400 font-semibold">
-                          <th className="py-3 px-4">Danışan / Üye</th>
-                          <th className="py-3 px-4">Referans Kodu</th>
-                          <th className="py-3 px-4">Durum</th>
-                          <th className="py-3 px-4 text-right">Kalan Kredi</th>
-                          <th className="py-3 px-4 text-right">Toplam Tarama</th>
-                          <th className="py-3 px-4">Kayıt Tarihi</th>
+                          <th className="py-3 px-4 whitespace-nowrap">Danışan / Üye</th>
+                          <th className="py-3 px-4 whitespace-nowrap">Referans Kodu</th>
+                          <th className="py-3 px-4 whitespace-nowrap">Durum</th>
+                          <th className="py-3 px-4 whitespace-nowrap text-right">Kalan Kredi</th>
+                          <th className="py-3 px-4 whitespace-nowrap text-right">Toplam Tarama</th>
+                          <th className="py-3 px-4 whitespace-nowrap">Kayıt Tarihi</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-800/60 text-slate-300">
@@ -2310,7 +2310,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                     <button
                       onClick={() => loadDealerScans()}
                       disabled={dealerScansLoading}
-                      className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                      className="px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer w-full sm:w-auto"
                     >
                       <RefreshCw className={`w-3.5 h-3.5 ${dealerScansLoading ? 'animate-spin' : ''}`} />
                       <span>Yenile</span>
@@ -2318,7 +2318,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                     <button
                       onClick={handleClearAllDealerScans}
                       disabled={dealerScans.length === 0 || isClearingDealerScans}
-                      className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                      className={`px-3.5 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer w-full sm:w-auto ${
                         dealerScans.length > 0
                           ? 'bg-rose-600 hover:bg-rose-500 text-white shadow-md shadow-rose-950/60'
                           : 'bg-slate-800 text-slate-500 cursor-not-allowed'
@@ -2345,7 +2345,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                     value={dealerScansSearch}
                     onChange={(e) => setDealerScansSearch(e.target.value)}
                     placeholder="Tarih, tarama tipi veya frekans arayın..."
-                    className="w-full pl-9 pr-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-slate-200 outline-none focus:border-rose-500 placeholder:text-slate-600"
+                    className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-xs text-slate-200 outline-none focus:border-rose-500 placeholder:text-slate-600"
                   />
                 </div>
 
@@ -2364,12 +2364,12 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                     <table className="w-full text-left text-xs text-slate-300">
                       <thead className="bg-slate-900/90 text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-800 sticky top-0">
                         <tr>
-                          <th className="p-3">Tarih / Saat</th>
-                          <th className="p-3">Tarama Türü</th>
-                          <th className="p-3">Frekans</th>
-                          <th className="p-3">Enerji</th>
-                          <th className="p-3">Durum</th>
-                          <th className="p-3 text-right">İşlem</th>
+                          <th className="p-3 whitespace-nowrap">Tarih / Saat</th>
+                          <th className="p-3 whitespace-nowrap">Tarama Türü</th>
+                          <th className="p-3 whitespace-nowrap">Frekans</th>
+                          <th className="p-3 whitespace-nowrap">Enerji</th>
+                          <th className="p-3 whitespace-nowrap">Durum</th>
+                          <th className="p-3 whitespace-nowrap text-right">İşlem</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-800">
@@ -2408,7 +2408,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                                 <button
                                   onClick={() => handleDeleteDealerScan(s.id)}
                                   disabled={isDeletingScanId === s.id}
-                                  className="p-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/30 text-rose-400 hover:text-rose-200 transition-colors cursor-pointer disabled:opacity-40"
+                                  className="p-2.5 min-w-[40px] min-h-[40px] inline-flex items-center justify-center rounded-lg bg-rose-500/10 hover:bg-rose-500/30 text-rose-400 hover:text-rose-200 transition-colors cursor-pointer disabled:opacity-40"
                                   title="Bu tarama kaydını sil"
                                 >
                                   {isDeletingScanId === s.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
@@ -2521,7 +2521,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                 {/* Share URL & Buttons Card */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div className="p-5 rounded-3xl bg-slate-950/85 border border-indigo-500/30 space-y-4 shadow-lg">
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="flex items-center gap-2 text-indigo-300 font-bold text-sm">
                         <Share2 className="w-4 h-4 text-indigo-400" />
                         <span>Özel Sunum &amp; Kayıt Linkiniz</span>
@@ -2533,12 +2533,12 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
 
                     <div className="space-y-1.5">
                       <label className="text-[11px] font-semibold text-slate-300">Tıklanabilir Sunum Bağlantısı:</label>
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-2">
                         <input
                           type="text"
                           readOnly
                           value={typeof window !== 'undefined' ? `${window.location.origin}/?ref=${encodeURIComponent(activeReseller.referralCode)}&view=presentation` : ''}
-                          className="flex-1 px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs text-indigo-300 font-mono outline-none select-all"
+                          className="w-full sm:flex-1 min-w-0 px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs text-indigo-300 font-mono outline-none select-all"
                         />
                         <button
                           onClick={() => {
@@ -2548,7 +2548,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                               setTimeout(() => setCopiedLink(false), 2500);
                             }
                           }}
-                          className="px-3.5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 cursor-pointer shadow-md"
+                          className="px-3.5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all flex items-center justify-center gap-1.5 w-full sm:w-auto shrink-0 cursor-pointer shadow-md"
                         >
                           {copiedLink ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                           <span>{copiedLink ? 'Kopyalandı' : 'Kopyala'}</span>
@@ -2557,7 +2557,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                     </div>
 
                     {/* Social Media Sharing */}
-                    <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-800">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2 border-t border-slate-800">
                       <a
                         href={`https://wa.me/?text=${encodeURIComponent(
                           `🌟 AuraBio Kuantum Biyo-Rezonans & Monoline 7 Nefis MLM İş Sunum Raporu (v6.0 Enterprise)\n\n` +
@@ -2590,7 +2590,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                   {/* Official PDF / DOC Download Card */}
                   <div className="p-5 rounded-3xl bg-slate-950/85 border border-slate-800 space-y-4 flex flex-col justify-between shadow-lg">
                     <div className="space-y-2">
-                      <div className="flex items-center justify-between">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
                         <div className="flex items-center gap-2 text-slate-200 font-bold text-sm">
                           <FileText className="w-4 h-4 text-indigo-400" />
                           <span>Güncel Kurumsal Rapor &amp; Katalog İndir (PDF / Word)</span>
@@ -2610,7 +2610,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-2 pt-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2">
                       <button
                         onClick={() => downloadTechnicalReportWord()}
                         className="py-2.5 px-3 rounded-xl bg-blue-600/90 hover:bg-blue-500 text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-md transition-colors cursor-pointer"
@@ -2644,7 +2644,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                     {onOpenBusinessPresentation && (
                       <button
                         onClick={onOpenBusinessPresentation}
-                        className="px-3.5 py-1.5 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/40 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer self-start sm:self-auto"
+                        className="px-3.5 py-2.5 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/40 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer self-start sm:self-auto"
                       >
                         <span>Detaylı Simülatör</span>
                         <ArrowRight className="w-3.5 h-3.5" />
@@ -2726,7 +2726,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                           <select
                             value={presCalcPackagePrice}
                             onChange={(e) => setPresCalcPackagePrice(Number(e.target.value))}
-                            className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-slate-200 outline-none"
+                            className="w-full px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs text-slate-200 outline-none"
                           >
                             {FREKANS_PACKAGES.slice(0, 8).map((pkg) => (
                               <option key={pkg.id} value={pkg.defaultPrice}>
@@ -2741,7 +2741,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                           <select
                             value={presCalcCareer}
                             onChange={(e) => setPresCalcCareer(Number(e.target.value))}
-                            className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-slate-200 outline-none"
+                            className="w-full px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs text-slate-200 outline-none"
                           >
                             {CAREER_TIERS.map((tier) => (
                               <option key={tier.level} value={tier.level}>
@@ -2752,7 +2752,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-4 pt-2 text-xs">
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-2 text-xs">
                         <label className="flex items-center gap-2 cursor-pointer">
                           <input
                             type="checkbox"
@@ -2776,30 +2776,30 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
 
                     <div className="lg:col-span-5 p-5 rounded-2xl bg-gradient-to-br from-slate-900 to-emerald-950/40 border border-emerald-500/40 flex flex-col justify-between space-y-3">
                       <div className="space-y-2 text-xs">
-                        <div className="flex items-center justify-between border-b border-slate-800 pb-1.5">
+                        <div className="flex items-center justify-between gap-3 border-b border-slate-800 pb-1.5">
                           <span className="text-slate-400">Danışan Seans Kârı:</span>
                           <span className="font-mono font-bold text-emerald-400">+{formatUsd(presMonthlySessionProfit)}</span>
                         </div>
-                        <div className="flex items-center justify-between border-b border-slate-800 pb-1.5">
+                        <div className="flex items-center justify-between gap-3 border-b border-slate-800 pb-1.5">
                           <span className="text-slate-400">Direkt Sponsor (%20):</span>
                           <span className="font-mono font-bold text-indigo-300">+{formatUsd(presMonthlyDirectSponsor)}</span>
                         </div>
-                        <div className="flex items-center justify-between border-b border-slate-800 pb-1.5">
+                        <div className="flex items-center justify-between gap-3 border-b border-slate-800 pb-1.5">
                           <span className="text-slate-400">Monoline Tek Hat (%25):</span>
                           <span className="font-mono font-bold text-teal-300">+{formatUsd(presMonthlyMonoline)}</span>
                         </div>
-                        <div className="flex items-center justify-between border-b border-slate-800 pb-1.5">
+                        <div className="flex items-center justify-between gap-3 border-b border-slate-800 pb-1.5">
                           <span className="text-slate-400">{presSelectedTier.title} Havuz Payı:</span>
                           <span className="font-mono font-bold text-amber-300">+{formatUsd(presMonthlyCareerPool)}</span>
                         </div>
                         {presMonthlyMatching > 0 && (
-                          <div className="flex items-center justify-between border-b border-slate-800 pb-1.5">
+                          <div className="flex items-center justify-between gap-3 border-b border-slate-800 pb-1.5">
                             <span className="text-slate-400">Matching Bonus:</span>
                             <span className="font-mono font-bold text-purple-300">+{formatUsd(presMonthlyMatching)}</span>
                           </div>
                         )}
                         {presMonthlyFastRoi > 0 && (
-                          <div className="flex items-center justify-between border-b border-slate-800 pb-1.5">
+                          <div className="flex items-center justify-between gap-3 border-b border-slate-800 pb-1.5">
                             <span className="text-slate-400">Fast-ROI Bonusu:</span>
                             <span className="font-mono font-bold text-emerald-300">+{formatUsd(presMonthlyFastRoi)}</span>
                           </div>
@@ -3519,13 +3519,13 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
               <div className="space-y-4 animate-fade-in">
                 {/* Search & Filter Bar */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-slate-950/80 rounded-2xl border border-slate-800">
-                  <div className="relative flex-1">
+                  <div className="relative w-full sm:flex-1 min-w-0">
                     <input
                       type="text"
                       value={commSearch}
                       onChange={(e) => setCommSearch(e.target.value)}
                       placeholder="İşlem No, Maskeli Üye ID veya Paket Adı Ara..."
-                      className="w-full pl-9 pr-4 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-slate-100 placeholder:text-slate-500 outline-none"
+                      className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs text-slate-100 placeholder:text-slate-500 outline-none"
                     />
                     <Search className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" />
                   </div>
@@ -3556,13 +3556,13 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                     <table className="w-full text-left text-xs">
                       <thead className="bg-slate-900/90 text-slate-400 uppercase text-[10px] font-semibold border-b border-slate-800 tracking-wider">
                         <tr>
-                          <th className="py-3 px-4">İşlem ID</th>
-                          <th className="py-3 px-4">Maskeli Üye</th>
-                          <th className="py-3 px-4">Satın Alınan Paket</th>
-                          <th className="py-3 px-4 text-right">Satış Tutarı</th>
-                          <th className="py-3 px-4 text-right">Komisyon Tutarı</th>
-                          <th className="py-3 px-4 text-center">Durum</th>
-                          <th className="py-3 px-4 text-right">Tarih</th>
+                          <th className="py-3 px-4 whitespace-nowrap">İşlem ID</th>
+                          <th className="py-3 px-4 whitespace-nowrap">Maskeli Üye</th>
+                          <th className="py-3 px-4 whitespace-nowrap">Satın Alınan Paket</th>
+                          <th className="py-3 px-4 whitespace-nowrap text-right">Satış Tutarı</th>
+                          <th className="py-3 px-4 whitespace-nowrap text-right">Komisyon Tutarı</th>
+                          <th className="py-3 px-4 whitespace-nowrap text-center">Durum</th>
+                          <th className="py-3 px-4 whitespace-nowrap text-right">Tarih</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-800/80 text-slate-300">
@@ -3692,14 +3692,14 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                     <table className="w-full text-left text-xs border-collapse">
                       <thead>
                         <tr className="border-b border-slate-800 bg-slate-900/90 text-slate-400">
-                          <th className="py-3 px-4 font-semibold">Fatura No & ETTN</th>
-                          <th className="py-3 px-4 font-semibold">Paket & Hizmet Detayı</th>
-                          <th className="py-3 px-4 font-semibold text-right">KDV Hariç</th>
-                          <th className="py-3 px-4 font-semibold text-right">KDV (%20)</th>
-                          <th className="py-3 px-4 font-semibold text-right">Genel Toplam</th>
-                          <th className="py-3 px-4 font-semibold text-center">Tarih</th>
-                          <th className="py-3 px-4 font-semibold text-center">Durum</th>
-                          <th className="py-3 px-4 font-semibold text-center">İşlem</th>
+                          <th className="py-3 px-4 whitespace-nowrap font-semibold">Fatura No & ETTN</th>
+                          <th className="py-3 px-4 whitespace-nowrap font-semibold">Paket & Hizmet Detayı</th>
+                          <th className="py-3 px-4 whitespace-nowrap font-semibold text-right">KDV Hariç</th>
+                          <th className="py-3 px-4 whitespace-nowrap font-semibold text-right">KDV (%20)</th>
+                          <th className="py-3 px-4 whitespace-nowrap font-semibold text-right">Genel Toplam</th>
+                          <th className="py-3 px-4 whitespace-nowrap font-semibold text-center">Tarih</th>
+                          <th className="py-3 px-4 whitespace-nowrap font-semibold text-center">Durum</th>
+                          <th className="py-3 px-4 whitespace-nowrap font-semibold text-center">İşlem</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-800/60">
@@ -3991,7 +3991,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                       className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-emerald-300 font-mono"
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     <div>
                       <label className="block text-[11px] text-slate-400 mb-1">Son Kullanma (AA/YY)</label>
                       <input

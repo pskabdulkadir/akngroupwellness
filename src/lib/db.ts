@@ -172,15 +172,98 @@ export async function getDoc(docRef: any): Promise<DocumentSnapshot> {
   };
 }
 
-export async function getDocs(queryOrCol: any): Promise<QuerySnapshot> {
-  const colName = queryOrCol?.id || queryOrCol?.name || queryOrCol?.collectionName || String(queryOrCol);
+export interface QueryConstraint {
+  kind: 'where' | 'orderBy' | 'limit';
+  field?: string;
+  op?: string;
+  value?: any;
+  direction?: 'asc' | 'desc';
+  count?: number;
+}
 
-  const colMap = getCollectionMap(colName);
-  const docs: DocumentSnapshot[] = Object.entries(colMap).map(([id, data]) => ({
+interface QueryRef {
+  isQuery: true;
+  source: any;
+  constraints: QueryConstraint[];
+}
+
+function sourceOf(target: any): any {
+  return target?.isQuery === true ? target.source : target;
+}
+
+function readField(data: any, fieldPath: string): any {
+  return fieldPath.split('.').reduce((acc, key) => (acc == null ? undefined : acc[key]), data);
+}
+
+function matchesWhere(data: any, c: QueryConstraint): boolean {
+  const actual = readField(data, c.field || '');
+  switch (c.op) {
+    case '==':
+      return actual === c.value;
+    case '!=':
+      return actual !== undefined && actual !== c.value;
+    case '<':
+      return actual < c.value;
+    case '<=':
+      return actual <= c.value;
+    case '>':
+      return actual > c.value;
+    case '>=':
+      return actual >= c.value;
+    case 'in':
+      return Array.isArray(c.value) && c.value.includes(actual);
+    case 'array-contains':
+      return Array.isArray(actual) && actual.includes(c.value);
+    default:
+      throw new Error(`Unsupported where operator: ${c.op}`);
+  }
+}
+
+function compareValues(a: any, b: any): number {
+  if (a === b) return 0;
+  if (a == null) return -1;
+  if (b == null) return 1;
+  return a < b ? -1 : a > b ? 1 : 0;
+}
+
+function readDocs(target: any): DocumentSnapshot[] {
+  const source = sourceOf(target);
+  const colName = source?.id || source?.name || source?.collectionName || String(source);
+  let entries = Object.entries(getCollectionMap(colName));
+
+  if (target?.isQuery === true) {
+    const constraints: QueryConstraint[] = target.constraints;
+    entries = entries.filter(([, data]) =>
+      constraints.every((c) => c.kind !== 'where' || matchesWhere(data, c))
+    );
+
+    const orders = constraints.filter((c) => c.kind === 'orderBy');
+    if (orders.length > 0) {
+      entries = [...entries].sort(([, a], [, b]) => {
+        for (const o of orders) {
+          const r = compareValues(readField(a, o.field || ''), readField(b, o.field || ''));
+          if (r !== 0) return o.direction === 'desc' ? -r : r;
+        }
+        return 0;
+      });
+    }
+
+    const limits = constraints.filter((c) => c.kind === 'limit');
+    const lastLimit = limits[limits.length - 1];
+    if (lastLimit?.count !== undefined) {
+      entries = entries.slice(0, lastLimit.count);
+    }
+  }
+
+  return entries.map(([id, data]) => ({
     id,
     data: () => data,
     exists: () => true,
   }));
+}
+
+export async function getDocs(queryOrCol: any): Promise<QuerySnapshot> {
+  const docs = readDocs(queryOrCol);
 
   return {
     docs,
@@ -195,7 +278,8 @@ export function onSnapshot(
   callback: (snapshot: any) => void,
   _onError?: (err: any) => void
 ): Unsubscribe {
-  const colName = target?.parent?.id || target?.id || target?.name || target?.collectionName || 'general';
+  const source = sourceOf(target);
+  const colName = source?.parent?.id || source?.id || source?.name || source?.collectionName || 'general';
 
   if (!listeners.has(colName)) {
     listeners.set(colName, new Set());
@@ -211,12 +295,7 @@ export function onSnapshot(
         id: target.id,
       });
     } else {
-      const colMap = getCollectionMap(colName);
-      const docs: DocumentSnapshot[] = Object.entries(colMap).map(([id, data]) => ({
-        id,
-        data: () => data,
-        exists: () => true,
-      }));
+      const docs = readDocs(target);
       callback({
         docs,
         empty: docs.length === 0,
@@ -237,20 +316,21 @@ export function onSnapshot(
   };
 }
 
-export function query(colRef: any, ..._constraints: any[]): any {
-  return colRef;
+export function query(source: any, ...constraints: QueryConstraint[]): QueryRef {
+  const base: QueryRef = source?.isQuery === true ? source : { isQuery: true, source, constraints: [] };
+  return { isQuery: true, source: base.source, constraints: [...base.constraints, ...constraints] };
 }
 
-export function where(_fieldPath: string, _opStr: any, _value: any): any {
-  return null;
+export function where(fieldPath: string, opStr: string, value: any): QueryConstraint {
+  return { kind: 'where', field: fieldPath, op: opStr, value };
 }
 
-export function limit(_num: number): any {
-  return null;
+export function limit(count: number): QueryConstraint {
+  return { kind: 'limit', count };
 }
 
-export function orderBy(_fieldPath: string, _directionStr?: any): any {
-  return null;
+export function orderBy(fieldPath: string, directionStr: 'asc' | 'desc' = 'asc'): QueryConstraint {
+  return { kind: 'orderBy', field: fieldPath, direction: directionStr };
 }
 
 export async function ensureFirebaseAuthUser(email?: string, _password?: string): Promise<{ uid: string } | null> {

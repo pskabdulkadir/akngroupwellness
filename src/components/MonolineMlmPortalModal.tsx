@@ -923,8 +923,8 @@ export const MonolineMlmPortalModal: React.FC<MonolineMlmPortalModalProps> = ({
   if (!isOpen && !embedded) return null;
 
   const innerContent = (
-    <div className={`flex flex-col bg-slate-50 text-slate-900 lg:flex-row ${embedded ? 'h-full min-h-0 overflow-hidden' : 'h-screen min-h-0 overflow-hidden'}`}>
-      <div className="z-30 max-h-[40vh] shrink-0 overflow-y-auto border-b border-slate-200 bg-white/95 backdrop-blur-xs lg:sticky lg:top-0 lg:h-full lg:max-h-full lg:w-72 lg:border-b-0 lg:border-r">
+    <div className={`flex flex-col bg-slate-50 text-slate-900 lg:flex-row ${embedded ? 'h-full min-h-0 overflow-hidden' : 'mobile-viewport-height min-h-0 overflow-hidden'}`}>
+      <div className="z-30 max-h-[40vh] shrink-0 overflow-y-auto border-b border-slate-200 bg-white/95 pt-[env(safe-area-inset-top,0px)] backdrop-blur-xs overscroll-y-contain lg:sticky lg:top-0 lg:h-full lg:max-h-full lg:w-72 lg:border-b-0 lg:border-r">
         <div className="mx-auto flex w-full max-w-[1600px] flex-col items-stretch gap-4 px-4 py-4 lg:px-4">
           <div className="flex flex-col gap-2">
             <button

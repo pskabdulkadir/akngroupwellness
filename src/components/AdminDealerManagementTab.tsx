@@ -305,7 +305,7 @@ export const AdminDealerManagementTab: React.FC = () => {
                     <div><span className="text-slate-500">Çekilen</span><div className="mt-1">{money(selected.wallet_total_withdrawn)}</div></div>
                     <div><span className="text-slate-500">Sponsor</span><div className="mt-1">{money(selected.wallet_sponsor_earnings)}</div></div>
                     <div><span className="text-slate-500">Unilevel</span><div className="mt-1">{money(selected.wallet_unilevel_earnings)}</div></div>
-                    <div><span className="text-slate-500">Monoline</span><div className="mt-1">{money(selected.wallet_monoline_earnings)}</div></div>
+                    <div><span className="text-slate-500">Monoline teşvik</span><div className="mt-1">{money(selected.wallet_monoline_earnings)}</div></div>
                   </div>
                 </div>
                 <form onSubmit={saveWalletAdjustment} className="space-y-3 rounded-xl border border-amber-500/30 bg-amber-950/20 p-4">

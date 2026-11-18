@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { CommissionTransaction, MonolineMember } from '../types/monoline';
+import { getMonolineOnlyWallet } from '../utils/walletRegion';
 
 interface LedgerTransactionsViewProps {
   transactions: CommissionTransaction[];
@@ -253,7 +254,7 @@ export const LedgerTransactionsView: React.FC<LedgerTransactionsViewProps> = ({
                 <th className="py-3 px-3 text-right">Kişisel Hacim</th>
                 <th className="py-3 px-3 text-right">Monoline Grup Hacmi</th>
                 <th className="py-3 px-3 text-right">Sponsor Cüzdanı (%20)</th>
-                <th className="py-3 px-3 text-right">Monoline Cüzdanı (%25)</th>
+                <th className="py-3 px-3 text-right">Monoline Cüzdanı</th>
                 <th className="py-3 px-3 text-right">Kariyer Havuz Bonusu</th>
                 <th className="py-3 pl-3 text-right">Toplam Kazanç</th>
               </tr>
@@ -290,7 +291,7 @@ export const LedgerTransactionsView: React.FC<LedgerTransactionsViewProps> = ({
                     $
                   </td>
                   <td className="py-3 px-3 text-right text-amber-700 font-medium">
-                    {m.wallets.monoline_wallet.toLocaleString('tr-TR', {
+                    {getMonolineOnlyWallet(m.wallets).toLocaleString('tr-TR', {
                       minimumFractionDigits: 2,
                     })}{' '}
                     $
