@@ -69,6 +69,7 @@ import {
   resolveMemberRegion,
 } from '../utils/walletRegion';
 import { recordUserContractApprovals } from '../utils/paymentProcessor';
+import { formatUsd } from '../utils/currency';
 import { FixedUsdRateBanner } from './common/FixedUsdRateBanner';
 import { DealerRegionalUsdPanel } from './DealerRegionalUsdPanel';
 import { DealerEthicsGuidelines } from './DealerEthicsGuidelines';
@@ -1546,6 +1547,23 @@ export const DealerBackOfficeView: React.FC<DealerBackOfficeViewProps> = ({
       .reduce((sum, c) => sum + (c.amount || 0), 0);
   }, [member.wallets.monoline_incentive_wallet, memberCommissionLogs]);
 
+  const totalEarnings = member.wallets.total_earnings || 0;
+  const matchingEarnings = member.wallets.matching_wallet || 0;
+  const fastRoiEarnings = member.wallets.fast_roi_wallet || 0;
+  const sponsorEarnings = Math.max(0, (member.wallets.sponsor_wallet || 0) - fastRoiEarnings);
+  const careerEarnings = Math.max(0, (member.wallets.career_pool_wallet || 0) - matchingEarnings);
+  const earningsBreakdown = [
+    { label: 'Sponsor ve başlangıç bonusları', amount: sponsorEarnings },
+    { label: 'FAST-ROI bonusu', amount: fastRoiEarnings },
+    { label: 'Unilevel ekip komisyonu', amount: unilevelEarnings },
+    { label: 'Monoline sıra teşviki', amount: monolineIncentiveEarnings },
+    { label: 'Unilevel Infinity', amount: member.wallets.infinity_wallet || 0 },
+    { label: 'Liderlik eşleşme bonusu', amount: matchingEarnings },
+    { label: 'Kariyer ve havuz ödülleri', amount: careerEarnings },
+  ];
+  const categorizedEarnings = earningsBreakdown.reduce((sum, item) => sum + item.amount, 0);
+  const otherEarnings = Math.max(0, totalEarnings - categorizedEarnings);
+
   const handleWithdrawalSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setWithdrawComplianceError(null);
@@ -2129,6 +2147,36 @@ export const DealerBackOfficeView: React.FC<DealerBackOfficeViewProps> = ({
             </div>
           </div>
         </div>
+
+        {subTab === 'wallet' && (
+          <section className="rounded-2xl border border-emerald-500/30 bg-slate-950 p-5 text-white shadow-xs sm:p-6" aria-label="Toplam bayi kazançları">
+          <div className="flex flex-col gap-3 border-b border-white/10 pb-4 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <div className="text-xs font-bold uppercase tracking-wider text-emerald-300">Bayi Toplam Kazançları</div>
+              <p className="mt-1 text-xs leading-relaxed text-slate-300">
+                Hesabınıza tanımlanan tüm kümülatif kazançlar. 14 günlük bekleyen tutarlar dahildir; çekilebilir bakiyeden ayrıdır.
+              </p>
+            </div>
+            <div className="font-mono text-3xl font-black tabular-nums text-white sm:text-4xl">
+              {formatUsd(totalEarnings, 2)}
+            </div>
+          </div>
+          <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {earningsBreakdown.map((item) => (
+              <div key={item.label} className="flex min-w-0 items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/5 px-3 py-2.5">
+                <span className="text-xs text-slate-300">{item.label}</span>
+                <span className="shrink-0 font-mono text-sm font-bold tabular-nums text-white">{formatUsd(item.amount, 2)}</span>
+              </div>
+            ))}
+            {otherEarnings > 0 && (
+              <div className="flex min-w-0 items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/5 px-3 py-2.5">
+                <span className="text-xs text-slate-300">Diğer kazanç / düzeltmeler</span>
+                <span className="shrink-0 font-mono text-sm font-bold tabular-nums text-white">{formatUsd(otherEarnings, 2)}</span>
+              </div>
+            )}
+          </div>
+          </section>
+        )}
 
         {/* SEANS KREDİSİ & DANIŞAN PERAKENDE GELİR HESAPLAYICI */}
         <div className="p-5 rounded-2xl bg-gradient-to-r from-indigo-950 via-slate-900 to-emerald-950 text-white border border-indigo-500/30 shadow-xs">
