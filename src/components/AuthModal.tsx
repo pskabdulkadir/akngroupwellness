@@ -39,11 +39,10 @@ import { DealerDetails } from '../types';
 import { getPackagePriceForRegion, MEMBER_COUNTRY_OPTIONS, resolveMemberRegion } from '../utils/walletRegion';
 import { formatUsd } from '../utils/currency';
 import type { DealerPackage } from '../config/dealerPackages';
-import { 
-  Reseller, 
+import {
+  Reseller,
   getDealerPackages,
-  subscribeToDealerPackages,
-  getActiveResellers, 
+  subscribeToDealerPackages, 
   getResellerByCode, 
   detectReferralCodeFromUrlOnly,
   detectAndSaveReferralCodeFromUrl, 
@@ -159,10 +158,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [legalContractType, setLegalContractType] = useState<LegalContractTab>('terms');
 
   // Reseller / Referral selection state
-  const [resellersList, setResellersList] = useState<Reseller[]>([]);
   const [selectedResellerId, setSelectedResellerId] = useState<string>(lockedSponsor?.uid || '');
   const [customReferralCode, setCustomReferralCode] = useState<string>(lockedSponsor?.referralCode || '');
-  const [isCustomReferralMode, setIsCustomReferralMode] = useState<boolean>(false);
   const [validatedReseller, setValidatedReseller] = useState<Reseller | null>(() =>
     lockedSponsor ? createLockedReseller(lockedSponsor) : null
   );
@@ -216,15 +213,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       setCustomReferralCode(sponsor.referralCode);
       setIsUrlReferralDetected(true);
       setIsManualSponsorMode(false);
-      setIsCustomReferralMode(false);
       setTab('register');
     }
 
     const loadResellers = async () => {
       try {
-        const list = await getActiveResellers();
-        setResellersList(list);
-
         const referralCode = lockedSponsor?.referralCode.trim().toUpperCase() || detectReferralCodeFromUrlOnly();
         if (referralCode) {
           const foundReseller = await getResellerByCode(referralCode);
@@ -240,7 +233,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             setCustomReferralCode(reseller.referralCode);
             setIsUrlReferralDetected(true);
             setIsManualSponsorMode(false);
-            setIsCustomReferralMode(false);
             setErrorMsg(null);
             setTab('register');
             return;
@@ -252,7 +244,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             setCustomReferralCode('');
             setIsUrlReferralDetected(true);
             setIsManualSponsorMode(false);
-            setIsCustomReferralMode(false);
             setTab('register');
             return;
           }
@@ -264,7 +255,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         setSelectedResellerId('');
         setValidatedReseller(null);
         setCustomReferralCode('');
-        setIsCustomReferralMode(false);
       } catch (err) {
         console.debug('Load resellers notice:', err);
       }
@@ -294,24 +284,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     }
   }, [regPhone, dealerWhatsapp]);
 
-  // Handle dropdown reseller change
-  const handleResellerDropdownChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const val = e.target.value;
-    if (val === 'CUSTOM_CODE') {
-      setIsCustomReferralMode(true);
-      setSelectedResellerId('');
-      setValidatedReseller(null);
-    } else {
-      setIsCustomReferralMode(false);
-      setSelectedResellerId(val);
-      const found = resellersList.find(r => r.uid === val);
-      setValidatedReseller(found || null);
-      if (found) {
-        setCustomReferralCode(found.referralCode);
-      }
-    }
-  };
-
   // Handle custom code check
   const handleCustomCodeChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value.trim().toUpperCase();
@@ -335,7 +307,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     lockedSponsor ||
     selectedResellerId || 
     validatedReseller || 
-    (isCustomReferralMode && customReferralCode.trim().length > 0)
+    customReferralCode.trim().length > 0
   );
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
@@ -369,7 +341,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     e.preventDefault();
 
     if (!isResellerSelected) {
-      setErrorMsg('Lütfen kayıt olmak için listeden bir Bayi seçiniz veya Referans Kodu giriniz.');
+      setErrorMsg('Lütfen kayıt olmak için geçerli bir Bayi Referans Kodu giriniz.');
       return;
     }
 
@@ -929,57 +901,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 /* Normal Link ile Giriş Yapanlar İçin: Serbest / Manuel Sponsor Seçimi */
                 <div className="space-y-2.5 animate-fade-in">
 
-                  {/* Hızlı Seçim Butonları (Pills) */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-[10px] font-bold">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsCustomReferralMode(false);
-                        if (resellersList.length > 0 && !selectedResellerId) {
-                          setSelectedResellerId(resellersList[0].uid);
-                        }
-                      }}
-                      className={`px-2 py-1.5 rounded-lg border text-center transition-all cursor-pointer ${
-                        !isCustomReferralMode
-                          ? 'bg-amber-500/20 text-amber-300 border-amber-500/50 shadow-sm'
-                          : 'bg-slate-900/60 text-slate-400 border-slate-800 hover:text-slate-200'
-                      }`}
-                    >
-                      🏢 Listeden Bayi Seç
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsCustomReferralMode(true);
-                      }}
-                      className={`px-2 py-1.5 rounded-lg border text-center transition-all cursor-pointer ${
-                        isCustomReferralMode
-                          ? 'bg-amber-500/20 text-amber-300 border-amber-500/50 shadow-sm'
-                          : 'bg-slate-900/60 text-slate-400 border-slate-800 hover:text-slate-200'
-                      }`}
-                    >
-                      ✏️ Kod Gir
-                    </button>
+                  <div className="px-2 py-1.5 rounded-lg border text-center text-[10px] font-bold bg-amber-500/20 text-amber-300 border-amber-500/50 shadow-sm">
+                    ✏️ Kod Gir
                   </div>
 
-                  {!isCustomReferralMode ? (
-                    <div className="flex gap-2">
-                      <select
-                        value={selectedResellerId}
-                        onChange={handleResellerDropdownChange}
-                        className="w-full px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-700 focus:border-amber-500 text-xs text-slate-100 outline-none"
-                      >
-                        <option value="" disabled>Bayi seçiniz</option>
-                        {resellersList.map((r) => (
-                          <option key={r.uid} value={r.uid}>
-                            🏢 {r.resellerName} (Bayi Kodu: {r.referralCode})
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  ) : (
-                    <div className="space-y-1 animate-fade-in">
+                  <div className="space-y-1 animate-fade-in">
                       <div className="relative">
                         <input
                           type="text"
@@ -1002,7 +928,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                         </div>
                       ) : null}
                     </div>
-                  )}
                 </div>
               )}
 
