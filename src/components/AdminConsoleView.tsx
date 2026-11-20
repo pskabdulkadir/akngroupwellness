@@ -4885,7 +4885,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 font-mono"
                   >
                     <option value="">
-                      Varsayılan Kök Sponsor ({sortedMembers[0]?.full_name || 'Kök #1'})
+                      🌐 Doğrudan Merkez (Sponsorsuz · Kök: {sortedMembers[0]?.full_name || 'Kök #1'})
                     </option>
                     {sortedMembers.map((m) => (
                       <option key={m.user_id} value={m.user_id}>

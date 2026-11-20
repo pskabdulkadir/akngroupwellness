@@ -259,10 +259,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         }
 
         // If no referral in current URL: do NOT lock to any cached dealer!
-        // Allow user to select sponsor manually from list, enter custom code, or choose Direct Central.
         setIsUrlReferralDetected(false);
         setIsManualSponsorMode(true);
-        setSelectedResellerId('DIRECT_CENTRAL');
+        setSelectedResellerId('');
         setValidatedReseller(null);
         setCustomReferralCode('');
         setIsCustomReferralMode(false);
@@ -302,11 +301,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       setIsCustomReferralMode(true);
       setSelectedResellerId('');
       setValidatedReseller(null);
-    } else if (val === 'DIRECT_CENTRAL') {
-      setIsCustomReferralMode(false);
-      setSelectedResellerId('DIRECT_CENTRAL');
-      setValidatedReseller(null);
-      setCustomReferralCode('');
     } else {
       setIsCustomReferralMode(false);
       setSelectedResellerId(val);
@@ -339,7 +333,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
   const isResellerSelected = Boolean(
     lockedSponsor ||
-    selectedResellerId === 'DIRECT_CENTRAL' ||
     selectedResellerId || 
     validatedReseller || 
     (isCustomReferralMode && customReferralCode.trim().length > 0)
@@ -376,7 +369,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     e.preventDefault();
 
     if (!isResellerSelected) {
-      setErrorMsg('Lütfen kayıt olmak için listeden bir Bayi seçiniz, doğrudan kaydı seçiniz veya Referans Kodu giriniz.');
+      setErrorMsg('Lütfen kayıt olmak için listeden bir Bayi seçiniz veya Referans Kodu giriniz.');
       return;
     }
 
@@ -390,12 +383,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     setSuccessMsg(null);
 
     try {
-      const targetResellerId = lockedSponsor?.uid || (selectedResellerId === 'DIRECT_CENTRAL'
-        ? ''
-        : (selectedResellerId || validatedReseller?.uid || ''));
-      const targetReferralCode = lockedSponsor?.referralCode.trim().toUpperCase() || (selectedResellerId === 'DIRECT_CENTRAL'
-        ? ''
-        : (validatedReseller?.referralCode || (customReferralCode ? customReferralCode.trim().toUpperCase() : '')));
+      const targetResellerId = lockedSponsor?.uid || selectedResellerId || validatedReseller?.uid || '';
+      const targetReferralCode = lockedSponsor?.referralCode.trim().toUpperCase() || validatedReseller?.referralCode || (customReferralCode ? customReferralCode.trim().toUpperCase() : '');
 
       const dealerData: DealerDetails | undefined = isDealerRequested ? {
         companyName: dealerCompanyName.trim(),
@@ -941,34 +930,17 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 <div className="space-y-2.5 animate-fade-in">
 
                   {/* Hızlı Seçim Butonları (Pills) */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5 text-[10px] font-bold">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSelectedResellerId('DIRECT_CENTRAL');
-                        setIsCustomReferralMode(false);
-                        setCustomReferralCode('');
-                        setValidatedReseller(null);
-                      }}
-                      className={`px-2 py-1.5 rounded-lg border text-center transition-all cursor-pointer ${
-                        !isCustomReferralMode && selectedResellerId === 'DIRECT_CENTRAL'
-                          ? 'bg-amber-500/20 text-amber-300 border-amber-500/50 shadow-sm'
-                          : 'bg-slate-900/60 text-slate-400 border-slate-800 hover:text-slate-200'
-                      }`}
-                    >
-                      🌐 Doğrudan Merkez
-                    </button>
-
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-[10px] font-bold">
                     <button
                       type="button"
                       onClick={() => {
                         setIsCustomReferralMode(false);
-                        if (resellersList.length > 0 && selectedResellerId === 'DIRECT_CENTRAL') {
+                        if (resellersList.length > 0 && !selectedResellerId) {
                           setSelectedResellerId(resellersList[0].uid);
                         }
                       }}
                       className={`px-2 py-1.5 rounded-lg border text-center transition-all cursor-pointer ${
-                        !isCustomReferralMode && selectedResellerId !== 'DIRECT_CENTRAL'
+                        !isCustomReferralMode
                           ? 'bg-amber-500/20 text-amber-300 border-amber-500/50 shadow-sm'
                           : 'bg-slate-900/60 text-slate-400 border-slate-800 hover:text-slate-200'
                       }`}
@@ -998,7 +970,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                         onChange={handleResellerDropdownChange}
                         className="w-full px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-700 focus:border-amber-500 text-xs text-slate-100 outline-none"
                       >
-                        <option value="DIRECT_CENTRAL">🌐 AuraBio Genel / Doğrudan Kayıt (Merkez Lisanslama - Sponsorsuz)</option>
+                        <option value="" disabled>Bayi seçiniz</option>
                         {resellersList.map((r) => (
                           <option key={r.uid} value={r.uid}>
                             🏢 {r.resellerName} (Bayi Kodu: {r.referralCode})
