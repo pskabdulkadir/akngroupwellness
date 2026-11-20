@@ -701,7 +701,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               <div className="p-2.5 rounded-xl bg-emerald-950/80 border border-emerald-500/50 flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2 text-emerald-300 text-[11px] font-bold">
                   <Coins className="w-4 h-4 text-emerald-400 shrink-0" />
-                  <span>🎁 Paket alımında paket kredilerine ek +32 seans kredisi bonusu</span>
+                  <span>Paket kredisi: 1 USD = 1 Kredi</span>
                 </div>
                 <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-[9px] font-black text-emerald-200 shrink-0">
                   Bir Defaya Mahsus Otomatik
@@ -878,7 +878,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 ))}
               </select>
               <p className="text-[10px] text-slate-400">
-                Yurt dışı kayıtlarda paket fiyatı 3x uygulanır.
+                Tüm paketlerde 1 USD = 1 Kredi uygulanır.
               </p>
             </div>
 
@@ -1119,7 +1119,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                             {pkg.badge}
                           </span>
                           <div className="flex items-center gap-1.5">
-                            {isInternationalRegistration && <span className="px-1.5 py-0.5 rounded-full bg-sky-500/15 border border-sky-400/40 text-sky-300 text-[8px] font-black">3x Yurt Dışı</span>}
+                            {isInternationalRegistration && <span className="px-1.5 py-0.5 rounded-full bg-sky-500/15 border border-sky-400/40 text-sky-300 text-[8px] font-black">Uluslararası</span>}
                             {isSelected && <Check className="w-3.5 h-3.5 text-amber-400 shrink-0" />}
                           </div>
                         </div>
@@ -1176,8 +1176,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               </div>
               <p className={`text-[10px] italic ${isInternationalRegistration ? 'text-sky-300' : 'text-amber-300/80'}`}>
                 {isInternationalRegistration
-                  ? 'Yurt dışı kayıtlarda tüm paket ve seans bedelleri 3x uygulanır. Kartlardaki tutarlar seçtiğiniz ülkeye göre güncellenir.'
-                  : 'Türkiye kayıtlarında paket fiyatları yerel katalog tutarlarıdır. Bayi seans kredilerinin son kullanma tarihi yoktur; paket ayrıntılarını “İncele” ile görüntüleyebilirsiniz.'}
+                  ? 'Tüm paketlerde 1 USD = 1 Kredi uygulanır. Bayi seans kredilerinin son kullanma tarihi yoktur; paket ayrıntılarını “İncele” ile görüntüleyebilirsiniz.'
+                  : 'Paket fiyatları USD cinsindendir ve her 1 USD karşılığında 1 kredi tanımlanır. Bayi seans kredilerinin son kullanma tarihi yoktur; paket ayrıntılarını “İncele” ile görüntüleyebilirsiniz.'}
               </p>
             </div>
 

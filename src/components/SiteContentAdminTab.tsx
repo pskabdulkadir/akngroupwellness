@@ -11,7 +11,6 @@ const FIELDS: { key: keyof SiteContent; label: string; hint: string }[] = [
   { key: 'iban', label: 'IBAN', hint: 'Boşluklu veya boşluksuz girilebilir.' },
   { key: 'supportPhone', label: 'WhatsApp / Destek Telefonu', hint: 'Örnek: +90 542 578 37 48' },
   { key: 'affiliateBadge', label: 'Bayi Paneli Rozet Metni', hint: 'Bayi panelinin başlığındaki rozet.' },
-  { key: 'welcomeBonusLabel', label: 'Hoşgeldin Bonusu Metni', hint: 'Yalnızca metin değişir; kredi miktarı kodda sabittir.' },
 ];
 
 export const SiteContentAdminTab: React.FC<SiteContentAdminTabProps> = ({ onSuccessMessage }) => {
@@ -36,7 +35,7 @@ export const SiteContentAdminTab: React.FC<SiteContentAdminTabProps> = ({ onSucc
       <div>
         <h3 className="text-base font-bold text-slate-100">Site İçerik Yönetimi</h3>
         <p className="text-xs text-slate-400 mt-1">
-          Banka, IBAN ve WhatsApp bilgileri tüm sistemde; rozet ve bonus metinleri bayi panelinde anında güncellenir.
+          Banka, IBAN ve WhatsApp bilgileri tüm sistemde; rozet metni bayi panelinde anında güncellenir.
         </p>
       </div>
 

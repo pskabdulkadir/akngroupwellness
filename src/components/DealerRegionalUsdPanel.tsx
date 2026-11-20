@@ -149,8 +149,8 @@ export const DealerRegionalUsdPanel: React.FC<DealerRegionalUsdPanelProps> = ({
 
   const title = isInternational ? '🌍 Yurt Dışı & Avrupa Bayi Paneli ($ USD)' : '🇹🇷 Yurt İçi Bayi Paneli ($ USD)';
   const description = isInternational
-    ? 'Yalnızca yurt dışı kayıtlı üyelerden doğan USD komisyonları ve metrikleri. Paket fiyatları 3x uygulanır.'
-    : 'Yalnızca Türkiye kayıtlı üyelerden doğan USD komisyonları ve metrikleri. Paket fiyatları 1x uygulanır.';
+    ? 'Yalnızca yurt dışı kayıtlı üyelerden doğan USD komisyonları ve metrikleri.'
+    : 'Yalnızca Türkiye kayıtlı üyelerden doğan USD komisyonları ve metrikleri.';
 
   return (
     <div className="space-y-6">

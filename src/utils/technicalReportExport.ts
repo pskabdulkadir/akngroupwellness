@@ -141,7 +141,7 @@ export function downloadTechnicalReportWord(): void {
     <h2>2. ÇİFT MOTORLU HİBRİT KOMİSYON MİMARİSİ &amp; 7 NEFİS MERTEBESİ MLM GELİR MODELİ</h2>
     <p>AuraBio Frekans bayilik ekosistemi, çalışan liderleri ödüllendiren Unilevel ve pasif üyeleri sistemde tutan Küresel Monoline hattını aynı anda çalıştıran Çift Motorlu Hibrit Komisyon Mimarisi ile çalışır:</p>
     <ul>
-      <li><strong>1. Danışan Seans Geliri (Perakende Kâr):</strong> Bayiler seans kredi havuzundan $0.40 – $1.05 birim maliyetle kullandıkları seansları danışanlarına $30 – $70 aralığında uygulayarak yüksek perakende kâr elde eder.</li>
+      <li><strong>1. Danışan Seans Geliri (Perakende Kâr):</strong> Bayiler seans kredi havuzundan $1.00 birim maliyetle kullandıkları seansları danışanlarına $30 – $70 aralığında uygulayarak yüksek perakende kâr elde eder.</li>
       <li><strong>2. %20 Direkt Sponsor Satış Primi:</strong> Bayinin kendi referans koduyla davet ettiği üyelerin satın aldığı tüm paketlerden anında <strong>%20 Direkt Sponsor Primi</strong> Sponsor Cüzdanına yansır.</li>
       <li><strong>3. Motor 1 — Ekip Kurma &amp; Liderlik Kazancı (Unilevel 7 Derinlik - %25):</strong> &ldquo;Kendi ekibinizi kurun, dikeyde 7 derinliğe kadar oluşan tüm cirodan %25'e varan pay alın!&rdquo; (1. Derinlik %7, 2. Derinlik %5, 3. Derinlik %4, 4. Derinlik %3, 5-7. Derinlik %2; 8. ebeveynde durur).</li>
       <li><strong>4. Motor 2 — Küresel Sıra Pasif Teşviki (Monoline Global Line - %5):</strong> &ldquo;Sisteme erken dahil olmanın avantajını yaşayın! Arkanızdan gelen küresel sıranın ilk 7 derinliğinden %5'lik havuzdan sembolik teşvik primi kazanın.&rdquo; (1. Sıra %1.50, 2. Sıra %1.00, 3. Sıra %0.80, 4. Sıra %0.60, 5. Sıra %0.50, 6-7. Sıra %0.30).</li>
@@ -164,7 +164,7 @@ export function downloadTechnicalReportWord(): void {
     </div>
 
     <h2>4. 14 RESMİ BAYİLİK &amp; SEANS KREDİSİ HAVUZU ALIŞVERİŞ PAKETİ</h2>
-    <p>Bayi Back-Office üzerinden satın alınabilen ve anında seans kredisi + Monoline komisyon dağıtımı tetikleyen 14 resmi paket. Her paket alımına 32 seans kredisi paket alım bonusu eklenir:</p>
+    <p>Bayi Back-Office üzerinden satın alınabilen 14 resmi paket. Paket fiyatı USD cinsindendir ve krediler 1 USD = 1 Kredi kuralıyla tanımlanır. Paket alımında ek sabit kredi bonusu uygulanmaz:</p>
     <table>
       <thead>
         <tr>
@@ -414,7 +414,7 @@ export function downloadTechnicalReportPDF(): void {
   y += 5;
 
   const mlmItems = [
-    '1. Danisan Seans Kari: 14 kredi paketinde $0.40-$1.05 birim maliyet ile $30-$70 seans uygulamasi.',
+    '1. Danisan Seans Kari: 14 kredi paketinde $1.00 birim maliyet ile $30-$70 seans uygulamasi.',
     '2. %20 Direkt Sponsor Primi: Referans kodunuzla kaydolan uyelerin her paket alimindan aninda %20 nakit komisyon.',
     '3. Motor 1 (%25 Unilevel 7 Derinlik): Ust 7 kademeye %7, %5, %4, %3, %2, %2, %2 seklinde sponsor agacindan dagitim.',
     '4. Motor 2 (%5 Kuresel Monoline Tesviki): Kuresel kuyrukta ust 7 siraya %1.50, %1.00, %0.80, %0.60, %0.50, %0.30, %0.30.',

@@ -8,6 +8,8 @@ import {
   evaluateMemberOrganizationMetrics,
 } from '../types/monoline';
 import { getPackagePriceForRegion, resolveMemberRegion } from './walletRegion';
+import { DEFAULT_DEALER_PACKAGES } from '../config/dealerPackages';
+import { DEFAULT_MEMBERSHIP_PACKAGES } from './authManager';
 
 const EXPECTED_PACKAGE_PRICES = [101, 201, 302, 402, 503, 603, 1005, 1206, 1407, 1608, 1809, 2010, 4021, 6031];
 const now = new Date().toISOString();
@@ -75,13 +77,16 @@ function createMember(
 test('14 paket katalogda doğru fiyat ve seans kredileriyle tanımlı', () => {
   assert.equal(FREKANS_PACKAGES.length, 14);
   assert.deepEqual(FREKANS_PACKAGES.map((pkg) => pkg.defaultPrice), EXPECTED_PACKAGE_PRICES);
-  assert.equal(FREKANS_PACKAGES[0].sessionCredits, 96);
+  assert.deepEqual(FREKANS_PACKAGES.map((pkg) => pkg.sessionCredits), EXPECTED_PACKAGE_PRICES);
+  assert.deepEqual(DEFAULT_DEALER_PACKAGES.map((pkg) => pkg.price), EXPECTED_PACKAGE_PRICES);
+  assert.deepEqual(DEFAULT_DEALER_PACKAGES.map((pkg) => pkg.scanCredits), EXPECTED_PACKAGE_PRICES);
+  assert.deepEqual(DEFAULT_MEMBERSHIP_PACKAGES.map((pkg) => pkg.price), EXPECTED_PACKAGE_PRICES);
+  assert.deepEqual(DEFAULT_MEMBERSHIP_PACKAGES.map((pkg) => pkg.scanCredits), EXPECTED_PACKAGE_PRICES);
   assert.equal(FREKANS_PACKAGES.at(-1)?.id, 'PKG_ENTERPRISE_MEGA');
   assert.equal(FREKANS_PACKAGES.at(-1)?.defaultPrice, 6031);
-  assert.equal(FREKANS_PACKAGES.at(-1)?.sessionCredits, 15000);
 });
 
-test('yurt dışı fiyatı 3x olur, seans hakları paket tanımındaki sayıda kalır', () => {
+test('paket fiyatı ve kredisi tüm bölgelerde 1:1 kalır', () => {
   assert.equal(resolveMemberRegion(' tr '), 'DOMESTIC');
   assert.equal(resolveMemberRegion('US'), 'INTERNATIONAL');
   assert.equal(resolveMemberRegion(undefined), 'DOMESTIC');
@@ -89,10 +94,8 @@ test('yurt dışı fiyatı 3x olur, seans hakları paket tanımındaki sayıda k
   for (const pkg of FREKANS_PACKAGES) {
     assert.equal(getPackagePriceForRegion(pkg.defaultPrice, 'DOMESTIC'), pkg.defaultPrice);
     const internationalPrice = getPackagePriceForRegion(pkg.defaultPrice, 'INTERNATIONAL');
-    assert.equal(internationalPrice, pkg.defaultPrice * 3);
-    const internationalUnitPrice = internationalPrice / pkg.sessionCredits;
-    const expectedInternationalUnitPrice = (pkg.defaultPrice / pkg.sessionCredits) * 3;
-    assert.ok(Math.abs(internationalUnitPrice - expectedInternationalUnitPrice) < 1e-10);
+    assert.equal(internationalPrice, pkg.defaultPrice);
+    assert.equal(internationalPrice, pkg.sessionCredits);
     assert.equal(pkg.sessionCredits, FREKANS_PACKAGES.find((candidate) => candidate.id === pkg.id)?.sessionCredits);
   }
 });

@@ -62,16 +62,16 @@ export const DEFAULT_MEMBERSHIP_PACKAGES: MembershipPackage[] = [
   {
     id: 'pkg-5k',
     name: 'Mini Başlangıç & Deneme Paketi',
-    durationText: '96 Seans Kredisi (Süre Sınırı Yok)',
-    scanCredits: 96,
+    durationText: '101 Seans Kredisi (Süre Sınırı Yok)',
+    scanCredits: 101,
     days: null,
     price: 101,
     priceText: '$101',
     badge: 'MİNİ DENEME',
-    unitCostText: '$1.05 / Seans',
+    unitCostText: '$1.00 / Seans',
     targetAudience: 'Sistemi düşük bütçeyle denemek isteyen bireysel kullanıcı ve uygulayıcılar.',
     features: [
-      '96 Adet Tam Biyo-Rezonans & Çakra Seans Kredisi',
+      '101 Adet Tam Biyo-Rezonans & Çakra Seans Kredisi',
       'Süre Sınırı Yok (Kredileriniz Asla Yanmaz)',
       'Temel Aura ve Frekans Analiz Modülleri',
       'Web & Mobil Uyumlu Arayüz',
@@ -81,16 +81,16 @@ export const DEFAULT_MEMBERSHIP_PACKAGES: MembershipPackage[] = [
   {
     id: 'pkg-10k',
     name: 'Bronz Başlangıç & Seans Paketi',
-    durationText: '210 Seans Kredisi (Süre Sınırı Yok)',
-    scanCredits: 210,
+    durationText: '201 Seans Kredisi (Süre Sınırı Yok)',
+    scanCredits: 201,
     days: null,
     price: 201,
     priceText: '$201',
     badge: 'BAŞLANGIÇ & BİREYSEL',
-    unitCostText: '$0.96 / Seans',
+    unitCostText: '$1.00 / Seans',
     targetAudience: 'Sisteme yeni adım atan bireysel terapist ve danışmanlar.',
     features: [
-      '210 Adet Tam Biyo-Rezonans & Çakra Seans Kredisi',
+      '201 Adet Tam Biyo-Rezonans & Çakra Seans Kredisi',
       'Süre Sınırı Yok (Kredileriniz Asla Yanmaz)',
       'Standart Raporlama & Aura Analizi',
       'Web & Mobil Uyumlu Erişim',
@@ -100,16 +100,16 @@ export const DEFAULT_MEMBERSHIP_PACKAGES: MembershipPackage[] = [
   {
     id: 'pkg-15k',
     name: 'Gümüş Standart Terapist Paketi',
-    durationText: '345 Seans Kredisi (Süre Sınırı Yok)',
-    scanCredits: 345,
+    durationText: '302 Seans Kredisi (Süre Sınırı Yok)',
+    scanCredits: 302,
     days: null,
     price: 302,
     priceText: '$302',
     badge: 'STANDART TERAPİST',
-    unitCostText: '$0.88 / Seans',
+    unitCostText: '$1.00 / Seans',
     targetAudience: 'Düzenli danışan alan bireysel koçlar ve bio-enerji uygulayıcıları.',
     features: [
-      '345 Adet Tam Biyo-Rezonans & Çakra Seans Kredisi',
+      '302 Adet Tam Biyo-Rezonans & Çakra Seans Kredisi',
       'Süre Sınırı Yok (Kredileriniz Asla Yanmaz)',
       'Organ, Çakra ve Meridyen Raporlama',
       'Danışan Takip Modülü',
@@ -119,16 +119,16 @@ export const DEFAULT_MEMBERSHIP_PACKAGES: MembershipPackage[] = [
   {
     id: 'pkg-20k',
     name: 'Gümüş Plus Terapist Paketi',
-    durationText: '480 Seans Kredisi (Süre Sınırı Yok)',
-    scanCredits: 480,
+    durationText: '402 Seans Kredisi (Süre Sınırı Yok)',
+    scanCredits: 402,
     days: null,
     price: 402,
     priceText: '$402',
     badge: 'TERAPİST & PRATİSYEN',
-    unitCostText: '$0.84 / Seans',
+    unitCostText: '$1.00 / Seans',
     targetAudience: 'Düzenli seans yapan holistik sağlık koçları ve pratisyenler.',
     features: [
-      '480 Adet Tam Biyo-Rezonans & Çakra Seans Kredisi',
+      '402 Adet Tam Biyo-Rezonans & Çakra Seans Kredisi',
       'Süre Sınırı Yok (Kredileriniz Asla Yanmaz)',
       'Detaylı Organ, Çakra ve Letaif Analiz Raporları',
       'Danışan Kayıt & Takip Sistemi',
@@ -138,16 +138,16 @@ export const DEFAULT_MEMBERSHIP_PACKAGES: MembershipPackage[] = [
   {
     id: 'pkg-25k',
     name: 'Altın Danışman Paketi',
-    durationText: '645 Seans Kredisi (Süre Sınırı Yok)',
-    scanCredits: 645,
+    durationText: '503 Seans Kredisi (Süre Sınırı Yok)',
+    scanCredits: 503,
     days: null,
     price: 503,
     priceText: '$503',
     badge: 'DANIŞMAN & KOÇ',
-    unitCostText: '$0.78 / Seans',
+    unitCostText: '$1.00 / Seans',
     targetAudience: 'Genişleyen danışan tabanına sahip profesyonel terapistler.',
     features: [
-      '645 Adet Tam Biyo-Rezonans & Çakra Seans Kredisi',
+      '503 Adet Tam Biyo-Rezonans & Çakra Seans Kredisi',
       'Süre Sınırı Yok (Kredileriniz Asla Yanmaz)',
       'Gelişmiş PDF Rapor Dışa Aktarma',
       'Özel Frekans Listeleri & Protokoller',
@@ -157,17 +157,17 @@ export const DEFAULT_MEMBERSHIP_PACKAGES: MembershipPackage[] = [
   {
     id: 'pkg-30k',
     name: 'Altın Pro Danışman Paketi',
-    durationText: '810 Seans Kredisi (Süre Sınırı Yok)',
-    scanCredits: 810,
+    durationText: '603 Seans Kredisi (Süre Sınırı Yok)',
+    scanCredits: 603,
     days: null,
     price: 603,
     priceText: '$603',
     popular: true,
     badge: 'EN POPÜLER & F/P',
-    unitCostText: '$0.74 / Seans',
+    unitCostText: '$1.00 / Seans',
     targetAudience: 'Yoğun danışan kabul eden profesyonel terapistler ve merkezler.',
     features: [
-      '810 Adet Tam Biyo-Rezonans Seans Kredisi',
+      '603 Adet Tam Biyo-Rezonans Seans Kredisi',
       'Süre Sınırı Yok (Kredileriniz Asla Yanmaz)',
       'Gelişmiş PDF Rapor Dışa Aktarma & Arşivleme',
       'Özel Frekans Listeleri & Özel Protokol Tanımlama',
@@ -178,16 +178,16 @@ export const DEFAULT_MEMBERSHIP_PACKAGES: MembershipPackage[] = [
   {
     id: 'pkg-50k',
     name: 'Platin Klinik & Uzman Paketi',
-    durationText: '1500 Seans Kredisi (Süre Sınırı Yok)',
-    scanCredits: 1500,
+    durationText: '1.005 Seans Kredisi (Süre Sınırı Yok)',
+    scanCredits: 1005,
     days: null,
     price: 1005,
     priceText: '$1.005',
     badge: 'UZMAN KLİNİK',
-    unitCostText: '$0.67 / Seans',
+    unitCostText: '$1.00 / Seans',
     targetAudience: 'Geniş danışan portföyüne sahip klinikler ve bio-frekans merkezleri.',
     features: [
-      '1500 Adet Tam Biyo-Rezonans Seans Kredisi',
+      '1.005 Adet Tam Biyo-Rezonans Seans Kredisi',
       'Süre Sınırı Yok (Kredileriniz Asla Yanmaz)',
       'Çoklu Terapist ve Danışan Yönetim Desteği',
       'Özel Alt Bayilik (Sub-dealer) Oluşturma Yetkisi',
@@ -197,16 +197,16 @@ export const DEFAULT_MEMBERSHIP_PACKAGES: MembershipPackage[] = [
   {
     id: 'pkg-60k',
     name: 'Safir Kurumsal Merkez Paketi',
-    durationText: '1950 Seans Kredisi (Süre Sınırı Yok)',
-    scanCredits: 1950,
+    durationText: '1.206 Seans Kredisi (Süre Sınırı Yok)',
+    scanCredits: 1206,
     days: null,
     price: 1206,
     priceText: '$1.206',
     badge: 'SAFİR KURUMSAL',
-    unitCostText: '$0.62 / Seans',
+    unitCostText: '$1.00 / Seans',
     targetAudience: 'Çoklu seans odası bulunan sağlıklı yaşam ve holistik merkezler.',
     features: [
-      '1950 Adet Tam Biyo-Rezonans Seans Kredisi',
+      '1.206 Adet Tam Biyo-Rezonans Seans Kredisi',
       'Süre Sınırı Yok (Kredileriniz Asla Yanmaz)',
       'Grup Aura Senkronizasyonu & Çoklu Tarama',
       'Özel Kurumsal Logo ve Rapor Başlığı Entegrasyonu',
@@ -216,16 +216,16 @@ export const DEFAULT_MEMBERSHIP_PACKAGES: MembershipPackage[] = [
   {
     id: 'pkg-70k',
     name: 'Zümrüt Master Klinik Paketi',
-    durationText: '2400 Seans Kredisi (Süre Sınırı Yok)',
-    scanCredits: 2400,
+    durationText: '1.407 Seans Kredisi (Süre Sınırı Yok)',
+    scanCredits: 1407,
     days: null,
     price: 1407,
     priceText: '$1.407',
     badge: 'ZÜMRÜT MASTER',
-    unitCostText: '$0.59 / Seans',
+    unitCostText: '$1.00 / Seans',
     targetAudience: 'Bölgesel sağlık merkezleri ve uzman klinik ağları.',
     features: [
-      '2400 Adet Tam Biyo-Rezonans Seans Kredisi',
+      '1.407 Adet Tam Biyo-Rezonans Seans Kredisi',
       'Süre Sınırı Yok (Kredileriniz Asla Yanmaz)',
       'Gelişmiş AI Biyo-Rezonans ve Frekans Öneri Modülü',
       'Limitsiz Danışan Geçmişi ve Otomatik Seans Takibi',
@@ -235,16 +235,16 @@ export const DEFAULT_MEMBERSHIP_PACKAGES: MembershipPackage[] = [
   {
     id: 'pkg-80k',
     name: 'Yakut Elit Sağlık Paketi',
-    durationText: '2850 Seans Kredisi (Süre Sınırı Yok)',
-    scanCredits: 2850,
+    durationText: '1.608 Seans Kredisi (Süre Sınırı Yok)',
+    scanCredits: 1608,
     days: null,
     price: 1608,
     priceText: '$1.608',
     badge: 'YAKUT ELİT',
-    unitCostText: '$0.56 / Seans',
+    unitCostText: '$1.00 / Seans',
     targetAudience: 'Yüksek hacimli estetik, wellness ve bioenerji merkezleri.',
     features: [
-      '2850 Adet Tam Biyo-Rezonans Seans Kredisi',
+      '1.608 Adet Tam Biyo-Rezonans Seans Kredisi',
       'Süre Sınırı Yok (Kredileriniz Asla Yanmaz)',
       'Gelişmiş Organ Grafikleri & 3D Biyo-Aura Simülatörü',
       'Alt Terapist Kullanıcı Yetkilendirme Sistemi',
@@ -254,16 +254,16 @@ export const DEFAULT_MEMBERSHIP_PACKAGES: MembershipPackage[] = [
   {
     id: 'pkg-90k',
     name: 'Titanyum Entegre Tıp Paketi',
-    durationText: '3.300 Seans Kredisi (Süre Sınırı Yok)',
-    scanCredits: 3300,
+    durationText: '1.809 Seans Kredisi (Süre Sınırı Yok)',
+    scanCredits: 1809,
     days: null,
     price: 1809,
     priceText: '$1.809',
     badge: 'TİTANYUM ENTEGRE',
-    unitCostText: '$0.55 / Seans',
+    unitCostText: '$1.00 / Seans',
     targetAudience: 'Entegre ve fonksiyonel tıp hekimleri ile hastane departmanları.',
     features: [
-      '3.300 Adet Tam Biyo-Rezonans Seans Kredisi',
+      '1.809 Adet Tam Biyo-Rezonans Seans Kredisi',
       'Süre Sınırı Yok (Kredileriniz Asla Yanmaz)',
       'Tüm Kuantum Frekans Veritabanı ve Letaif Haritaları',
       'Özel Veri Entegrasyon Protokolleri',
@@ -273,16 +273,16 @@ export const DEFAULT_MEMBERSHIP_PACKAGES: MembershipPackage[] = [
   {
     id: 'pkg-100k',
     name: 'Elmas Bölge Distribütör Paketi',
-    durationText: '3.900 Seans Kredisi (Süre Sınırı Yok)',
-    scanCredits: 3900,
+    durationText: '2.010 Seans Kredisi (Süre Sınırı Yok)',
+    scanCredits: 2010,
     days: null,
     price: 2010,
     priceText: '$2.010',
     badge: 'BÖLGE DİSTRİBÜTÖRÜ',
-    unitCostText: '$0.52 / Seans',
+    unitCostText: '$1.00 / Seans',
     targetAudience: 'İl ve bölge distribütörleri, franchise temsilcileri.',
     features: [
-      '3.900 Adet Tam Biyo-Rezonans Seans Kredisi',
+      '2.010 Adet Tam Biyo-Rezonans Seans Kredisi',
       'Süre Sınırı Yok (Kredileriniz Asla Yanmaz)',
       'Alt Bayi Açma & Alt Bayilere Kredi Dağıtım Havuzu',
       'Bölge Temsilciliği ve Öncelikli Danışan Yönlendirme Hakkı',
@@ -292,16 +292,16 @@ export const DEFAULT_MEMBERSHIP_PACKAGES: MembershipPackage[] = [
   {
     id: 'pkg-200k',
     name: 'Master Franchise & Çoklu Şube Paketi',
-    durationText: '9.000 Seans Kredisi (Süre Sınırı Yok)',
-    scanCredits: 9000,
+    durationText: '4.021 Seans Kredisi (Süre Sınırı Yok)',
+    scanCredits: 4021,
     days: null,
     price: 4021,
     priceText: '$4.021',
     badge: 'MASTER FRANCHISE',
-    unitCostText: '$0.45 / Seans',
+    unitCostText: '$1.00 / Seans',
     targetAudience: 'Çok şubeli sağlık grupları, franchise ağları ve master organizasyonlar.',
     features: [
-      '9.000 Adet Tam Biyo-Rezonans Seans Kredisi',
+      '4.021 Adet Tam Biyo-Rezonans Seans Kredisi',
       'Süre Sınırı Yok (Kredileriniz Asla Yanmaz)',
       'Sınırsız Şube ve Alt Bayi Ağı Kurma İmkanı',
       'Özel Marka (Whitelabel Görünüm) & Rapor Özelleştirmesi',
@@ -311,16 +311,16 @@ export const DEFAULT_MEMBERSHIP_PACKAGES: MembershipPackage[] = [
   {
     id: 'pkg-300k',
     name: 'Enterprise Mega Ağ & Holding Paketi',
-    durationText: '15.000 Seans Kredisi (Süre Sınırı Yok)',
-    scanCredits: 15000,
+    durationText: '6.031 Seans Kredisi (Süre Sınırı Yok)',
+    scanCredits: 6031,
     days: null,
     price: 6031,
     priceText: '$6.031',
     badge: 'ENTERPRISE MEGA AĞ',
-    unitCostText: '$0.40 / Seans',
+    unitCostText: '$1.00 / Seans',
     targetAudience: 'Ulusal ve uluslararası sağlık ağları, yatırımcılar ve holdingler.',
     features: [
-      '15.000 Adet Tam Biyo-Rezonans Seans Kredisi',
+      '6.031 Adet Tam Biyo-Rezonans Seans Kredisi',
       'Süre Sınırı Yok (Kredileriniz Asla Yanmaz)',
       'Merkezi Kredi ve Bayi Yönetim Platformu',
       'Tüm Gelecek Modül ve Veri Güncellemelerine Ömür Boyu Erişim',
@@ -332,6 +332,24 @@ export const DEFAULT_MEMBERSHIP_PACKAGES: MembershipPackage[] = [
 export const MEMBERSHIP_PACKAGES: MembershipPackage[] = DEFAULT_MEMBERSHIP_PACKAGES;
 
 const STORAGE_CUSTOM_PACKAGES_KEY = 'aurabio_dynamic_packages_v3';
+
+function normalizeMembershipPackages(packages: MembershipPackage[]): MembershipPackage[] {
+  const defaults = new Map(DEFAULT_MEMBERSHIP_PACKAGES.map((pkg) => [pkg.id, pkg]));
+  return packages.map((pkg) => {
+    const canonical = defaults.get(pkg.id);
+    return canonical
+      ? {
+          ...pkg,
+          price: canonical.price,
+          priceText: canonical.priceText,
+          scanCredits: canonical.scanCredits,
+          durationText: canonical.durationText,
+          unitCostText: canonical.unitCostText,
+          features: canonical.features,
+        }
+      : pkg;
+  });
+}
 
 /**
  * Get active dynamic membership packages (combining local storage & defaults)
@@ -350,7 +368,7 @@ export function getMembershipPackages(): MembershipPackage[] {
             !String(p.name || '').includes('Anahtar Teslim Sistem Devri')
         );
         if (filtered.length >= 10) {
-          return filtered;
+          return normalizeMembershipPackages(filtered);
         }
       }
     }
@@ -391,8 +409,9 @@ export function subscribeToMembershipPackages(
                 p.id !== 'PKG_TUM_KODLAR' &&
                 !String(p.name || '').includes('Anahtar Teslim Sistem Devri')
             );
-            localStorage.setItem(STORAGE_CUSTOM_PACKAGES_KEY, JSON.stringify(filtered));
-            onUpdate(filtered);
+            const normalized = normalizeMembershipPackages(filtered);
+            localStorage.setItem(STORAGE_CUSTOM_PACKAGES_KEY, JSON.stringify(normalized));
+            onUpdate(normalized);
           }
         }
       },
@@ -429,6 +448,8 @@ export async function adminSaveMembershipPackage(pkg: MembershipPackage): Promis
     } else {
       updated = [...current, { ...pkg }];
     }
+
+    updated = normalizeMembershipPackages(updated);
 
     // Save locally
     localStorage.setItem(STORAGE_CUSTOM_PACKAGES_KEY, JSON.stringify(updated));
@@ -683,7 +704,7 @@ export async function completePaidDealerRegistration(
       amount: creditsAdded,
       previousBalance: totalCredits - creditsAdded,
       newBalance: totalCredits,
-      description: 'Ödemesi onaylanan bayi kaydı için paket kredisi ve paket alım bonusu tanımlandı.',
+      description: 'Ödemesi onaylanan bayi kaydı için paket kredileri tanımlandı.',
       performedBy: 'Sistem Ödeme Onayı',
     });
   }
@@ -876,16 +897,7 @@ export function getWhatsAppCartOrderUrl(user: UserMember, cartItems: CartItem[])
   let totalPrice = 0;
   const itemsTextList: string[] = [];
 
-  const dealerPackagesFallback = [
-    { id: 'bronze-dealer', name: 'Bronz Bayilik Paketi', durationText: '30 Seans Kredisi ($3.33/Seans)', price: 100 },
-    { id: 'silver-dealer', name: 'Gümüş Bayilik Paketi', durationText: '100 Seans Kredisi ($2.92/Seans)', price: 292 },
-    { id: 'gold-dealer', name: 'Altın Bayilik Paketi', durationText: '300 Seans Kredisi ($2.35/Seans)', price: 704 },
-  ];
-
-  const allAvailablePackages = [
-    ...MEMBERSHIP_PACKAGES,
-    ...dealerPackagesFallback
-  ];
+  const allAvailablePackages = DEFAULT_MEMBERSHIP_PACKAGES;
 
   activeItems.forEach(item => {
     const pkg = allAvailablePackages.find(p => p.id === item.packageId);
@@ -940,7 +952,7 @@ export function getWhatsAppDealerApplicationUrl(data: {
   const address = data.dealerDetails?.address ? `\nAdres: ${data.dealerDetails.address}` : '';
   const countryCode = (data.countryCode || 'TR').trim().toUpperCase();
   const isInternational = resolveMemberRegion(countryCode) === 'INTERNATIONAL';
-  const countryInfo = `\n🌍 Kayıt Ülkesi: ${countryCode}${isInternational ? ' (3x Yurt Dışı)' : ' (Türkiye)'}`;
+  const countryInfo = `\n🌍 Kayıt Ülkesi: ${countryCode}${isInternational ? ' (Uluslararası)' : ' (Türkiye)'}`;
   const pkgInfo = data.packageName ? `\n🏷️ Seçilen Bayilik Paketi: ${data.packageName} ${data.packagePriceText ? `(${data.packagePriceText})` : ''}` : '';
 
   const text = `🌟 Yeni Bayilik Başvurusu!\n👤 Ad Soyad: ${data.fullName}${countryInfo}\n🏢 Firma: ${company}\n📱 Telefon: ${phone}\n💼 Faaliyet Alanı: ${field}\n📋 Vergi Bilgisi: ${taxInfo}${address}${pkgInfo}\n\nOnaylamak ve kredi havuzunu aktifleştirmek için Yönetici Paneline Gidin.`;
@@ -1130,7 +1142,7 @@ export async function registerMember(
           amount: initialCredits,
           previousBalance: 0,
           newBalance: initialCredits,
-          description: `Bayi Kaydı Paket Satın Alımı (+${initialCredits} Seans Kredisi, paket alım bonusu dahil)`,
+          description: `Bayi kaydı için ${initialCredits} paket kredisi tanımlandı.`,
           performedBy: 'Bayi Kaydı',
         });
       }
@@ -1245,8 +1257,8 @@ export async function registerMember(
     return {
       success: true,
       message: isPendingDealerRegistration
-        ? `${companyName} bayi kaydınız alındı. Ödeme tamamlandığında paket kredisi ve +32 paket alım bonusu tanımlanacaktır.`
-        : `Tebrikler! ${companyName} yetkili bayilik hesabınız başarıyla oluşturuldu. Paket kredinize +32 paket alım bonusu eklenerek ${initialCredits} Seans Kredisi hesabınıza tanımlandı!`,
+        ? `${companyName} bayi kaydınız alındı. Ödeme tamamlandığında seçilen paketin kredileri tanımlanacaktır.`
+        : `Tebrikler! ${companyName} yetkili bayilik hesabınız oluşturuldu. ${initialCredits} paket kredisi hesabınıza tanımlandı.`,
       user: registeredUser,
       whatsappDealerUrl,
       pendingPayment: isPendingDealerRegistration,

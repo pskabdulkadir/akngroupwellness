@@ -1044,7 +1044,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
               <div className="p-3 rounded-2xl bg-emerald-950/70 border border-emerald-500/40 flex flex-wrap items-center justify-between gap-2 text-xs">
                 <div className="flex items-center gap-2 min-w-0 text-emerald-300 font-bold">
                   <Coins className="w-4 h-4 text-emerald-400 shrink-0" />
-                  <span>🎁 Paket alımında paket kredilerine ek +32 seans kredisi bonusu</span>
+                  <span>Paket kredisi: 1 USD = 1 Kredi; ek paket bonusu uygulanmaz.</span>
                 </div>
                 <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-[9px] font-black text-emerald-200 shrink-0">
                   Bir Defaya Mahsus Otomatik
@@ -1360,7 +1360,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                     </div>
 
                     <div className="text-[10px] text-emerald-300/90 font-semibold flex items-center gap-1">
-                      <span>🎁 {getSiteContent().welcomeBonusLabel} • Paket alım bonusu</span>
+                      <span>1 USD = 1 Kredi • Ek paket bonusu uygulanmaz</span>
                     </div>
 
                     <div className="text-[10px] flex items-center justify-between pt-1 border-t border-slate-800/80">
@@ -2625,7 +2625,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                         <div className="text-emerald-400 font-semibold">• Biyo-Rezonans, 302+ Frekans, 50+ Hastalık &amp; MindSpace Stüdyo</div>
                         <div className="text-amber-300 font-semibold">• Monoline 7 Nefis MLM (%20 Sponsor • %25 Tek Hat • %5 Sistem Fonu)</div>
                         <div className="text-indigo-300 font-semibold">• Liderlik Eşleşme (%20) • Fast-ROI (%75 İade)</div>
-                        <div className="text-slate-400">• 14 Resmi Alışveriş Paketi (96 Krediden 15.000 Krediye)</div>
+                        <div className="text-slate-400">• 14 Resmi Alışveriş Paketi (101 Krediden 6.031 Krediye)</div>
                       </div>
                     </div>
 

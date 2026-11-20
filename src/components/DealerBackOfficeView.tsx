@@ -2556,10 +2556,10 @@ export const DealerBackOfficeView: React.FC<DealerBackOfficeViewProps> = ({
               <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 space-y-3 text-xs text-emerald-950">
                 <div className="flex items-center justify-between gap-2">
                   <span className="font-bold">
-                    🎁 Paket alımında, seçilen paketin kredilerine ek +32 seans kredisi bonusu tanımlanır.
+                    Paket kredileri 1 USD = 1 Kredi kuralına göre tanımlanır; ek paket bonusu uygulanmaz.
                   </span>
                   <span className="px-2 py-0.5 rounded bg-emerald-600 text-white font-mono text-[10px] font-bold shrink-0">
-                    +32 KREDİ
+1 USD = 1 Kredi
                   </span>
                 </div>
                 <p className="text-[11px] text-emerald-900">

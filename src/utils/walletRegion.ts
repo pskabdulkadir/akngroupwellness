@@ -2,8 +2,6 @@ import type { MemberRegion } from '../types/monoline';
 
 export const DOMESTIC_COUNTRY_CODE = 'TR';
 
-export const INTERNATIONAL_PACKAGE_MULTIPLIER = 3;
-
 export const resolveMemberRegion = (countryCode: string | null | undefined): MemberRegion => {
   const normalized = (countryCode ?? '').trim().toUpperCase();
   if (!normalized || normalized === DOMESTIC_COUNTRY_CODE) return 'DOMESTIC';
@@ -23,13 +21,13 @@ export const convertTryToUsd = (amountTry: number, tryPerUsd: number): number =>
   return Math.round((amountTry / tryPerUsd) * 100) / 100;
 };
 
-export const getPackagePriceForRegion = (domesticPriceUsd: number, region: MemberRegion): number =>
-  region === 'INTERNATIONAL' ? domesticPriceUsd * INTERNATIONAL_PACKAGE_MULTIPLIER : domesticPriceUsd;
+export const getPackagePriceForRegion = (packagePriceUsd: number, _region: MemberRegion): number =>
+  packagePriceUsd;
 
 export const ACTIVATION_DOMESTIC_PRICE_USD = 100;
 
 export const getActivationPriceForRegion = (region: MemberRegion): number =>
-  getPackagePriceForRegion(ACTIVATION_DOMESTIC_PRICE_USD, region);
+  region === 'INTERNATIONAL' ? ACTIVATION_DOMESTIC_PRICE_USD * 3 : ACTIVATION_DOMESTIC_PRICE_USD;
 
 type RegionalWalletSource = {
   country_code?: string | null;
@@ -91,4 +89,4 @@ export const getCountryFlag = (countryCode: string | null | undefined): string =
 };
 
 export const getRegionTierLabel = (region: MemberRegion): string =>
-  region === 'INTERNATIONAL' ? '3x Yurt Dışı' : '1x Yurt İçi';
+  region === 'INTERNATIONAL' ? 'Yurt Dışı' : 'Yurt İçi';

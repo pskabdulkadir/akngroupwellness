@@ -7,7 +7,6 @@ export interface SiteContent {
   iban: string;
   supportPhone: string;
   affiliateBadge: string;
-  welcomeBonusLabel: string;
 }
 
 export const DEFAULT_SITE_CONTENT: SiteContent = {
@@ -16,7 +15,6 @@ export const DEFAULT_SITE_CONTENT: SiteContent = {
   iban: 'TR32 0015 7000 0000 0091 7751 22',
   supportPhone: '+90 542 578 37 48',
   affiliateBadge: 'AFFILIATE v2.5',
-  welcomeBonusLabel: '+32 Kredi',
 };
 
 const SITE_CONTENT_DOC_PATH = ['system_config', 'site_content'] as const;

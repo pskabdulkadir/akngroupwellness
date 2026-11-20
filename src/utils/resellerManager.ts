@@ -108,9 +108,6 @@ const STORAGE_ACTIVE_RESELLER_SESSION_KEY = 'aurabio_active_reseller_session_v1'
 const STORAGE_CACHED_REFERRAL_CODE_KEY = 'aurabio_stored_referral_code_v1';
 const STORAGE_DEALER_PACKAGES_KEY = 'aurabio_dealer_packages_v4';
 
-// Her paket alımına eklenen sabit bonus (sunucudaki WELCOME_BONUS_CREDITS ile aynı kural)
-export const PACKAGE_PURCHASE_BONUS_CREDITS = 32;
-
 /**
  * Get all stored local credit transaction logs
  */
@@ -367,6 +364,23 @@ export async function adminSetDealerCredits(
 /**
  * Get dynamic dealer packages
  */
+function normalizeDealerPackages(packages: DealerPackage[]): DealerPackage[] {
+  const defaults = new Map(DEFAULT_DEALER_PACKAGES.map((pkg) => [pkg.id, pkg]));
+  return packages.map((pkg) => {
+    const canonical = defaults.get(pkg.id);
+    return canonical
+      ? {
+          ...pkg,
+          price: canonical.price,
+          priceText: canonical.priceText,
+          scanCredits: canonical.scanCredits,
+          unitCostText: canonical.unitCostText,
+          features: canonical.features,
+        }
+      : pkg;
+  });
+}
+
 export function getDealerPackages(): DealerPackage[] {
   if (typeof window === 'undefined') return DEFAULT_DEALER_PACKAGES;
   try {
@@ -381,7 +395,7 @@ export function getDealerPackages(): DealerPackage[] {
             !String(p.name || '').includes('Anahtar Teslim Sistem Devri')
         );
         if (filtered.length >= 10) {
-          return filtered;
+          return normalizeDealerPackages(filtered);
         }
       }
     }
@@ -394,7 +408,7 @@ export function getDealerPackages(): DealerPackage[] {
 export function saveDealerPackages(pkgs: DealerPackage[]): void {
   if (typeof window === 'undefined') return;
   try {
-    localStorage.setItem(STORAGE_DEALER_PACKAGES_KEY, JSON.stringify(pkgs));
+    localStorage.setItem(STORAGE_DEALER_PACKAGES_KEY, JSON.stringify(normalizeDealerPackages(pkgs)));
     window.dispatchEvent(new CustomEvent('aurabio_dealer_packages_updated'));
   } catch (e) {
     console.warn('Error saving local dealer packages:', e);
@@ -417,6 +431,7 @@ export async function adminSaveDealerPackage(pkg: DealerPackage): Promise<boolea
       updated = [...current, { ...pkg }];
     }
 
+    updated = normalizeDealerPackages(updated);
     saveDealerPackages(updated);
 
     // Save to Firestore
@@ -501,8 +516,9 @@ export function subscribeToDealerPackages(onUpdate: (pkgs: DealerPackage[]) => v
               !String(p.name || '').includes('Anahtar Teslim Sistem Devri')
           );
           if (filtered.length >= 10) {
-            saveDealerPackages(filtered);
-            onUpdate(filtered);
+            const normalized = normalizeDealerPackages(filtered);
+            saveDealerPackages(normalized);
+            onUpdate(normalized);
           }
         }
       }
@@ -522,13 +538,13 @@ export function subscribeToDealerPackages(onUpdate: (pkgs: DealerPackage[]) => v
 }
 
 /**
- * Paket kredisi + her alımda sabit paket alım bonusu
+ * Returns the package credit amount without a purchase bonus.
  */
 export function getPackagePurchaseCredits(packageId: string): number {
   const pkg =
     getDealerPackages().find(p => p.id === packageId) ||
     DEFAULT_DEALER_PACKAGES.find(p => p.id === packageId);
-  return (pkg?.scanCredits ?? 0) + PACKAGE_PURCHASE_BONUS_CREDITS;
+  return pkg?.scanCredits ?? 0;
 }
 
 /**
@@ -2257,7 +2273,7 @@ export async function registerNewReseller(data: {
         amount: finalInitialCredits,
         previousBalance: 0,
         newBalance: finalInitialCredits,
-        description: `Bayi Kaydı Paket Satın Alımı (+${finalInitialCredits} Seans Kredisi, paket alım bonusu dahil)`,
+        description: `Bayi kaydı için ${finalInitialCredits} paket kredisi tanımlandı.`,
         performedBy: 'Bayi Kaydı',
       });
     }

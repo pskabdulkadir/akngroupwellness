@@ -915,7 +915,7 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
                   </div>
                   <h4 className="text-sm font-black text-slate-100">1. Danışan Seans Başı %1000'e Varan Perakende Kâr</h4>
                   <p className="text-xs text-slate-400 leading-relaxed">
-                    14 kademeli seans kredi paketlerinde birim seans maliyetiniz <strong>$0.40 – $1.05</strong> seviyesine düşerken, danışanlarınıza uygulayacağınız seansları <strong>$30 – $70</strong> arasında ücretlendirerek doğrudan perakende kâr sağlarsınız.
+                    14 kademeli seans kredi paketlerinde birim seans maliyetiniz <strong>$1.00</strong> olarak sabitlenirken, danışanlarınıza uygulayacağınız seansları <strong>$30 – $70</strong> arasında ücretlendirerek doğrudan perakende kâr sağlarsınız.
                   </p>
                   <div className="p-2.5 rounded-xl bg-amber-950/40 border border-amber-500/30 text-[11px] font-bold text-amber-300">
                     Örn: 30 Seans x $30 = $905 Aylık Seans Geliri
@@ -1158,7 +1158,7 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
                   <div className="space-y-1">
                     <h4 className="text-sm font-bold text-slate-100">14 Resmi Paketten Seçim Yapın &amp; Seans Kredisi Yükleyin</h4>
                     <p className="text-xs text-slate-400 leading-relaxed">
-                      Bayi Back-Office içerisindeki <strong>14 Resmi Alışveriş Paketi</strong> sekmesinden 96 krediden 15.000 krediye kadar bütçenize uygun paketi seçin. Her paket alımında seçtiğiniz paketin kredisinin üzerine 32 seans kredisi bonus eklenir. BDDK uyumlu 3D Secure Sanal POS, Havale/EFT veya Kripto (USDT TRC-20) ile ödemenizi tamamlayın; krediniz anında havuzunuza aktarılır.
+                      Bayi Back-Office içerisindeki <strong>14 Resmi Alışveriş Paketi</strong> sekmesinden bütçenize uygun paketi seçin. Paket fiyatı USD cinsindendir ve 1 USD = 1 Kredi kuralı uygulanır; ek paket bonusu yoktur. Desteklenen ödeme yöntemlerinden biriyle ödemenizi tamamlayın; ödenmiş sipariş kredileri sunucu tarafından kredi defterine kaydedilir.
                     </p>
                   </div>
                 </div>

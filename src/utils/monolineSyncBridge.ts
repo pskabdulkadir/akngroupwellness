@@ -668,7 +668,7 @@ export async function mirrorMonolineStateBackToFrekans(
         (r as any).monolinePosition !== m.global_line_id ||
         (r as any).isActive !== m.is_active ||
         (r as any).activityExpiresAt !== m.activity_expires_at ||
-        (m.welcome_bonus_granted && !(r as any).welcomeBonusGranted)
+        (false)
       ) {
         resellersChanged = true;
         return {
@@ -688,9 +688,9 @@ export async function mirrorMonolineStateBackToFrekans(
           unlockedDepth: m.unlocked_depth,
           isActive: m.is_active,
           activityExpiresAt: m.activity_expires_at,
-          welcomeBonusGranted: Boolean(m.welcome_bonus_granted || (r as any).welcomeBonusGranted),
-          welcomeBonusCredits: m.welcome_bonus_credits || (r as any).welcomeBonusCredits || 0,
-          welcomeBonusBreakdown: m.welcome_bonus_granted ? '+32' : '',
+          welcomeBonusGranted: false,
+          welcomeBonusCredits: 0,
+          welcomeBonusBreakdown: '',
         };
       }
       return r;
@@ -807,7 +807,7 @@ export async function recordMonolinePackageOrderToFrekans(
       DEFAULT_MEMBERSHIP_PACKAGES.find((p) => p.id === frekansPkgId) ||
       DEFAULT_MEMBERSHIP_PACKAGES[0];
 
-    const creditsAdded = Number(tx.session_credits_added || pkgMeta.scanCredits || 32);
+    const creditsAdded = Number(tx.session_credits_added ?? pkgMeta.scanCredits ?? 0);
     const nowIso = new Date().toISOString();
 
     const buyerEmail = (buyerMember?.email || '').trim().toLowerCase();

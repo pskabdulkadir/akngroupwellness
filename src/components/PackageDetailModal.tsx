@@ -85,7 +85,7 @@ export const PackageDetailModal: React.FC<PackageDetailModalProps> = ({
                 )}
                 {isInternational && (
                   <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-sky-500/15 text-sky-300 border border-sky-400/40">
-                    3x Yurt Dışı
+                    Uluslararası hesap
                   </span>
                 )}
               </div>
@@ -144,7 +144,7 @@ export const PackageDetailModal: React.FC<PackageDetailModalProps> = ({
 
           {isInternational && (
             <div className="p-3 rounded-xl bg-sky-500/10 border border-sky-400/30 text-sky-200 text-xs">
-              Seçilen yurt dışı ülke için paket fiyatı ve seans bedeli 3 kat uygulanır.
+              Paket fiyatı USD cinsindendir; krediler 1 USD = 1 Kredi kuralına göre tanımlanır.
             </div>
           )}
 

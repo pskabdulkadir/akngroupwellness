@@ -32,36 +32,36 @@ const STORAGE_CAMPAIGNS_KEY = 'aurabio_campaigns_news_v1';
 export const DEFAULT_CAMPAIGNS: CampaignItem[] = [
   {
     id: 'camp-dealer-welcome',
-    title: 'Yeni Bayilere Özel: %25 Ek Seans Kredisi Bonusu',
-    badge: '🔥 %25 EKSTRA KREDİ',
+    title: 'Paket Kredilerinde 1 USD = 1 Kredi',
+    badge: 'KREDİ KURALI',
     badgeColor: 'amber',
-    description: 'AuraBio Yetkili Bayilik başvurusu yapan ve ilk paket alımını gerçekleştiren tüm klinik ve uygulayıcılara %25 hediye seans kredisi tanımlanmaktadır.',
-    detailedContent: 'Klinikler, biyo-rezonans merkezleri ve danışmanlar için başlatılan bu kampanya kapsamında aldığınız tüm toptan kredi havuzuna anında %25 ilave seans tanımlanır. Kredilerin son kullanma tarihi yoktur.',
-    discountRate: '%25 İlave Bonus',
-    couponCode: 'AURA-BAYI-25',
+    description: 'Tüm bayi paketlerinde her 1 USD karşılığında 1 kredi tanımlanır. Paket alımında ek bonus kredi uygulanmaz.',
+    detailedContent: 'Paket kredisi, ödenen paket tutarına göre sunucu tarafından belirlenir ve kredi defterine tek seferde kaydedilir.',
+    discountRate: '1 USD = 1 Kredi',
+    couponCode: '',
     validUntilText: 'Sınırlı Kontenjan (İlk 50 Bayi)',
     targetAudience: 'dealers',
-    isActive: true,
-    featured: true,
+    isActive: false,
+    featured: false,
     buttonText: 'Bayilik Başvurusu Yap',
-    whatsappMessage: 'Merhaba, Yeni Bayi %25 Ek Kredi Bonusu kampanyasından yararlanmak ve bayilik başvurusu yapmak istiyorum.',
+    whatsappMessage: 'Merhaba, bayi paketleri ve kredi fiyatlandırması hakkında bilgi almak istiyorum.',
     createdAt: Date.now() - 86400000 * 2
   },
   {
     id: 'camp-altin-pro-special',
-    title: 'Altın Pro Danışman Paketi Kampanyası: +30 Seans Hediye',
+    title: 'Altın Pro Danışman Paketi',
     badge: '💎 EN POPÜLER FIRSAT',
     badgeColor: 'emerald',
-    description: '270 Seans Kredisi içeren Altın Pro Danışman paketini tercih eden danışmanlarımıza +30 seans hediye, toplam 300 seans yetkisi sağlanmaktadır.',
-    detailedContent: 'Tam Biyo-Rezonans frekans modülleri, özel PDF danışan raporlama, 3D biyo-aura simülatörü ve VIP danışman desteği pakete dahildir. Seans başına maliyet sadece 100 $ düzeyine inmektedir.',
-    discountRate: '+30 Hediye Seans',
-    couponCode: 'ALTINPRO30',
+    description: 'Altın Pro paketi, 603 USD karşılığında 603 seans kredisi içerir. Ek paket bonusu uygulanmaz.',
+    detailedContent: 'Tam Biyo-Rezonans frekans modülleri, özel PDF danışan raporlama, 3D biyo-aura simülatörü ve VIP danışman desteği pakete dahildir.',
+    discountRate: '1 USD = 1 Kredi',
+    couponCode: '',
     validUntilText: 'Bu Ay Sonuna Kadar',
     targetAudience: 'all',
-    isActive: true,
-    featured: true,
+    isActive: false,
+    featured: false,
     buttonText: 'Paketi İncele & Sipariş Ver',
-    whatsappMessage: 'Merhaba, Altın Pro Danışman Paketi +30 Hediye Seans kampanyasından yararlanmak istiyorum.',
+    whatsappMessage: 'Merhaba, Altın Pro Danışman Paketi hakkında bilgi almak istiyorum.',
     createdAt: Date.now() - 86400000 * 4
   },
   {
@@ -99,6 +99,25 @@ export const DEFAULT_CAMPAIGNS: CampaignItem[] = [
   }
 ];
 
+const PACKAGE_CREDIT_CAMPAIGN_IDS = new Set(['camp-dealer-welcome', 'camp-altin-pro-special']);
+
+function normalizeCampaign(campaign: CampaignItem): CampaignItem {
+  if (!PACKAGE_CREDIT_CAMPAIGN_IDS.has(campaign.id)) return campaign;
+  const canonical = DEFAULT_CAMPAIGNS.find((item) => item.id === campaign.id)!;
+  return {
+    ...campaign,
+    title: canonical.title,
+    badge: canonical.badge,
+    description: canonical.description,
+    detailedContent: canonical.detailedContent,
+    discountRate: canonical.discountRate,
+    couponCode: '',
+    isActive: false,
+    featured: false,
+    whatsappMessage: canonical.whatsappMessage,
+  };
+}
+
 export function getLocalCampaigns(): CampaignItem[] {
   if (typeof window === 'undefined') return DEFAULT_CAMPAIGNS;
   try {
@@ -106,7 +125,7 @@ export function getLocalCampaigns(): CampaignItem[] {
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed;
+        return parsed.map(normalizeCampaign);
       }
     }
   } catch (e) {
@@ -141,7 +160,7 @@ export async function fetchRemoteCampaigns(): Promise<CampaignItem[]> {
     }
     const items: CampaignItem[] = [];
     snapshot.forEach((d) => {
-      items.push({ ...(d.data() as CampaignItem), id: d.id });
+      items.push(normalizeCampaign({ ...(d.data() as CampaignItem), id: d.id }));
     });
     // Sort featured first, then newest
     items.sort((a, b) => {
@@ -174,7 +193,7 @@ export function subscribeToCampaigns(callback: (campaigns: CampaignItem[]) => vo
       }
       const items: CampaignItem[] = [];
       snapshot.forEach((d: any) => {
-        items.push({ ...(d.data() as CampaignItem), id: d.id });
+        items.push(normalizeCampaign({ ...(d.data() as CampaignItem), id: d.id }));
       });
       items.sort((a, b) => {
         if (a.featured && !b.featured) return -1;
@@ -195,11 +214,11 @@ export function subscribeToCampaigns(callback: (campaigns: CampaignItem[]) => vo
 
 export async function saveOrUpdateCampaign(campaign: CampaignItem): Promise<{ success: boolean; message: string }> {
   try {
-    const updatedCamp: CampaignItem = {
+    const updatedCamp: CampaignItem = normalizeCampaign({
       ...campaign,
       updatedAt: Date.now(),
       createdAt: campaign.createdAt || Date.now()
-    };
+    });
 
     // Update local cache
     const current = getLocalCampaigns();
