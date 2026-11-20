@@ -9209,79 +9209,176 @@ async function startServer(options: { listen?: boolean } = {}) {
   // SECTION 4B: 🎁 YÖNETİCİ BONUS KREDİ YÜKLEME (SEÇİLİ BAYİYE ÖZEL SEANS KREDİSİ)
   // ============================================================================
   app.post('/api/v1/admin/bonuses/credit-grant', requireAdminJwt, async (req, res) => {
+    let rollbackState: Record<string, any> | null = null;
     try {
-      const { target_user_id, credit_amount, note } = req.body || {};
-      const credits = Number(credit_amount) || 0;
+      const { target_user_id, credit_amount, note, request_id, start_date, end_date } = req.body || {};
+      const credits = Number(credit_amount);
+      const requestId = String(request_id || '').trim();
+      const isBulk = Boolean(start_date || end_date);
+      const safeNote = String(note || 'Yönetici Kariyer Bonusu').trim().slice(0, 300);
 
-      if (!target_user_id) {
-        res.status(400).json({
-          status: 'error',
-          message: 'Lütfen bonus kredi yüklenecek bayiyi seçin.',
-        });
-        return;
+      if (!Number.isSafeInteger(credits) || credits <= 0 || credits > 2147483647) {
+        return res.status(400).json({ status: 'error', message: 'Pozitif tam sayı bonus kredi miktarı girin.' });
+      }
+      if (!/^[A-Za-z0-9._:-]{8,36}$/.test(requestId)) {
+        return res.status(400).json({ status: 'error', message: 'Geçerli ve tekil işlem kimliği zorunludur.' });
       }
 
-      if (credits <= 0) {
-        res.status(400).json({
-          status: 'error',
-          message: 'Lütfen geçerli bir bonus kredi sayısı (> 0) girin.',
-        });
-        return;
+      let targetMember: MonolineMember | undefined;
+      let startAt: Date | undefined;
+      let endAt: Date | undefined;
+      if (isBulk) {
+        const validDate = (value: unknown): value is string => {
+          if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+          const parsed = new Date(`${value}T00:00:00.000Z`);
+          return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
+        };
+        if (!validDate(start_date) || !validDate(end_date) || start_date > end_date) {
+          return res.status(400).json({ status: 'error', message: 'Geçerli bir başlangıç ve bitiş tarihi seçin.' });
+        }
+        startAt = new Date(`${start_date}T00:00:00.000Z`);
+        endAt = new Date(new Date(`${end_date}T00:00:00.000Z`).getTime() + 86400000);
+      } else {
+        const targetId = String(target_user_id || '').trim();
+        if (!targetId) {
+          return res.status(400).json({ status: 'error', message: 'Lütfen bonus kredi yüklenecek bayiyi seçin.' });
+        }
+        targetMember = members.find((member) => member.user_id === targetId || String(member.id) === targetId);
+        if (!targetMember) {
+          return res.status(404).json({ status: 'error', message: 'Belirtilen bayi sistemde bulunamadı.' });
+        }
       }
 
-      const targetMember = members.find(
-        (m) => m.user_id === target_user_id || String(m.id) === target_user_id
-      );
+      const outcome = await runInAtomicTransaction(async () => {
+        rollbackState = captureRollbackState();
+        try {
+          return await withTransaction(async (client) => {
+            const batchKey = `ADMIN_BONUS:${requestId}`;
+            const claimed = await client.query(
+              `INSERT INTO idempotency_keys (request_id, scope, response_payload)
+               VALUES ($1, 'ADMIN_BONUS_CREDIT_GRANT', $2::jsonb)
+               ON CONFLICT (request_id) DO NOTHING
+               RETURNING request_id`,
+              [batchKey, JSON.stringify({ target_user_id: targetMember?.user_id || null, start_date: start_date || null, end_date: end_date || null, credits })]
+            );
+            if (!claimed.rows.length) {
+              const previous = await client.query(
+                'SELECT scope, response_payload FROM idempotency_keys WHERE request_id = $1',
+                [batchKey]
+              );
+              if (previous.rows[0]?.scope !== 'ADMIN_BONUS_CREDIT_GRANT') {
+                const error: any = new Error('İşlem kimliği başka bir işlemde kullanılmış.');
+                error.statusCode = 409;
+                throw error;
+              }
+              return { ...(previous.rows[0].response_payload || {}), is_idempotent_replay: true };
+            }
 
-      if (!targetMember) {
-        res.status(404).json({
-          status: 'error',
-          message: 'Belirtilen bayi sistemde bulunamadı.',
-        });
-        return;
-      }
+            let recipients: MonolineMember[];
+            if (isBulk) {
+              const selected = await client.query(
+                `SELECT user_id FROM users
+                 WHERE user_id <> 'USR-ADMIN'
+                   AND created_at >= $1 AND created_at < $2
+                 ORDER BY user_id FOR UPDATE`,
+                [startAt, endAt]
+              );
+              const membersById = new Map(members.map((member) => [member.user_id, member]));
+              recipients = selected.rows.map((row) => membersById.get(row.user_id)).filter(Boolean) as MonolineMember[];
+              if (recipients.length !== selected.rows.length) {
+                throw new Error('Tarih aralığındaki bayiler sunucu durumuyla eşleşmiyor; işlem iptal edildi.');
+              }
+              if (!recipients.length) {
+                const error: any = new Error('Seçilen tarih aralığında bayi bulunamadı.');
+                error.statusCode = 404;
+                throw error;
+              }
+            } else {
+              const locked = await client.query('SELECT user_id FROM users WHERE user_id = $1 FOR UPDATE', [targetMember!.user_id]);
+              if (!locked.rows.length) {
+                const error: any = new Error('Bayi kredi hesabı bulunamadı.');
+                error.statusCode = 404;
+                throw error;
+              }
+              recipients = [targetMember!];
+            }
 
-      const oldCredits = targetMember.session_credits || 0;
-      targetMember.session_credits = oldCredits + credits;
-      creditsOwnedByServer.add(targetMember.user_id);
-      const nowIso = new Date().toISOString();
+            const currentBalances = await client.query(
+              'SELECT user_id, scan_credits FROM users WHERE user_id = ANY($1::text[])',
+              [recipients.map((member) => member.user_id)]
+            );
+            if (currentBalances.rows.some((row) => Number(row.scan_credits) + credits > 2147483647)) {
+              const error: any = new Error('Yüklenecek kredi, bayi hesabının PostgreSQL kredi sınırını aşar.');
+              error.statusCode = 422;
+              throw error;
+            }
 
-      // Log to activity log
-      activityLogs.unshift({
-        id: nextActivityLogId++,
-        user_id: targetMember.id,
-        external_user_id: targetMember.user_id,
-        user_full_name: targetMember.full_name,
-        action_type: 'ADMIN_MANUAL_UPDATE',
-        description: `🎁 Yönetici Bonusu: +${credits.toLocaleString('tr-TR')} Seans Kredisi yüklendi (${oldCredits} → ${targetMember.session_credits} Kredi). Açıklama: ${note || 'Yönetici Kariyer Bonusu'}`,
-        previous_expires_at: targetMember.activity_expires_at || null,
-        new_expires_at: targetMember.activity_expires_at || null,
-        is_active_after: targetMember.is_active,
-        created_at: nowIso,
+            const nowIso = new Date().toISOString();
+            const results: Array<{ member: MonolineMember; previousBalance: number; remainingCredits: number }> = [];
+            for (const member of recipients) {
+              const credit = await applyResellerCreditAdjustment(
+                client,
+                member.user_id,
+                { delta: credits },
+                `ADMIN_BONUS:${requestId}:${member.user_id}`
+              );
+              if (!credit.success) throw new Error(credit.message);
+              member.session_credits = credit.remainingCredits;
+              creditsOwnedByServer.add(member.user_id);
+              activityLogs.unshift({
+                id: nextActivityLogId++,
+                user_id: member.id,
+                external_user_id: member.user_id,
+                user_full_name: member.full_name,
+                action_type: 'ADMIN_MANUAL_UPDATE',
+                description: `Yönetici bonusu: +${credits.toLocaleString('tr-TR')} seans kredisi (${credit.previousBalance} → ${credit.remainingCredits}). Açıklama: ${safeNote}`,
+                previous_expires_at: member.activity_expires_at || null,
+                new_expires_at: member.activity_expires_at || null,
+                is_active_after: member.is_active,
+                created_at: nowIso,
+              });
+              notificationOutbox.unshift({
+                id: nextNotificationId++,
+                user_id: member.id,
+                external_user_id: member.user_id,
+                user_full_name: member.full_name,
+                channel: 'IN_APP',
+                title: 'Bonus seans kredisi yüklendi',
+                message: `Yönetici tarafından hesabınıza +${credits.toLocaleString('tr-TR')} seans kredisi aktarıldı. Yeni bakiyeniz: ${credit.remainingCredits}. ${safeNote}`,
+                status: 'SENT',
+                created_at: nowIso,
+              });
+              results.push({ member, previousBalance: credit.previousBalance, remainingCredits: credit.remainingCredits });
+            }
+
+            const addedCredits = credits * recipients.length;
+            const message = isBulk
+              ? `${recipients.length} bayiye kişi başı +${credits.toLocaleString('tr-TR')}, toplam ${addedCredits.toLocaleString('tr-TR')} bonus kredi yüklendi.`
+              : `${recipients[0].full_name} paneline +${credits.toLocaleString('tr-TR')} bonus seans kredisi yüklendi. Güncel bakiye: ${results[0].remainingCredits}.`;
+            const responsePayload = {
+              message,
+              mode: isBulk ? 'DATE_RANGE' : 'INDIVIDUAL',
+              recipient_count: recipients.length,
+              added_credits: addedCredits,
+              credits_per_member: credits,
+              recipient_user_ids: recipients.map((member) => member.user_id),
+            };
+            await client.query(
+              'UPDATE idempotency_keys SET response_payload = $1::jsonb WHERE request_id = $2',
+              [JSON.stringify(responsePayload), batchKey]
+            );
+            await persistApplicationState(client);
+            return { ...responsePayload, target_member: isBulk ? undefined : recipients[0], state: buildStateResponse() };
+          });
+        } catch (error) {
+          if (rollbackState) applyPersistentState(rollbackState);
+          throw error;
+        }
       });
 
-      // Send to notification outbox
-      notificationOutbox.unshift({
-        id: nextNotificationId++,
-        user_id: targetMember.id,
-        external_user_id: targetMember.user_id,
-        user_full_name: targetMember.full_name,
-        channel: 'IN_APP',
-        title: '🎁 Tebrikler! Bonus Seans Kredisi Yüklendi',
-        message: `Yönetici tarafından hesabınıza +${credits.toLocaleString('tr-TR')} Seans Kredisi başarıyla aktarıldı! Yeni Havuzunuz: ${targetMember.session_credits} Seans. ${note ? `(Not: ${note})` : ''}`,
-        status: 'SENT',
-        created_at: nowIso,
-      });
-
-      res.json({
-        status: 'success',
-        message: `🎉 Tebrikler! ${targetMember.full_name} (#${targetMember.global_line_id} · Kod: ${targetMember.ref_code}) paneline +${credits.toLocaleString('tr-TR')} Bonus Seans Kredisi başarıyla yüklendi! (Güncel Bakiye: ${targetMember.session_credits} Seans).`,
-        target_member: targetMember,
-        added_credits: credits,
-        state: buildStateResponse(),
-      });
+      return res.json({ status: 'success', ...outcome });
     } catch (err: any) {
-      res.status(500).json({
+      return res.status(err?.statusCode || 500).json({
         status: 'error',
         message: err?.message || 'Bonus kredi yükleme işlemi sırasında hata oluştu.',
       });

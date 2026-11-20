@@ -592,6 +592,9 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
 
   // 🎁 Yönetici Tarafından Belirlenen Bonus Kredileri Seçilen Bayiye Yükleme State'leri
   const [bonusCreditTargetUserId, setBonusCreditTargetUserId] = useState<string>('');
+  const [bonusCreditMode, setBonusCreditMode] = useState<'INDIVIDUAL' | 'DATE_RANGE'>('INDIVIDUAL');
+  const [bonusCreditStartDate, setBonusCreditStartDate] = useState('');
+  const [bonusCreditEndDate, setBonusCreditEndDate] = useState('');
   const [bonusCreditAmount, setBonusCreditAmount] = useState<number>(250);
   const [bonusCreditNote, setBonusCreditNote] = useState<string>(
     'Yönetici Özel Kariyer Başarı Bonusu'
@@ -621,7 +624,8 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
   const handleGrantBonusCredits = async (
     targetUserId: string,
     credits: number,
-    note?: string
+    note?: string,
+    dateRange?: { startDate: string; endDate: string }
   ) => {
     setBonusCreditBusy(true);
     setBonusCreditFeedback(null);
@@ -630,10 +634,13 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-
+          Authorization: `Bearer ${getAdminToken() || ''}`,
         },
         body: JSON.stringify({
-          target_user_id: targetUserId,
+          target_user_id: targetUserId || undefined,
+          start_date: dateRange?.startDate,
+          end_date: dateRange?.endDate,
+          request_id: crypto.randomUUID(),
           credit_amount: credits,
           note: note || 'Yönetici Kariyer Bonusu',
         }),
@@ -935,6 +942,16 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
   }, [careerTiers]);
 
   const sortedMembers = [...members].sort((a, b) => a.global_line_id - b.global_line_id);
+  const isBonusDateRangeValid = Boolean(
+    bonusCreditStartDate && bonusCreditEndDate && bonusCreditStartDate <= bonusCreditEndDate
+  );
+  const bonusCreditBulkRecipients = isBonusDateRangeValid
+    ? sortedMembers.filter((member) =>
+        member.user_id !== 'USR-ADMIN' &&
+        member.joined_at.slice(0, 10) >= bonusCreditStartDate &&
+        member.joined_at.slice(0, 10) <= bonusCreditEndDate
+      )
+    : [];
   const bankBalancesByCurrency = bankAccounts.reduce<Record<string, number>>((totals, account) => {
     if (account.balance !== null) totals[account.currency] = (totals[account.currency] || 0) + account.balance;
     return totals;
@@ -4446,22 +4463,76 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                 )}
 
                 <div className="space-y-3.5 text-xs">
-                  <div>
-                    <label className="block font-semibold text-indigo-200 mb-1">
-                      Bonus Kredi Yüklenecek Bayiyi Seçin
-                    </label>
-                    <select
-                      value={bonusCreditTargetUserId || sortedMembers[0]?.user_id || ''}
-                      onChange={(e) => setBonusCreditTargetUserId(e.target.value)}
-                      className="w-full px-3 py-2 bg-slate-900 border border-indigo-500/50 rounded-xl font-medium text-white"
-                    >
-                      {sortedMembers.map((m) => (
-                        <option key={m.user_id} value={m.user_id} className="bg-slate-900 text-white">
-                          #{m.global_line_id} {m.full_name} (Kariyer Seviyesi {m.career_level}) — Mevcut Kredi: {m.session_credits || 0} Seans
-                        </option>
-                      ))}
-                    </select>
+                  <div className="grid grid-cols-2 gap-2">
+                    {([
+                      ['INDIVIDUAL', 'Bireysel bayi'],
+                      ['DATE_RANGE', 'Tarih aralığı'],
+                    ] as const).map(([mode, label]) => (
+                      <button
+                        key={mode}
+                        type="button"
+                        onClick={() => setBonusCreditMode(mode)}
+                        className={`rounded-lg border px-3 py-2 font-bold transition-colors ${
+                          bonusCreditMode === mode
+                            ? 'border-amber-300 bg-amber-400 text-slate-950'
+                            : 'border-indigo-700 bg-indigo-950/60 text-indigo-200 hover:bg-indigo-900'
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
                   </div>
+
+                  {bonusCreditMode === 'INDIVIDUAL' ? (
+                    <div>
+                      <label className="block font-semibold text-indigo-200 mb-1">
+                        Bonus Kredi Yüklenecek Bayiyi Seçin
+                      </label>
+                      <select
+                        value={bonusCreditTargetUserId || sortedMembers[0]?.user_id || ''}
+                        onChange={(e) => setBonusCreditTargetUserId(e.target.value)}
+                        className="w-full px-3 py-2 bg-slate-900 border border-indigo-500/50 rounded-xl font-medium text-white"
+                      >
+                        {sortedMembers.map((m) => (
+                          <option key={m.user_id} value={m.user_id} className="bg-slate-900 text-white">
+                            #{m.global_line_id} {m.full_name} (Kariyer Seviyesi {m.career_level}) — Mevcut Kredi: {m.session_credits || 0} Seans
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  ) : (
+                    <div className="space-y-2 rounded-xl border border-indigo-700/70 bg-indigo-950/40 p-3">
+                      <p className="font-semibold text-indigo-100">Bayi kayıt tarihi aralığı</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        <label className="space-y-1 text-indigo-200">
+                          <span>Başlangıç</span>
+                          <input
+                            type="date"
+                            value={bonusCreditStartDate}
+                            onChange={(e) => setBonusCreditStartDate(e.target.value)}
+                            className="w-full rounded-lg border border-indigo-500/50 bg-slate-900 px-2 py-2 text-white"
+                          />
+                        </label>
+                        <label className="space-y-1 text-indigo-200">
+                          <span>Bitiş</span>
+                          <input
+                            type="date"
+                            value={bonusCreditEndDate}
+                            onChange={(e) => setBonusCreditEndDate(e.target.value)}
+                            className="w-full rounded-lg border border-indigo-500/50 bg-slate-900 px-2 py-2 text-white"
+                          />
+                        </label>
+                      </div>
+                      <p className="text-indigo-200/80">
+                        Seçilen günler dahildir; bu tarihlerde kayıt olan bayiler sayılır.
+                      </p>
+                      <p className="font-bold text-amber-300">
+                        {isBonusDateRangeValid
+                          ? `${bonusCreditBulkRecipients.length} kayıtlı bayi · toplam ${(bonusCreditBulkRecipients.length * bonusCreditAmount).toLocaleString('tr-TR')} kredi`
+                          : 'Toplu yükleme için geçerli bir tarih aralığı seçin.'}
+                      </p>
+                    </div>
+                  )}
 
                   <div>
                     <div className="flex items-center justify-between mb-1">
@@ -4513,14 +4584,29 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
 
                   <button
                     type="button"
-                    disabled={bonusCreditBusy || bonusCreditAmount <= 0 || sortedMembers.length === 0}
-                    onClick={() =>
-                      handleGrantBonusCredits(
-                        bonusCreditTargetUserId || sortedMembers[0]?.user_id,
+                    disabled={
+                      bonusCreditBusy ||
+                      bonusCreditAmount <= 0 ||
+                      (bonusCreditMode === 'INDIVIDUAL'
+                        ? sortedMembers.length === 0
+                        : !isBonusDateRangeValid || bonusCreditBulkRecipients.length === 0)
+                    }
+                    onClick={() => {
+                      if (bonusCreditMode === 'DATE_RANGE') {
+                        const totalCredits = bonusCreditBulkRecipients.length * bonusCreditAmount;
+                        if (!window.confirm(`${bonusCreditBulkRecipients.length} bayiye toplam ${totalCredits.toLocaleString('tr-TR')} bonus kredi yüklenecek. Devam edilsin mi?`)) return;
+                        void handleGrantBonusCredits('', bonusCreditAmount, bonusCreditNote, {
+                          startDate: bonusCreditStartDate,
+                          endDate: bonusCreditEndDate,
+                        });
+                        return;
+                      }
+                      void handleGrantBonusCredits(
+                        bonusCreditTargetUserId || sortedMembers[0]?.user_id || '',
                         bonusCreditAmount,
                         bonusCreditNote
-                      )
-                    }
+                      );
+                    }}
                     className="w-full py-3 px-4 bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 font-black rounded-xl shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 transition-all text-xs"
                   >
                     <Zap className="w-4 h-4 fill-slate-950" />
