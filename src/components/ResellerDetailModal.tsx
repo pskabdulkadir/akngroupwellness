@@ -152,8 +152,7 @@ export const ResellerDetailModal: React.FC<ResellerDetailModalProps> = ({
     loadDeepData();
   }, [reseller]);
 
-  // LIVE SYNC: Real-time Firestore listener for this dealer's balance, scan stats and audit trail.
-  // The admin screen updates instantly whenever the dealer scans on any device (no manual refresh).
+  // Refresh the server-owned balance and local credit history periodically.
   useEffect(() => {
     if (!reseller?.uid) return;
 
@@ -169,7 +168,7 @@ export const ResellerDetailModal: React.FC<ResellerDetailModalProps> = ({
       if (!isActive || !updated) return;
       setCurrentReseller(prev => prev ? {
         ...prev,
-        creditsBalance: typeof updated.creditsBalance === 'number' ? updated.creditsBalance : prev.creditsBalance,
+        creditsBalance: updated.creditsBalance,
         totalScans: typeof updated.totalScans === 'number' ? updated.totalScans : prev.totalScans,
         lastScanAt: updated.lastScanAt || prev.lastScanAt,
         status: updated.status || prev.status,
@@ -324,7 +323,7 @@ export const ResellerDetailModal: React.FC<ResellerDetailModalProps> = ({
   )}`;
 
   // Calculated Financial Metrics
-  const calculatedCredits = currentReseller.creditsBalance !== undefined ? currentReseller.creditsBalance : 100;
+  const calculatedCredits = currentReseller.creditsBalance;
   const totalSales = currentReseller.totalSalesAmount || 0;
   const totalCommission = currentReseller.totalEarnings || 0;
   const paidCommission = currentReseller.paidEarnings || 0;
@@ -535,7 +534,7 @@ export const ResellerDetailModal: React.FC<ResellerDetailModalProps> = ({
               <div className="p-4 rounded-2xl bg-slate-950/90 border border-slate-800 space-y-1">
                 <span className="text-[11px] text-slate-400 font-medium block">Kalan Seans Kredisi</span>
                 <div className="text-xl font-black font-mono text-emerald-400">
-                  {calculatedCredits} Seans
+                  {calculatedCredits ?? '—'} Seans
                 </div>
                 <span className="text-[10px] text-slate-500 block">Süre Sınırı Yok</span>
               </div>
@@ -719,7 +718,7 @@ export const ResellerDetailModal: React.FC<ResellerDetailModalProps> = ({
                 <div className="text-left sm:text-right">
                   <span className="text-[11px] text-slate-400 block font-medium">Mevcut Kullanılabilir Kredi</span>
                   <span className="text-3xl font-black font-mono text-emerald-400">
-                    {calculatedCredits} <span className="text-sm font-sans font-bold text-slate-300">Seans</span>
+                    {calculatedCredits ?? '—'} <span className="text-sm font-sans font-bold text-slate-300">Seans</span>
                   </span>
                 </div>
               </div>
@@ -1060,7 +1059,7 @@ export const ResellerDetailModal: React.FC<ResellerDetailModalProps> = ({
                               {client.phone && <div className="text-[10px] text-slate-500 font-mono">{client.phone}</div>}
                             </td>
                             <td className="py-3 px-4 font-mono font-bold text-emerald-400">
-                              {client.creditsBalance ?? 0} Seans
+                              {client.creditsBalance ?? '—'} Seans
                             </td>
                             <td className="py-3 px-4">
                               <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${

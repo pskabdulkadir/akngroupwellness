@@ -42,7 +42,8 @@ import {
   getMemberWalletToken,
   saveMemberWalletToken
 } from '../utils/authManager';
-import { DealerPackage, getDealerPackages, subscribeToDealerPackages } from '../utils/resellerManager';
+import { getDealerPackages, subscribeToDealerPackages } from '../utils/resellerManager';
+import type { DealerPackage } from '../config/dealerPackages';
 import { DemoProtocolModal } from './DemoProtocolModal';
 import { LegalContractsModal, LegalContractTab } from './LegalContractsModal';
 import {
@@ -362,6 +363,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
         });
         const settlement = await walletResponse.json().catch(() => ({}));
         const grantedCredits = Number(settlement.transaction?.session_credits_added);
+        const totalCredits = Number(settlement.totalCredits);
         if (
           !walletResponse.ok ||
           settlement.status !== 'success' ||
@@ -369,6 +371,8 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
           settlement.transaction?.buyer_user_id !== user.uid ||
           !Number.isFinite(grantedCredits) ||
           grantedCredits <= 0 ||
+          !Number.isInteger(totalCredits) ||
+          totalCredits < grantedCredits ||
           typeof settlement.member_token !== 'string' ||
           !settlement.member_token
         ) {
@@ -382,6 +386,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
             selectedPackage: cartItems[0].packageId,
             dealerPackageId: cartItems[0].packageId,
           },
+          totalCredits,
           grantedCredits
         );
         onDealerRegistrationPaid?.(orderUser);
@@ -417,6 +422,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
           });
           const settlement = await settlementResponse.json().catch(() => ({}));
           const grantedCredits = Number(settlement.transaction?.session_credits_added);
+          const totalCredits = Number(settlement.totalCredits);
           if (
             !settlementResponse.ok ||
             settlement.status !== 'success' ||
@@ -424,6 +430,8 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
             settlement.transaction?.buyer_user_id !== user.uid ||
             !Number.isFinite(grantedCredits) ||
             grantedCredits <= 0 ||
+            !Number.isInteger(totalCredits) ||
+            totalCredits < grantedCredits ||
             typeof settlement.member_token !== 'string' ||
             !settlement.member_token
           ) {
@@ -438,6 +446,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
               selectedPackage: cartItems[0].packageId,
               dealerPackageId: cartItems[0].packageId,
             },
+            totalCredits,
             grantedCredits
           );
           onDealerRegistrationPaid?.(orderUser);

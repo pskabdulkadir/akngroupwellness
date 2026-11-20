@@ -96,8 +96,6 @@ import {
 import { 
   Reseller, 
   CommissionTransaction, 
-  DealerPackage,
-  DEFAULT_DEALER_PACKAGES,
   getDealerPackages,
   subscribeToDealerPackages,
   adminSaveDealerPackage,
@@ -116,6 +114,7 @@ import {
   subscribeToCreditLogs,
   CreditTransaction
 } from '../utils/resellerManager';
+import { DEFAULT_DEALER_PACKAGES, type DealerPackage } from '../config/dealerPackages';
 import { 
   DigitalInvoice, 
   getAllDigitalInvoices, 
@@ -389,6 +388,7 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
   const [showDataBackupModal, setShowDataBackupModal] = useState<boolean>(false);
   const [showResetConfirmModal, setShowResetConfirmModal] = useState<boolean>(false);
   const [isResettingSystem, setIsResettingSystem] = useState<boolean>(false);
+  const [resetConfirmation, setResetConfirmation] = useState('');
 
   // Member Sponsorship & Branch / Leg Balance Edit State
   const [memberToEditSponsorship, setMemberToEditSponsorship] = useState<UserMember | null>(null);
@@ -400,7 +400,6 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
   const [editMemberAssignedLeg, setEditMemberAssignedLeg] = useState<'LEFT' | 'RIGHT' | 'AUTO'>('AUTO');
   const [editMemberLeftLegVol, setEditMemberLeftLegVol] = useState<number>(0);
   const [editMemberRightLegVol, setEditMemberRightLegVol] = useState<number>(0);
-  const [editMemberCredits, setEditMemberCredits] = useState<number>(100);
   const [editMemberCareerLevel, setEditMemberCareerLevel] = useState<number>(1);
   const [editMemberIsAllowed, setEditMemberIsAllowed] = useState<boolean>(true);
   const [isSavingMemberEdit, setIsSavingMemberEdit] = useState<boolean>(false);
@@ -488,7 +487,7 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
           pendingEarnings: 0,
           totalSalesAmount: 0,
           totalReferredUsers: 0,
-          creditsBalance: target.creditsBalance ?? 100,
+          creditsBalance: target.creditsBalance,
           dealerPackageId: target.dealerPackageId || 'silver-dealer',
           createdAt: target.createdAt || new Date().toISOString(),
           updatedAt: new Date().toISOString(),
@@ -1015,7 +1014,7 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
   const handleOpenResellerCreditModal = (r: Reseller, action: 'add' | 'deduct' | 'set' = 'add') => {
     setCreditModalReseller(r);
     setCreditModalActionType(action);
-    setCreditModalAmount(action === 'set' ? (r.creditsBalance ?? 100).toString() : '30');
+    setCreditModalAmount(action === 'set' ? (r.creditsBalance?.toString() || '') : '30');
     setCreditModalReason(
       action === 'add' ? 'Yetkili Bayi Satın Alma / Manuel Kredi Yükleme' :
       action === 'deduct' ? 'Manuel Kredi Düzeltmesi / İade' : 'Yönetici Doğrudan Bakiye Güncellemesi'
@@ -1025,6 +1024,10 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
 
   const handleApplyResellerCreditAdjustment = async () => {
     if (!creditModalReseller) return;
+    if (!creditModalAmount.trim()) {
+      alert('İşlem için kredi miktarını giriniz.');
+      return;
+    }
     const val = Number(creditModalAmount);
     if (isNaN(val) || val < 0) {
       alert('Lütfen geçerli bir seans kredi miktarı giriniz.');
@@ -1407,7 +1410,6 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
     setEditMemberAssignedLeg((m as any).assignedLeg || 'AUTO');
     setEditMemberLeftLegVol((m as any).leftLegVolume || 0);
     setEditMemberRightLegVol((m as any).rightLegVolume || 0);
-    setEditMemberCredits(m.creditsBalance ?? 100);
     setEditMemberCareerLevel((m as any).careerLevel || 1);
     setEditMemberIsAllowed(m.isAllowed ?? true);
   };
@@ -1426,7 +1428,6 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
         role: memberToEditSponsorship.role === 'accounting' ? 'accounting' : editMemberRole,
         referredByCode: editMemberSponsorCode.trim().toUpperCase() || undefined,
         resellerId: editMemberSponsorCode.trim().toUpperCase() || undefined,
-        creditsBalance: Number(editMemberCredits) || 0,
         isAllowed: editMemberIsAllowed,
         ...({
           assignedLeg: editMemberAssignedLeg,
@@ -1449,7 +1450,6 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
           role: updatedUser.role,
           referredByCode: updatedUser.referredByCode || null,
           resellerId: updatedUser.resellerId || null,
-          creditsBalance: updatedUser.creditsBalance,
           isAllowed: updatedUser.isAllowed,
           assignedLeg: editMemberAssignedLeg,
           leftLegVolume: Number(editMemberLeftLegVol) || 0,
@@ -1468,7 +1468,6 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             full_name: updatedUser.fullName,
-            session_credits: updatedUser.creditsBalance,
             sponsor_id: editMemberSponsorCode.trim().toUpperCase(),
             assigned_leg: editMemberAssignedLeg,
             left_leg_volume: Number(editMemberLeftLegVol) || 0,
@@ -1500,11 +1499,13 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
 
   // Full System Reset Handler
   const handleExecuteResetSystem = async () => {
+    if (resetConfirmation !== 'SIFIRLA') return;
     setIsResettingSystem(true);
     try {
-      wipeAllLocalApplicationData();
       const res = await fetch('/api/v1/reset', { method: 'POST' });
-      await res.json();
+      const data = await res.json();
+      if (!res.ok || !data.state) throw new Error(data.message || 'Sıfırlama tamamlanamadı.');
+      wipeAllLocalApplicationData();
 
       await loadMembers();
       await loadResellersAndCommissions();
@@ -1516,7 +1517,8 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
       window.dispatchEvent(new CustomEvent('monoline_webhook_triggered'));
 
       setShowResetConfirmModal(false);
-      setActionSuccessMsg('Sistem tamamen sıfırlandı! Tüm simülasyon, demo ve sahte veriler silindi, sistem temiz olarak sıfırdan başlatıldı.');
+      setResetConfirmation('');
+      setActionSuccessMsg(data.message || 'Fabrika sıfırlaması tamamlandı.');
       setTimeout(() => setActionSuccessMsg(null), 5000);
     } catch (err: any) {
       alert('Sistem sıfırlanırken hata oluştu: ' + (err?.message || ''));
@@ -2358,7 +2360,7 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
                         return `${c.quantity}x ${p.name}`;
                       }).filter(Boolean);
 
-                      const currentCredits = member.creditsBalance ?? (access.isAllowed ? 100 : 0);
+                      const currentCredits = member.creditsBalance;
 
                       return (
                         <div
@@ -2377,7 +2379,7 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
                                 
                                 <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-mono font-extrabold flex items-center gap-1">
                                   <Coins className="w-3 h-3 text-emerald-400" />
-                                  <span>{currentCredits} SEANS KREDİSİ</span>
+                                  <span>{currentCredits ?? '—'} SEANS KREDİSİ</span>
                                 </span>
 
                                 <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
@@ -2429,7 +2431,7 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
                                 {access.remainingText}
                               </div>
                               <div className="text-[10px] text-slate-500">
-                                {currentCredits > 0 ? `${currentCredits} Seans Yapılabilir` : 'Kredi Bitti / Yükleme Gerekli'}
+                                {currentCredits === undefined ? 'Bakiye sunucudan okunamadı' : currentCredits > 0 ? `${currentCredits} Seans Yapılabilir` : 'Kredi Bitti / Yükleme Gerekli'}
                               </div>
                             </div>
                           </div>
@@ -2515,7 +2517,7 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
                             <div className="flex items-center gap-2">
                               {member.phone && (
                                 <a
-                                  href={getWhatsAppNotifyUrl(member, `${currentCredits} Seans Kredisi`)}
+                                  href={getWhatsAppNotifyUrl(member, `${currentCredits ?? 'Bilinmiyor'} Seans Kredisi`)}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-emerald-950/60 text-slate-300 hover:text-emerald-300 border border-slate-700 text-[11px] font-semibold flex items-center gap-1 transition-colors"
@@ -2708,7 +2710,7 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
                       <Coins className="w-4 h-4 text-emerald-400" />
                     </div>
                     <div className="text-xl sm:text-2xl font-black text-emerald-400 font-mono">
-                      {resellers.reduce((sum, r) => sum + (r.creditsBalance ?? 100), 0)} <span className="text-xs font-sans text-emerald-300">Seans</span>
+                      {resellers.reduce((sum, r) => sum + (r.creditsBalance ?? 0), 0)} <span className="text-xs font-sans text-emerald-300">Seans</span>
                     </div>
                     <div className="text-[10px] text-emerald-300/80">
                       Bayilerin sistemdeki kullanılabilir kredisi
@@ -2781,7 +2783,7 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
                       <Coins className="w-3.5 h-3.5 text-emerald-400" />
                       <span>Bayi Kredi Kullanımı & Havuz Yönetimi</span>
                       <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-300 rounded-full text-[10px] font-mono font-bold border border-emerald-500/40">
-                        {resellers.reduce((sum, r) => sum + (r.creditsBalance ?? 100), 0)} Kredi
+                        {resellers.reduce((sum, r) => sum + (r.creditsBalance ?? 0), 0)} Kredi
                       </span>
                     </button>
 
@@ -2927,7 +2929,7 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
                                   <div>
                                     <span className="text-[10px] text-slate-400 block font-medium">Kalan Seans Kredisi</span>
                                     <span className="text-sm font-black font-mono text-emerald-400">
-                                      {r.creditsBalance ?? 100} <span className="text-[11px] font-sans font-bold text-slate-300">Seans</span>
+                                      {r.creditsBalance ?? '—'} <span className="text-[11px] font-sans font-bold text-slate-300">Seans</span>
                                     </span>
                                   </div>
                                 </div>
@@ -3034,7 +3036,7 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
                         <div className="p-3.5 rounded-2xl bg-slate-900/90 border border-slate-800">
                           <span className="text-[11px] text-slate-400 block font-medium">Toplam Kalan Bayi Kredisi</span>
                           <span className="text-2xl font-black font-mono text-emerald-400">
-                            {resellers.reduce((sum, r) => sum + (r.creditsBalance ?? 100), 0)}
+                            {resellers.reduce((sum, r) => sum + (r.creditsBalance ?? 0), 0)}
                           </span>
                           <span className="text-[10px] text-slate-500 block">Sistemdeki Aktif Havuz</span>
                         </div>
@@ -3058,7 +3060,7 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
                         <div className="p-3.5 rounded-2xl bg-slate-900/90 border border-slate-800">
                           <span className="text-[11px] text-slate-400 block font-medium">Kritik Seviye (&lt;10 Kredi)</span>
                           <span className="text-2xl font-black font-mono text-rose-400">
-                            {resellers.filter(r => (r.creditsBalance ?? 100) < 10).length}
+                            {resellers.filter(r => r.creditsBalance !== undefined && r.creditsBalance < 10).length}
                           </span>
                           <span className="text-[10px] text-slate-500 block">Kredisi Azalan Bayiler</span>
                         </div>
@@ -3124,15 +3126,16 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
                                     (r.email || '').toLowerCase().includes(q);
                                   if (!match) return false;
                                 }
-                                const cred = r.creditsBalance ?? 100;
+                                if (r.creditsBalance === undefined && dealerCreditFilter !== 'all') return false;
+                                const cred = r.creditsBalance ?? 0;
                                 if (dealerCreditFilter === 'low') return cred < 10;
                                 if (dealerCreditFilter === 'medium') return cred >= 10 && cred <= 50;
                                 if (dealerCreditFilter === 'high') return cred > 50;
                                 return true;
                               })
                               .map(r => {
-                                const cred = r.creditsBalance ?? 100;
-                                const isLow = cred < 10;
+                                const cred = r.creditsBalance;
+                                const isLow = cred !== undefined && cred < 10;
                                 const isZero = cred === 0;
 
                                 return (
@@ -3170,7 +3173,7 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
                                             ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 animate-pulse'
                                             : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
                                         }`}>
-                                          {cred} Seans
+                                          {cred ?? '—'} Seans
                                         </span>
                                         {isLow && !isZero && (
                                           <span className="text-[9px] text-amber-400 font-bold mt-0.5">Kritik Bakiye</span>
@@ -5804,13 +5807,9 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
 
                   <div>
                     <label className="block text-slate-300 font-semibold mb-1">Seans Kredi Bakiyesi</label>
-                    <input
-                      type="number"
-                      min={0}
-                      value={editMemberCredits}
-                      onChange={(e) => setEditMemberCredits(Number(e.target.value) || 0)}
-                      className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-slate-100 outline-none focus:border-indigo-500 font-mono"
-                    />
+                    <div className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 font-mono">
+                      {memberToEditSponsorship?.creditsBalance ?? '—'}
+                    </div>
                   </div>
 
                   <div className="sm:col-span-2 flex items-center gap-3 pt-1">
@@ -5863,7 +5862,7 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
                     Sistemi Sıfırlamak İstediğinizden Emin Misiniz?
                   </h3>
                   <p className="text-xs text-rose-300 font-medium">
-                    Tüm simülasyon, test ve sahte veriler silinecektir.
+                    `USR-ADMIN` dışındaki üyeler ve tüm işlem kayıtları veritabanından kalıcı olarak silinecektir.
                   </p>
                 </div>
               </div>
@@ -5871,13 +5870,22 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
               <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-2 text-xs text-slate-300">
                 <p className="font-semibold text-rose-300">Devam edildiğinde yapılacak işlemler:</p>
                 <ul className="list-disc list-inside space-y-1 text-slate-400">
-                  <li>Sistemdeki tüm simülasyon, demo ve sahte kullanıcılar silinir</li>
-                  <li>Finans sistemleri, cüzdanlar ve komisyon kayıtları temizlenir</li>
-                  <li>Havuz ve seans kredisi sayaçları sıfırlanır</li>
-                  <li><strong>Yönetici hesabı hariç</strong> her şey sıfırlanır ve sistem temiz olarak sıfırdan başlar</li>
+                  <li>`USR-ADMIN` dışındaki tüm üyeler ve cüzdanları silinir</li>
+                  <li>Sipariş, komisyon, çekim, muhasebe, ödeme ve bildirim kayıtları temizlenir</li>
+                  <li>Yönetici cüzdanı ve sistem havuzları sıfırlanır; yönetici hesabı ve sistem ayarları korunur</li>
                 </ul>
               </div>
 
+              <label className="block space-y-1.5 text-xs font-semibold text-slate-200">
+                Onaylamak için SIFIRLA yazın
+                <input
+                  value={resetConfirmation}
+                  onChange={(event) => setResetConfirmation(event.target.value)}
+                  disabled={isResettingSystem}
+                  className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm"
+                  autoComplete="off"
+                />
+              </label>
               <div className="flex items-center justify-end gap-3 pt-2">
                 <button
                   type="button"
@@ -5890,7 +5898,7 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
 
                 <button
                   type="button"
-                  disabled={isResettingSystem}
+                  disabled={isResettingSystem || resetConfirmation !== 'SIFIRLA'}
                   onClick={handleExecuteResetSystem}
                   className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold shadow-lg shadow-rose-950/70 cursor-pointer disabled:opacity-50 flex items-center gap-2"
                 >
@@ -7148,7 +7156,7 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
                 <div className="flex items-center justify-between text-slate-400">
                   <span>Mevcut Kredi Bakiyesi:</span>
                   <span className="font-mono font-bold text-emerald-400 text-sm">
-                    {creditTargetMember.creditsBalance ?? (checkMemberAccess(creditTargetMember).isAllowed ? 100 : 0)} Seans
+                    {creditTargetMember.creditsBalance ?? '—'} Seans
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-slate-400">
@@ -7541,7 +7549,7 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
                 <div className="p-2 rounded-xl bg-slate-900">
                   <span className="text-[10px] text-slate-400 block">Mevcut Bakiye</span>
                   <span className="text-lg font-black font-mono text-slate-100">
-                    {creditModalReseller.creditsBalance ?? 100}
+                    {creditModalReseller.creditsBalance ?? '—'}
                   </span>
                   <span className="text-[9px] text-slate-500 block">Seans</span>
                 </div>
@@ -7564,11 +7572,13 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
                 <div className="p-2 rounded-xl bg-emerald-950/40 border border-emerald-500/40">
                   <span className="text-[10px] text-emerald-300 block font-bold">Yeni Bakiye</span>
                   <span className="text-lg font-black font-mono text-emerald-400">
-                    {creditModalActionType === 'add' 
-                      ? (creditModalReseller.creditsBalance ?? 100) + Number(creditModalAmount || 0)
-                      : creditModalActionType === 'deduct'
-                      ? Math.max(0, (creditModalReseller.creditsBalance ?? 100) - Number(creditModalAmount || 0))
-                      : Number(creditModalAmount || 0)}
+                    {creditModalActionType === 'set'
+                      ? Number(creditModalAmount || 0)
+                      : creditModalReseller.creditsBalance === undefined
+                      ? '—'
+                      : creditModalActionType === 'add'
+                      ? creditModalReseller.creditsBalance + Number(creditModalAmount || 0)
+                      : Math.max(0, creditModalReseller.creditsBalance - Number(creditModalAmount || 0))}
                   </span>
                   <span className="text-[9px] text-emerald-300/80 block">Seans</span>
                 </div>

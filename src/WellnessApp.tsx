@@ -68,7 +68,8 @@ import {
 import { 
   Reseller,
   getActiveResellerSession,
-  deductScanCreditFromDealer, 
+  deductScanCreditFromDealer,
+  refundScanCreditToDealer,
   getStoredReferralCode, 
   clearStoredReferralCode,
   getResellerByCode, 
@@ -99,6 +100,7 @@ export default function WellnessApp({
 } = {}) {
   useKeyboardAvoidance();
   const initialNav = useRef<Partial<AppNavigationState>>(parseCurrentUrlState()).current;
+  const activeScanRequestIdRef = useRef<string | null>(null);
 
   // 1. Navigation & History State
   const [activeTab, setActiveTab] = useState<ActiveTab>(() => initialNav.activeTab || 'camera');
@@ -677,10 +679,6 @@ export default function WellnessApp({
   useEffect(() => {
     if (!currentUser?.uid) return;
 
-    fetchMemberProfile(currentUser.uid).then((profile) => {
-      if (profile) setCurrentUser(profile);
-    });
-
     const unsubscribe = subscribeToMemberStatus(currentUser.uid, (updatedMember) => {
       if (updatedMember) {
         setCurrentUser(updatedMember);
@@ -770,6 +768,35 @@ export default function WellnessApp({
     }
   };
 
+  const handleScanStart = async (): Promise<string | null> => {
+    const requestId = `SCAN-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
+    const res = await deductScanCreditFromDealer(currentUser?.uid, { scanCost: 1, requestId });
+    if (!res.success) {
+      if (res.remainingCredits <= 0 && (currentUser?.role === 'dealer' || currentUser?.dealerDetails)) {
+        setTimeout(() => {
+          setIsResellerDashboardOpen(true);
+        }, 1500);
+      }
+      return res.message || 'Seans kredisi düşülemedi. Lütfen tekrar deneyin.';
+    }
+    activeScanRequestIdRef.current = requestId;
+    if (currentUser && typeof res.remainingCredits === 'number') {
+      setCurrentUser((prev) => prev ? { ...prev, creditsBalance: res.remainingCredits } : prev);
+    }
+    return null;
+  };
+
+  const handleScanCancel = () => {
+    const requestId = activeScanRequestIdRef.current;
+    if (!requestId) return;
+    activeScanRequestIdRef.current = null;
+    refundScanCreditToDealer(currentUser?.uid, requestId).then((res) => {
+      if (res) {
+        setCurrentUser((prev) => prev ? { ...prev, creditsBalance: res.remainingCredits } : prev);
+      }
+    }).catch(console.error);
+  };
+
   const handleScanComplete = (result: ScanResult) => {
     saveScanResult(result, {
       uid: currentUser?.uid,
@@ -777,25 +804,7 @@ export default function WellnessApp({
       fullName: currentUser?.fullName
     });
     setScanHistory((prev) => [result, ...prev.filter(s => s.id !== result.id)]);
-
-    // Deduct credit from Dealer/Reseller credit pool in real-time
-    // (Atomic Firestore transaction + unique requestId prevents double-spend on double triggers)
-    deductScanCreditFromDealer(currentUser?.uid, {
-      scanCost: 1,
-      requestId: result?.id || `SCAN-${Date.now()}`
-    }).then((res) => {
-      if (res.success && typeof res.remainingCredits === 'number') {
-        if (currentUser) {
-          setCurrentUser((prev) => prev ? { ...prev, creditsBalance: res.remainingCredits } : prev);
-        }
-        // If credits run out (0 or less), automatically redirect dealer to package purchase modal
-        if (res.remainingCredits <= 0 && (currentUser?.role === 'dealer' || currentUser?.dealerDetails)) {
-          setTimeout(() => {
-            setIsResellerDashboardOpen(true);
-          }, 1500);
-        }
-      }
-    }).catch(console.error);
+    activeScanRequestIdRef.current = null;
 
     if (autoStartPostScan && lastPreScan && pendingComparisonTreatment) {
       setComparisonPair({
@@ -993,6 +1002,8 @@ export default function WellnessApp({
       <main className="flex-1 flex flex-col pb-[calc(6rem+env(safe-area-inset-bottom,0px))] lg:pb-8 transition-all duration-300">
         {activeTab === 'camera' && (
           <CameraView
+            onScanStart={handleScanStart}
+            onScanCancel={handleScanCancel}
             onScanComplete={handleScanComplete}
             onOpenFrequencySelector={() => handleNavigate('islamic')}
             onOpenUserGuide={() => setIsUserGuideOpen(true)}

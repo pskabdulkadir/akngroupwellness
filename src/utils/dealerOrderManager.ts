@@ -1,18 +1,5 @@
-import { 
-  doc, 
-  getDoc, 
-  setDoc, 
-  collection, 
-  getDocs,
-  query,
-  onSnapshot,
-  where,
-  limit,
-  Unsubscribe,
-  db
-} from '../lib/db';
-import { DealerPackage } from './resellerManager';
-import { BANK_INFO } from './authManager';
+import { doc, setDoc, Unsubscribe, db } from '../lib/db';
+import type { DealerPackage } from '../config/dealerPackages';
 
 export interface DealerPackageOrder {
   id: string;
@@ -61,20 +48,38 @@ export function saveLocalDealerOrders(orders: DealerPackageOrder[]): void {
  * Fetch all dealer package purchase requests
  */
 export async function getAllDealerPackageOrders(): Promise<DealerPackageOrder[]> {
-  try {
-    const colRef = collection(db, 'dealer_package_orders');
-    const snapshot = await getDocs(colRef);
-    if (!snapshot.empty) {
-      const list: DealerPackageOrder[] = [];
-      snapshot.forEach(docSnap => {
-        list.push(docSnap.data() as DealerPackageOrder);
+  const { getAdminToken } = await import('./adminSession');
+  const token = getAdminToken();
+  if (token) {
+    try {
+      const response = await fetch('/api/v1/admin/dealer-package-orders', {
+        headers: { Authorization: `Bearer ${token}` },
       });
-      list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-      saveLocalDealerOrders(list);
-      return list;
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || data.status !== 'success') return [];
+      const orders: DealerPackageOrder[] = (data.orders || []).map((order: any) => ({
+        id: order.order_id,
+        resellerId: order.reseller_id,
+        resellerName: order.reseller_name || order.reseller_id,
+        resellerEmail: order.reseller_email || '',
+        resellerPhone: order.reseller_phone || '',
+        packageId: order.package_id,
+        packageName: order.package_name,
+        scanCredits: Number(order.scan_credits) || 0,
+        price: Number(order.amount) || 0,
+        priceText: `${Number(order.amount || 0).toLocaleString('tr-TR')} $`,
+        status: String(order.status || 'PENDING').toLowerCase() as DealerPackageOrder['status'],
+        paymentMethod: 'bank_transfer',
+        paymentReference: order.payment_reference || '',
+        adminNote: order.admin_note || undefined,
+        createdAt: order.created_at,
+        approvedAt: order.approved_at || undefined,
+      }));
+      saveLocalDealerOrders(orders);
+      return orders;
+    } catch {
+      return [];
     }
-  } catch (err) {
-    console.debug('Firestore get dealer package orders fallback:', err);
   }
   return getLocalDealerOrders();
 }
@@ -87,47 +92,42 @@ export function subscribeToDealerPackageOrders(
   resellerFilter?: string
 ): Unsubscribe {
   const cleanFilter = (resellerFilter || '').trim().toLowerCase();
+  let active = true;
+  let refreshing = false;
+  const refreshServerOrders = async () => {
+    if (refreshing) return;
+    refreshing = true;
+    const orders = await getAllDealerPackageOrders();
+    if (active) onUpdate(orders.filter((order) => {
+      if (!cleanFilter) return true;
+      return [order.resellerId, order.resellerEmail, order.resellerName]
+        .some((value) => (value || '').trim().toLowerCase() === cleanFilter);
+    }));
+    refreshing = false;
+  };
   const matches = (order: DealerPackageOrder) => {
     if (!cleanFilter) return true;
     return [order.resellerId, order.resellerEmail, order.resellerName]
       .some(value => (value || '').trim().toLowerCase() === cleanFilter);
   };
   const emitLocal = () => onUpdate(getLocalDealerOrders().filter(matches));
-  emitLocal();
+  void refreshServerOrders();
+  const timer = window.setInterval(() => void refreshServerOrders(), 15000);
 
   const handleLocal = () => emitLocal();
   window.addEventListener('storage', handleLocal);
   window.addEventListener('aurabio_dealer_orders_updated', handleLocal);
 
-  try {
-    const rawFilter = (resellerFilter || '').trim();
-    const source = collection(db, 'dealer_package_orders');
-    const orderQuery = cleanFilter
-      ? query(source, where('resellerId', '==', rawFilter), limit(100))
-      : query(source, limit(500));
-    const unsub = onSnapshot(orderQuery, (snapshot) => {
-      const list = snapshot.docs.map((docSnap: any) => ({ ...docSnap.data(), id: docSnap.id } as DealerPackageOrder))
-        .filter(matches)
-        .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-      onUpdate(list);
-    }, (err) => console.debug('Firestore dealer orders live sync notice:', err));
-
-    return () => {
-      window.removeEventListener('storage', handleLocal);
-      window.removeEventListener('aurabio_dealer_orders_updated', handleLocal);
-      unsub();
-    };
-  } catch {
-    return () => {
-      window.removeEventListener('storage', handleLocal);
-      window.removeEventListener('aurabio_dealer_orders_updated', handleLocal);
-    };
-  }
+  return () => {
+    active = false;
+    window.clearInterval(timer);
+    window.removeEventListener('storage', handleLocal);
+    window.removeEventListener('aurabio_dealer_orders_updated', handleLocal);
+  };
 }
 
 /**
- * Reseller creates a package purchase order (Instant Credit Card 3D or Bank Transfer)
- * Also extends the dealer's activity period by the package's activity days
+ * Reseller creates a package purchase order through the supported server payment flows.
  */
 export async function requestDealerPackagePurchase(
   resellerId: string,
@@ -137,7 +137,8 @@ export async function requestDealerPackagePurchase(
   pkg: DealerPackage,
   paymentReference?: string,
   paymentMethod: 'bank_transfer' | 'credit_card_3d' | 'usdt_trc20' = 'bank_transfer',
-  paymentConfirmation?: { order_id: string; merchant_oid: string; transaction_id: string }
+  paymentConfirmation?: { order_id: string; merchant_oid: string; transaction_id: string },
+  requestedOrderId?: string
 ): Promise<{
   success: boolean;
   message: string;
@@ -145,11 +146,14 @@ export async function requestDealerPackagePurchase(
   activityExtended?: boolean;
 }> {
   try {
-    const orderId = paymentConfirmation?.order_id || `DORD-${crypto.randomUUID()}`;
+    const orderId = paymentConfirmation?.order_id || requestedOrderId || `DORD-${crypto.randomUUID()}`;
     const nowIso = new Date().toISOString();
     const isInstantPayment = paymentMethod === 'credit_card_3d';
     if (isInstantPayment && !paymentConfirmation) {
       return { success: false, message: 'Doğrulanmış Sanal POS ödemesi olmadan sipariş oluşturulamaz.' };
+    }
+    if (!isInstantPayment && paymentMethod !== 'bank_transfer') {
+      return { success: false, message: 'Bu ödeme yöntemi için sunucu onaylı sipariş akışı bulunmuyor.' };
     }
 
     const newOrder: DealerPackageOrder = {
@@ -165,18 +169,38 @@ export async function requestDealerPackagePurchase(
       priceText: pkg.priceText || `${pkg.price.toLocaleString('tr-TR')} $`,
       status: isInstantPayment ? 'approved' : 'pending',
       paymentMethod,
-      paymentReference:
-        paymentReference ||
-        (paymentMethod === 'credit_card_3d'
-          ? '3D-SECURE-KREDI-KARTI'
-          : paymentMethod === 'usdt_trc20'
-          ? 'USDT-TRC20-ONAYLI'
-          : ''),
+      paymentReference: paymentReference || (isInstantPayment ? '3D-SECURE-KREDI-KARTI' : ''),
       createdAt: nowIso,
       ...(isInstantPayment ? { approvedAt: nowIso } : {}),
     };
 
     let activityExtended = false;
+    if (!isInstantPayment && paymentMethod === 'bank_transfer') {
+      const [{ getAdminToken }, { getMemberWalletToken }] = await Promise.all([
+        import('./adminSession'),
+        import('./authManager'),
+      ]);
+      const token = getAdminToken() || getMemberWalletToken();
+      if (!token) return { success: false, message: 'Bayi oturumu sunucuda doğrulanamadı.' };
+      const response = await fetch(`/api/v1/members/${encodeURIComponent(resellerId)}/dealer-package-orders`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          order_id: orderId,
+          package_id: pkg.id,
+          payment_reference: paymentReference || '',
+        }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || result.status !== 'success' || !result.order) {
+        return { success: false, message: result.message || 'Havale siparişi sunucuya kaydedilemedi.' };
+      }
+      newOrder.scanCredits = Number(result.order.scan_credits) || pkg.scanCredits;
+      newOrder.price = Number(result.order.amount) || pkg.price;
+      newOrder.packageName = result.order.package_name || pkg.name;
+      newOrder.status = String(result.order.status || 'PENDING').toLowerCase() as DealerPackageOrder['status'];
+    }
+
     if (isInstantPayment && paymentConfirmation) {
       const whRes = await fetch('/api/v1/integrations/order-commission', {
         method: 'POST',
@@ -206,40 +230,6 @@ export async function requestDealerPackagePurchase(
       const { syncFrekansWithMonolineEngine } = await import('./monolineSyncBridge');
       await syncFrekansWithMonolineEngine();
       window.dispatchEvent(new CustomEvent('monoline_webhook_triggered'));
-
-      try {
-        const {
-          getAllResellers,
-          saveLocalResellers,
-          getActiveResellerSession,
-          setActiveResellerSession,
-        } = await import('./resellerManager');
-        const resellers = await getAllResellers();
-        const cleanEmail = (resellerEmail || '').trim().toLowerCase();
-        const rIdx = resellers.findIndex(
-          (r) => r.uid === resellerId || (cleanEmail && r.email?.toLowerCase() === cleanEmail)
-        );
-        if (rIdx >= 0) {
-          const reseller = resellers[rIdx];
-          const updatedCredits = (Number(reseller.creditsBalance) || 0) + pkg.scanCredits;
-          reseller.creditsBalance = updatedCredits;
-          reseller.dealerPackageId = pkg.id;
-          reseller.status = 'active';
-          reseller.updatedAt = nowIso;
-          resellers[rIdx] = reseller;
-          saveLocalResellers(resellers);
-          const activeReseller = getActiveResellerSession();
-          if (activeReseller?.uid === reseller.uid) setActiveResellerSession(reseller);
-          await setDoc(doc(db, 'resellers', reseller.uid), {
-            creditsBalance: updatedCredits,
-            dealerPackageId: pkg.id,
-            status: 'active',
-            updatedAt: nowIso,
-          }, { merge: true }).catch(() => {});
-        }
-      } catch (credErr) {
-        console.debug('Instant credit update notice:', credErr);
-      }
     }
 
     const currentOrders = getLocalDealerOrders();
@@ -261,7 +251,7 @@ export async function requestDealerPackagePurchase(
       activityExtended,
       message: isInstantPayment
         ? `Ödemeniz onaylandı (${orderId})! +${pkg.scanCredits} Seans Kredisi bayi hesabınıza anında yüklendi.${activityStatusSuffix}`
-        : `Siparişiniz (${orderId}) başarıyla oluşturuldu (+${pkg.scanCredits} Seans Kredisi).${activityStatusSuffix}`,
+        : `Havale siparişiniz (${orderId}) oluşturuldu. Krediler yönetici onayından sonra yüklenecektir.`,
       order: newOrder,
     };
   } catch (err: any) {
@@ -282,182 +272,61 @@ export async function adminApproveDealerPackageOrder(
 ): Promise<{ success: boolean; message: string; newTotalCredits?: number }> {
   try {
     const allOrders = await getAllDealerPackageOrders();
-    const orderIndex = allOrders.findIndex(o => o.id === orderId);
-    if (orderIndex === -1) {
-      return { success: false, message: 'Sipariş bulunamadı.' };
-    }
+    const orderIndex = allOrders.findIndex((item) => item.id === orderId);
+    if (orderIndex < 0) return { success: false, message: 'Sipariş bulunamadı.' };
 
     const order = allOrders[orderIndex];
-    if (order.status === 'approved') {
-      return { success: false, message: 'Bu sipariş daha önce onaylanmıştır.' };
+    const { getAdminToken } = await import('./adminSession');
+    const token = getAdminToken();
+    if (!token) return { success: false, message: 'Yönetici oturumu sona erdi. Yeniden giriş yapın.' };
+
+    const response = await fetch(`/api/v1/admin/dealer-package-orders/${encodeURIComponent(orderId)}/approve`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ admin_note: adminNote }),
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok || result.status !== 'success' || typeof result.remainingCredits !== 'number') {
+      return { success: false, message: result.message || 'Sipariş sunucuda onaylanamadı.' };
     }
 
-    // 1. Credit Reseller / Dealer
-    const { getAllResellers, saveLocalResellers, getActiveResellerSession, setActiveResellerSession, generateUniqueReferralCode } = await import('./resellerManager');
-    const resellers = await getAllResellers();
-    const cleanEmail = (order.resellerEmail || '').trim().toLowerCase();
-    const cleanPhone = (order.resellerPhone || '').replace(/[^0-9]/g, '');
-    
-    let rIdx = resellers.findIndex(r => 
-      (order.resellerId && r.uid === order.resellerId) || 
-      (cleanEmail && r.email && r.email.toLowerCase() === cleanEmail) ||
-      (cleanPhone && r.phone && r.phone.replace(/[^0-9]/g, '') === cleanPhone)
-    );
-    
-    let updatedCredits = order.scanCredits;
-
-    if (rIdx >= 0) {
-      const res = resellers[rIdx];
-      const curCredits = typeof res.creditsBalance === 'number' ? res.creditsBalance : 0;
-      updatedCredits = curCredits + order.scanCredits;
-      res.creditsBalance = updatedCredits;
-      res.dealerPackageId = order.packageId;
-      res.status = 'active';
-      res.updatedAt = new Date().toISOString();
-      resellers[rIdx] = res;
-      saveLocalResellers(resellers);
-
-      const activeRes = getActiveResellerSession();
-      if (activeRes && (activeRes.uid === res.uid || (activeRes.email && activeRes.email.toLowerCase() === cleanEmail))) {
-        setActiveResellerSession(res);
-      }
-
-      try {
-        const docRef = doc(db, 'resellers', res.uid);
-        await setDoc(docRef, { 
-          creditsBalance: updatedCredits, 
-          dealerPackageId: order.packageId,
-          status: 'active',
-          updatedAt: res.updatedAt 
-        }, { merge: true });
-      } catch (e) {
-        console.debug('Firestore update reseller after approval notice:', e);
-      }
-    } else {
-      // Create new Reseller record if it didn't exist in resellers table
-      const newResellerUid = order.resellerId || `RESELLER-${Date.now()}`;
-      const newReferralCode = generateUniqueReferralCode();
-      const newResellerObj = {
-        uid: newResellerUid,
-        resellerName: order.resellerName || 'Bayi',
-        email: order.resellerEmail || '',
-        phone: order.resellerPhone || '',
-        referralCode: newReferralCode,
-        commissionRate: 20,
-        creditsBalance: order.scanCredits,
-        dealerPackageId: order.packageId,
-        bankInfo: {
-          bankName: '',
-          accountHolder: order.resellerName || '',
-          iban: ''
-        },
-        status: 'active' as const,
-        totalEarnings: 0,
-        paidEarnings: 0,
-        pendingEarnings: 0,
-        totalSalesAmount: 0,
-        totalReferredUsers: 0,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        notes: `Paket siparişi (${order.id}) ile otomatik oluşturuldu.`
-      };
-      resellers.push(newResellerObj);
-      saveLocalResellers(resellers);
-
-      try {
-        const docRef = doc(db, 'resellers', newResellerUid);
-        await setDoc(docRef, newResellerObj, { merge: true });
-      } catch (e) {
-        console.debug('Firestore create reseller notice:', e);
-      }
-    }
-
-    // 2. Also credit User Member profile if exists
-    const { getActiveMemberSession, fetchMemberProfile, getLocalMembersDirectory, saveToLocalMembersDirectory } = await import('./authManager');
-    const localMembers = getLocalMembersDirectory();
-    let user = localMembers.find(m => 
-      (order.resellerId && m.uid === order.resellerId) ||
-      (cleanEmail && m.email && m.email.toLowerCase() === cleanEmail) ||
-      (cleanPhone && m.phone && m.phone.replace(/[^0-9]/g, '') === cleanPhone)
-    ) || getActiveMemberSession();
-
-    if (!user && order.resellerId) {
-      user = await fetchMemberProfile(order.resellerId);
-    }
-
-    if (user) {
-      const curUserCredits = typeof user.creditsBalance === 'number' ? user.creditsBalance : 0;
-      const finalCredits = curUserCredits + order.scanCredits;
-      user.creditsBalance = finalCredits;
-      user.dealerPackageId = order.packageId;
-      user.role = 'dealer';
-      user.dealerStatus = 'approved';
-      user.isAllowed = true;
-      if (user.dealerDetails) {
-        user.dealerDetails.creditsBalance = finalCredits;
-        user.dealerDetails.companyName = order.resellerName || user.dealerDetails.companyName;
-      }
-
-      saveToLocalMembersDirectory(user);
-      const activeMember = getActiveMemberSession();
-      if (activeMember && activeMember.uid === user.uid) {
-        localStorage.setItem('aurabio_active_session_v1', JSON.stringify(user));
-        window.dispatchEvent(new CustomEvent('aurabio_session_updated', { detail: user }));
-      }
-
-      try {
-        const docRef = doc(db, 'users', user.uid);
-        await setDoc(docRef, {
-          creditsBalance: finalCredits,
-          dealerPackageId: order.packageId,
-          role: 'dealer',
-          dealerStatus: 'approved',
-          isAllowed: true,
-          updatedAt: new Date().toISOString()
-        }, { merge: true });
-      } catch (e) {
-        console.debug('Firestore update user after approval notice:', e);
-      }
-    }
-
-    // 3. Mark order approved
     order.status = 'approved';
-    order.approvedAt = new Date().toISOString();
+    order.approvedAt = result.order?.approved_at || new Date().toISOString();
     if (adminNote) order.adminNote = adminNote;
-
     allOrders[orderIndex] = order;
     saveLocalDealerOrders(allOrders);
 
-    try {
-      const docRef = doc(db, 'dealer_package_orders', orderId);
-      await setDoc(docRef, order, { merge: true });
-    } catch (fsErr) {
-      console.warn('Firestore approve dealer order notice:', fsErr);
+    const { getLocalResellers, getActiveResellerSession, setActiveResellerSession, saveLocalResellers } = await import('./resellerManager');
+    const resellers = getLocalResellers();
+    const reseller = resellers.find((item) => item.uid === order.resellerId);
+    if (reseller) {
+      const updated = { ...reseller, creditsBalance: undefined, dealerPackageId: order.packageId, status: 'active' as const };
+      saveLocalResellers(resellers.map((item) => item.uid === reseller.uid ? updated : item));
+      if (getActiveResellerSession()?.uid === reseller.uid) setActiveResellerSession(updated);
     }
 
-    // 5. Ensure Monoline Commission Engine Webhook is synced for approved order
-    try {
-      await fetch('/api/v1/integrations/order-commission', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          user_id: order.resellerId,
-          reseller_name: order.resellerName,
-          reseller_email: order.resellerEmail,
-          order_id: order.id,
-          order_amount: order.price,
-          package_id: order.packageId,
-          timestamp: order.approvedAt || new Date().toISOString(),
-        }),
-      });
-      const { syncFrekansWithMonolineEngine } = await import('./monolineSyncBridge');
-      await syncFrekansWithMonolineEngine();
-      window.dispatchEvent(new CustomEvent('monoline_webhook_triggered'));
-    } catch (whErr) {
-      console.debug('Monoline webhook approval sync notice:', whErr);
+    const { getActiveMemberSession, getLocalMembersDirectory, saveToLocalMembersDirectory } = await import('./authManager');
+    const user = getLocalMembersDirectory().find((item) => item.uid === order.resellerId);
+    if (user) {
+      const updated = {
+        ...user,
+        creditsBalance: undefined,
+        dealerPackageId: order.packageId,
+        role: 'dealer' as const,
+        dealerStatus: 'approved' as const,
+        isAllowed: true,
+        dealerDetails: user.dealerDetails ? { ...user.dealerDetails, creditsBalance: undefined } : user.dealerDetails,
+      };
+      saveToLocalMembersDirectory(updated);
+      if (getActiveMemberSession()?.uid === updated.uid) {
+        localStorage.setItem('aurabio_active_session_v1', JSON.stringify(updated));
+        window.dispatchEvent(new CustomEvent('aurabio_session_updated', { detail: updated }));
+      }
     }
 
-    // Broadcast globally
     window.dispatchEvent(new CustomEvent('aurabio_reseller_session_updated'));
     window.dispatchEvent(new CustomEvent('aurabio_dealer_orders_updated'));
     window.dispatchEvent(new CustomEvent('aurabio_resellers_updated'));
@@ -465,8 +334,8 @@ export async function adminApproveDealerPackageOrder(
 
     return {
       success: true,
-      message: `Sipariş onaylandı! ${order.resellerName} bayisine +${order.scanCredits} seans kredisi başarıyla yüklendi. (Yeni Kredi Bakiyesi: ${updatedCredits})`,
-      newTotalCredits: updatedCredits
+      message: `Sipariş onaylandı. Yeni kredi bakiyesi: ${result.remainingCredits}`,
+      newTotalCredits: result.remainingCredits,
     };
   } catch (err: any) {
     console.error('Admin approve dealer order error:', err);
@@ -482,25 +351,28 @@ export async function adminRejectDealerPackageOrder(
   adminNote?: string
 ): Promise<{ success: boolean; message: string }> {
   try {
-    const allOrders = await getAllDealerPackageOrders();
-    const orderIndex = allOrders.findIndex(o => o.id === orderId);
-    if (orderIndex === -1) {
-      return { success: false, message: 'Sipariş bulunamadı.' };
+    const { getAdminToken } = await import('./adminSession');
+    const token = getAdminToken();
+    if (!token) return { success: false, message: 'Yönetici oturumu sona erdi. Yeniden giriş yapın.' };
+    const response = await fetch(`/api/v1/admin/dealer-package-orders/${encodeURIComponent(orderId)}/reject`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ admin_note: adminNote }),
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok || result.status !== 'success') {
+      return { success: false, message: result.message || 'Sipariş sunucuda reddedilemedi.' };
     }
-
-    const order = allOrders[orderIndex];
-    order.status = 'rejected';
-    order.rejectedAt = new Date().toISOString();
-    if (adminNote) order.adminNote = adminNote;
-
-    allOrders[orderIndex] = order;
-    saveLocalDealerOrders(allOrders);
-
-    try {
-      const docRef = doc(db, 'dealer_package_orders', orderId);
-      await setDoc(docRef, order, { merge: true });
-    } catch (fsErr) {
-      console.warn('Firestore reject dealer order notice:', fsErr);
+    const allOrders = await getAllDealerPackageOrders();
+    const orderIndex = allOrders.findIndex((order) => order.id === orderId);
+    if (orderIndex >= 0) {
+      allOrders[orderIndex] = {
+        ...allOrders[orderIndex],
+        status: 'rejected',
+        rejectedAt: new Date().toISOString(),
+        adminNote,
+      };
+      saveLocalDealerOrders(allOrders);
     }
 
     window.dispatchEvent(new CustomEvent('aurabio_dealer_orders_updated'));

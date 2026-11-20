@@ -45,9 +45,9 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { UserMember } from '../utils/authManager';
+import type { DealerPackage } from '../config/dealerPackages';
 import { 
   Reseller, 
-  DealerPackage, 
   getDealerPackages, 
   getActiveResellerSession, 
   getStoredReferralCode, 

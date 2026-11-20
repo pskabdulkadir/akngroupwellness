@@ -74,6 +74,14 @@ function persistCollectionMap(colName: string): void {
   }
 }
 
+function stripClientBalance(colName: string, value: Record<string, any>): Record<string, any> {
+  if (colName !== 'users' && colName !== 'resellers') return value;
+  const { creditsBalance, session_credits, ...rest } = value;
+  if (!rest.dealerDetails || typeof rest.dealerDetails !== 'object') return rest;
+  const { creditsBalance: dealerCreditsBalance, ...dealerDetails } = rest.dealerDetails;
+  return { ...rest, dealerDetails };
+}
+
 function notifyListeners(colName: string): void {
   const cListeners = listeners.get(colName);
   if (cListeners) {
@@ -129,8 +137,9 @@ export async function setDoc(
   const docId = docRef?.id || 'default';
 
   const colMap = getCollectionMap(colName);
-  const existing = colMap[docId] || {};
-  colMap[docId] = options?.merge ? { ...existing, ...data } : { ...data };
+  const existing = stripClientBalance(colName, colMap[docId] || {});
+  const next = stripClientBalance(colName, data);
+  colMap[docId] = options?.merge ? { ...existing, ...next } : next;
   persistCollectionMap(colName);
   notifyListeners(colName);
 }
@@ -143,8 +152,8 @@ export async function updateDoc(
   const docId = docRef?.id || 'default';
 
   const colMap = getCollectionMap(colName);
-  const existing = colMap[docId] || {};
-  colMap[docId] = { ...existing, ...data };
+  const existing = stripClientBalance(colName, colMap[docId] || {});
+  colMap[docId] = { ...existing, ...stripClientBalance(colName, data) };
   persistCollectionMap(colName);
   notifyListeners(colName);
 }

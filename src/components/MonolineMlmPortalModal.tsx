@@ -99,6 +99,7 @@ export const MonolineMlmPortalModal: React.FC<MonolineMlmPortalModalProps> = ({
   } | null>(null);
   const [showDataBackupModal, setShowDataBackupModal] = useState<boolean>(false);
   const [showResetConfirmModal, setShowResetConfirmModal] = useState<boolean>(false);
+  const [resetConfirmation, setResetConfirmation] = useState('');
 
   useEffect(() => {
     setActiveTab(
@@ -900,26 +901,24 @@ export const MonolineMlmPortalModal: React.FC<MonolineMlmPortalModalProps> = ({
   };
 
   const executeResetSystem = async () => {
+    if (resetConfirmation !== 'SIFIRLA') return;
     setIsSubmitting(true);
     try {
-      wipeAllLocalApplicationData();
       const res = await fetch('/api/v1/reset', { method: 'POST' });
       const data = await res.json();
-      if (res.ok && data.state) {
-        applyServerState(data.state);
-        showNotice(
-          'success',
-          'Sistem sıfırlandı. Tüm simülasyon ve sahte veriler silindi, sistem temiz ve sıfırdan canlı üretime hazır.'
-        );
-        window.dispatchEvent(new CustomEvent('aurabio_members_updated'));
-        window.dispatchEvent(new CustomEvent('aurabio_resellers_updated'));
-        window.dispatchEvent(new CustomEvent('monoline_webhook_triggered'));
-      }
+      if (!res.ok || !data.state) throw new Error(data.message || 'Sıfırlama tamamlanamadı.');
+      wipeAllLocalApplicationData();
+      applyServerState(data.state);
+      showNotice('success', data.message || 'Fabrika sıfırlaması tamamlandı.');
+      window.dispatchEvent(new CustomEvent('aurabio_members_updated'));
+      window.dispatchEvent(new CustomEvent('aurabio_resellers_updated'));
+      window.dispatchEvent(new CustomEvent('monoline_webhook_triggered'));
+      setShowResetConfirmModal(false);
+      setResetConfirmation('');
     } catch (err: any) {
       showNotice('error', err?.message || 'Sistem sıfırlanırken hata oluştu.');
     } finally {
       setIsSubmitting(false);
-      setShowResetConfirmModal(false);
     }
   };
 
@@ -1670,19 +1669,28 @@ export const MonolineMlmPortalModal: React.FC<MonolineMlmPortalModalProps> = ({
                   Sistemi Sıfırlamak İstediğinizden Emin Misiniz?
                 </h3>
                 <p className="text-xs text-slate-500 font-medium">
-                  Tüm simülasyon ve demo sahte veriler silinecektir.
+                  Veritabanındaki `USR-ADMIN` dışındaki kullanıcılar ve tüm işlem kayıtları kalıcı olarak silinecektir.
                 </p>
               </div>
             </div>
             <div className="p-4 rounded-2xl bg-amber-50/70 border border-amber-200/80 text-xs text-amber-950 space-y-2">
               <p className="font-semibold">Bu işlem devam ettirildiğinde:</p>
               <ul className="list-disc list-inside space-y-1 text-slate-700">
-                <li>Sistemdeki tüm simülasyon, demo ve sahte veriler ve kullanıcılar silinir</li>
-                <li>Finans sistemleri, cüzdanlar, komisyonlar ve siparişler temizlenir</li>
-                <li>Havuz sayaçları ve seans kredisi havuzu sıfırlanır</li>
-                <li><strong>Yönetici hesabı hariç</strong> her şey sıfırlanır ve sistem sıfırdan başlar</li>
+                <li>`USR-ADMIN` dışındaki tüm üyeler ve bu üyelere bağlı cüzdanlar silinir</li>
+                <li>Sipariş, komisyon, çekim, muhasebe, ödeme ve bildirim kayıtları temizlenir</li>
+                <li>Yönetici cüzdanı ve sistem havuzları sıfırlanır; yönetici hesabı ve sistem ayarları korunur</li>
               </ul>
             </div>
+            <label className="block space-y-1.5 text-xs font-semibold text-slate-700">
+              Onaylamak için SIFIRLA yazın
+              <input
+                value={resetConfirmation}
+                onChange={(event) => setResetConfirmation(event.target.value)}
+                disabled={isSubmitting}
+                className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
+                autoComplete="off"
+              />
+            </label>
             <div className="flex items-center justify-end gap-3 pt-2">
               <button
                 type="button"
@@ -1695,7 +1703,7 @@ export const MonolineMlmPortalModal: React.FC<MonolineMlmPortalModalProps> = ({
               <button
                 type="button"
                 onClick={executeResetSystem}
-                disabled={isSubmitting}
+                disabled={isSubmitting || resetConfirmation !== 'SIFIRLA'}
                 className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 cursor-pointer shadow-sm disabled:opacity-50"
               >
                 {isSubmitting ? 'Sıfırlanıyor...' : 'Evet, Sistemi Tamamen Sıfırla'}

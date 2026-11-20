@@ -14,6 +14,7 @@ import {
 import { formatUsd } from './currency';
 import { getPackagePriceForRegion, resolveMemberRegion } from './walletRegion';
 import { loginAdmin, loginAdminWithMessage, loginAccountingWithMessage, clearAccountingToken } from './adminSession';
+import { DEFAULT_DEALER_PACKAGES } from '../config/dealerPackages';
 
 // ADMIN CREDENTIALS & CONSTANTS
 export const ADMIN_EMAILS = [
@@ -593,7 +594,8 @@ export function saveToLocalMembersDirectory(user: UserMember): void {
 
 export async function completePaidDealerRegistration(
   user: UserMember,
-  creditsBalance: number
+  totalCredits: number,
+  creditsAdded: number
 ): Promise<UserMember> {
   const existing = getLocalMembersDirectory().find((member) => member.uid === user.uid) || user;
   const wasPending = existing.paymentStatus !== 'PAID';
@@ -605,7 +607,7 @@ export async function completePaidDealerRegistration(
     isApproved: true,
     paymentStatus: 'PAID',
     dealerStatus: 'approved',
-    creditsBalance,
+    creditsBalance: totalCredits,
     dealerDetails: {
       ...existing.dealerDetails,
       companyName,
@@ -613,7 +615,7 @@ export async function completePaidDealerRegistration(
       taxOffice: existing.dealerDetails?.taxOffice || 'Belirtilmedi',
       businessField: existing.dealerDetails?.businessField || '',
       whatsapp: existing.dealerDetails?.whatsapp || existing.phone || '',
-      creditsBalance,
+      creditsBalance: totalCredits,
       approvedAt: now,
     },
   };
@@ -623,7 +625,10 @@ export async function completePaidDealerRegistration(
   window.dispatchEvent(new CustomEvent('aurabio_session_updated', { detail: updated }));
 
   try {
-    await setDoc(doc(db, 'users', updated.uid), updated, { merge: true });
+    const firestoreUser = structuredClone(updated);
+    delete firestoreUser.creditsBalance;
+    if (firestoreUser.dealerDetails) delete firestoreUser.dealerDetails.creditsBalance;
+    await setDoc(doc(db, 'users', updated.uid), firestoreUser, { merge: true });
   } catch (error) {
     console.debug('Paid dealer registration Firestore notice:', error);
   }
@@ -648,7 +653,7 @@ export async function completePaidDealerRegistration(
     taxNumber: updated.dealerDetails?.taxNumber || 'Belirtilmedi',
     taxOffice: updated.dealerDetails?.taxOffice || 'Belirtilmedi',
     commissionRate: 20,
-    creditsBalance,
+    creditsBalance: totalCredits,
     dealerPackageId: updated.dealerPackageId || 'pkg-5k',
     status: 'active' as const,
     joinedAt: updated.createdAt,
@@ -675,9 +680,9 @@ export async function completePaidDealerRegistration(
       resellerId: updated.uid,
       resellerName: companyName,
       type: 'purchase',
-      amount: creditsBalance,
-      previousBalance: 0,
-      newBalance: creditsBalance,
+      amount: creditsAdded,
+      previousBalance: totalCredits - creditsAdded,
+      newBalance: totalCredits,
       description: 'Ödemesi onaylanan bayi kaydı için paket kredisi ve paket alım bonusu tanımlandı.',
       performedBy: 'Sistem Ödeme Onayı',
     });
@@ -1025,7 +1030,6 @@ export async function registerMember(
       setActiveResellerSession,
       getPackagePurchaseCredits,
       recordCreditTransaction,
-      DEFAULT_DEALER_PACKAGES,
     } = await import('./resellerManager');
     const personalReferralCode = dealerApplicationData?.referralCode?.trim().toUpperCase() || generateUniqueReferralCode('AURA-BAYI');
 
@@ -1361,7 +1365,7 @@ export async function adminApproveDealer(
         referralCode: code,
         commissionRate,
         approvedAt: new Date().toISOString(),
-        creditsBalance: user.creditsBalance !== undefined ? user.creditsBalance : 100
+        creditsBalance: user.creditsBalance
       }
     };
 
@@ -1464,8 +1468,10 @@ export async function adminCreateDealerDirectly(data: {
 
     const uid = generateUid();
     const { generateUniqueReferralCode, getPackagePurchaseCredits } = await import('./resellerManager');
-    const initialCredits =
-      Number(data.initialCredits) || getPackagePurchaseCredits(data.dealerPackageId || 'pkg-5k');
+    const requestedInitialCredits = Number(data.initialCredits);
+    const initialCredits = Number.isFinite(requestedInitialCredits)
+      ? Math.max(0, Math.round(requestedInitialCredits))
+      : getPackagePurchaseCredits(data.dealerPackageId || 'pkg-5k');
     const referralCode = (data.customReferralCode || '').trim().toUpperCase() || generateUniqueReferralCode('AURA-BAYI');
     const commissionRate = data.commissionRate !== undefined ? Number(data.commissionRate) : 20;
 
@@ -1484,7 +1490,7 @@ export async function adminCreateDealerDirectly(data: {
       dealerStatus: 'approved',
       isDealerRequested: true,
       referralCode,
-      creditsBalance: initialCredits,
+      creditsBalance: 0,
       dealerPackageId: data.dealerPackageId || 'pkg-5k',
       dealerDetails: {
         companyName: cleanCompany,
@@ -1494,7 +1500,7 @@ export async function adminCreateDealerDirectly(data: {
         whatsapp: cleanPhone,
         referralCode,
         commissionRate,
-        creditsBalance: initialCredits,
+        creditsBalance: 0,
         dealerPackageId: data.dealerPackageId || 'silver-dealer',
         appliedAt: new Date().toISOString(),
         notes: data.notes || 'Yönetici tarafından doğrudan tanımlandı.',
@@ -1553,8 +1559,9 @@ export async function adminCreateDealerDirectly(data: {
         customReferralCode: referralCode,
         sponsorId: data.sponsorId || 'USR-ADMIN',
         keepCurrentSession: true,
+        deferMonolineSync: true,
         commissionRate,
-        initialCredits,
+        initialCredits: 0,
         notes: `Yönetici tarafından oluşturuldu. Başlangıç kredisi: ${initialCredits}`,
         bankInfo: {
           bankName: data.taxOffice || 'Belirtilmedi',
@@ -1567,7 +1574,8 @@ export async function adminCreateDealerDirectly(data: {
       try {
         const { getAdminToken } = await import('./adminSession');
         const adminToken = getAdminToken();
-        await fetch('/api/v1/members', {
+        if (!adminToken) throw new Error('Yönetici oturumu sona erdi. Yeniden giriş yapın.');
+        const response = await fetch('/api/v1/members', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -1590,8 +1598,37 @@ export async function adminCreateDealerDirectly(data: {
             assigned_leg: data.assignedLeg === 'RIGHT' ? 'RIGHT' : 'LEFT',
           }),
         });
+        const serverResult = await response.json().catch(() => ({}));
+        if (!response.ok || serverResult.status !== 'success' || serverResult.member?.user_id !== uid) {
+          throw new Error(serverResult.message || 'Bayi hesabı sunucuda ve kredi defterinde oluşturulamadı.');
+        }
+        const approvedCredits = Number(serverResult.member.session_credits);
+        if (!Number.isInteger(approvedCredits) || approvedCredits !== initialCredits) {
+          throw new Error('Sunucu başlangıç bakiyesini kredi defterine doğru kaydedemedi.');
+        }
+        newDealerUser.creditsBalance = approvedCredits;
+        if (newDealerUser.dealerDetails) newDealerUser.dealerDetails.creditsBalance = approvedCredits;
+        saveToLocalMembersDirectory(newDealerUser);
+        try {
+          await setDoc(doc(db, 'users', uid), {
+            creditsBalance: approvedCredits,
+            dealerDetails: { ...newDealerUser.dealerDetails, creditsBalance: approvedCredits },
+          }, { merge: true });
+        } catch (error) {
+          console.debug('Opening balance profile mirror notice:', error);
+        }
+        const { getLocalResellers, saveLocalResellers } = await import('./resellerManager');
+        const resellers = getLocalResellers().map((reseller) => reseller.uid === uid
+          ? { ...reseller, creditsBalance: approvedCredits }
+          : reseller);
+        saveLocalResellers(resellers);
+        try {
+          await setDoc(doc(db, 'resellers', uid), { creditsBalance: approvedCredits }, { merge: true });
+        } catch (error) {
+          console.debug('Opening balance reseller mirror notice:', error);
+        }
       } catch (srvRegErr) {
-        console.warn('Backend dealer registration notice:', srvRegErr);
+        throw srvRegErr;
       }
 
       const { syncFrekansWithMonolineEngine } = await import('./monolineSyncBridge');
@@ -1599,13 +1636,14 @@ export async function adminCreateDealerDirectly(data: {
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('monoline_webhook_triggered'));
       }
-    } catch (rErr) {
+    } catch (rErr: any) {
       console.warn('Reseller directory sync notice:', rErr);
+      return { success: false, message: rErr?.message || 'Bayi hesabı sunucuda oluşturulamadı.' };
     }
 
     return {
       success: true,
-      message: `Bayi hesabı başarıyla oluşturuldu! Belirlenen şifre ile anında giriş yapabilir. Kredi Havuzu: ${initialCredits} Seans, Referans Kodu: ${referralCode}`,
+      message: `Bayi hesabı başarıyla oluşturuldu! Belirlenen şifre ile anında giriş yapabilir. Kredi Havuzu: ${newDealerUser.creditsBalance ?? initialCredits} Seans, Referans Kodu: ${referralCode}`,
       user: newDealerUser,
       referralCode
     };
@@ -2066,6 +2104,11 @@ export async function loginMember(
       console.debug('Firestore lookup notice:', fsErr);
     }
 
+    const verifiedUid = String(walletSession.member?.user_id || '').trim();
+    if (!verifiedUid) {
+      return { success: false, message: 'Bayi kimliği sunucuda doğrulanamadı.' };
+    }
+
     // 3. Fallback to local members directory if Firestore unavailable
     if (!userData) {
       const localList = getLocalMembersDirectory();
@@ -2090,7 +2133,7 @@ export async function loginMember(
         dealerStatus: 'approved',
         isDealerRequested: true,
         referralCode: m.ref_code,
-        creditsBalance: typeof m.session_credits === 'number' ? m.session_credits : 64,
+        creditsBalance: undefined,
         referredByCode: m.sponsor_id || undefined,
         dealerPackageId: 'silver-dealer',
         createdAt: m.joined_at || new Date().toISOString(),
@@ -2103,7 +2146,7 @@ export async function loginMember(
           whatsapp: m.phone || '',
           referralCode: m.ref_code,
           commissionRate: 20,
-          creditsBalance: typeof m.session_credits === 'number' ? m.session_credits : 64,
+          creditsBalance: undefined,
           dealerPackageId: 'silver-dealer',
           appliedAt: m.joined_at || new Date().toISOString(),
           bankInfo: {
@@ -2118,6 +2161,7 @@ export async function loginMember(
     if (!userData) {
       return { success: false, message: 'Bu e-posta adresine ait kayıt bulunamadı.' };
     }
+    userData.uid = verifiedUid;
 
     // Ensure dealer role and permissions
     if (userData.role !== 'admin') {
@@ -2125,10 +2169,13 @@ export async function loginMember(
       userData.isDealerRequested = true;
       userData.dealerStatus = 'approved';
       userData.isAllowed = true;
-      if (typeof userData.creditsBalance !== 'number') {
-        userData.creditsBalance = 100;
-      }
+      userData.creditsBalance = undefined;
+      if (userData.dealerDetails) userData.dealerDetails.creditsBalance = undefined;
     }
+
+    const serverBalance = await fetchMemberCreditsFromServer(userData.uid);
+    userData.creditsBalance = serverBalance ?? undefined;
+    if (userData.dealerDetails) userData.dealerDetails.creditsBalance = serverBalance ?? undefined;
 
     // Update lastLoginAt
     userData.lastLoginAt = new Date().toISOString();
@@ -2233,72 +2280,88 @@ export function logoutMemberSession(): void {
   window.dispatchEvent(new CustomEvent('aurabio_resellers_updated'));
 }
 
-/**
- * Fetch latest user document from Firestore
- */
-export async function fetchMemberProfile(uid: string): Promise<UserMember | null> {
-  if (uid === 'ADMIN-AKN-01') {
-    return getActiveMemberSession();
-  }
-
-  // 1. Try local cache first
-  const localList = getLocalMembersDirectory();
-  const localUser = localList.find(m => m.uid === uid);
+async function fetchMemberCreditsFromServer(uid: string): Promise<number | null> {
+  const { getAdminToken } = await import('./adminSession');
+  const token = getAdminToken() || getMemberWalletToken();
+  if (!token) return null;
 
   try {
-    const docRef = doc(db, 'users', uid);
-    const snap = await getDoc(docRef);
-    if (snap.exists()) {
-      // Always hydrate uid from the document path so legacy documents remain usable.
-      const data = { ...snap.data(), uid: snap.id } as UserMember;
-      saveToLocalMembersDirectory(data);
-      localStorage.setItem(STORAGE_SESSION_KEY, JSON.stringify(data));
-      return data;
-    }
-  } catch (err) {
-    console.warn('Fetch member profile Firestore notice (using local session):', err);
+    const response = await fetch(`/api/v1/members/${encodeURIComponent(uid)}/credits`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = await response.json().catch(() => ({}));
+    return response.ok && data.status === 'success' && Number.isInteger(data.balance)
+      ? data.balance
+      : null;
+  } catch {
+    return null;
   }
-
-  return localUser || getActiveMemberSession();
 }
 
-/**
- * Real-time Live Subscription to Member's Approval & Expiry Status
- */
+function withServerCredits(user: UserMember, balance: number | null): UserMember {
+  const updated = { ...user, creditsBalance: balance ?? undefined };
+  if (updated.dealerDetails) {
+    updated.dealerDetails = { ...updated.dealerDetails, creditsBalance: balance ?? undefined };
+  }
+  return updated;
+}
+
+export async function fetchMemberProfile(uid: string): Promise<UserMember | null> {
+  if (uid === 'ADMIN-AKN-01') return getActiveMemberSession();
+
+  const cached = getLocalMembersDirectory().find((member) => member.uid === uid) ||
+    (getActiveMemberSession()?.uid === uid ? getActiveMemberSession() : null);
+  let profile = cached;
+  try {
+    const snap = await getDoc(doc(db, 'users', uid));
+    if (snap.exists()) profile = { ...snap.data(), uid: snap.id } as UserMember;
+  } catch (err) {
+    console.warn('Fetch member profile Firestore notice (using local profile):', err);
+  }
+
+  const balance = await fetchMemberCreditsFromServer(uid);
+  if (!profile) return null;
+  const updated = withServerCredits(profile, balance);
+  saveToLocalMembersDirectory(updated);
+  if (getActiveMemberSession()?.uid === uid) {
+    localStorage.setItem(STORAGE_SESSION_KEY, JSON.stringify(updated));
+  }
+  return updated;
+}
+
 export function subscribeToMemberStatus(
   uid: string,
   onUpdate: (user: UserMember | null) => void
 ): Unsubscribe {
   if (uid === 'ADMIN-AKN-01') {
-    const admin = getActiveMemberSession();
-    onUpdate(admin);
+    onUpdate(getActiveMemberSession());
     return () => {};
   }
 
-  try {
-    const docRef = doc(db, 'users', uid);
+  let active = true;
+  let refreshing = false;
+  const refresh = async () => {
+    if (refreshing) return;
+    refreshing = true;
+    try {
+      const profile = await fetchMemberProfile(uid);
+      if (active) onUpdate(profile);
+    } finally {
+      refreshing = false;
+    }
+  };
+  void refresh();
+  const timer = window.setInterval(() => void refresh(), 15000);
+  const handleRefresh = () => void refresh();
+  window.addEventListener('aurabio_credits_deducted', handleRefresh);
+  window.addEventListener('aurabio_session_updated', handleRefresh);
 
-    return onSnapshot(
-      docRef,
-      (snap) => {
-        if (snap.exists()) {
-          const data = snap.data() as UserMember;
-          saveToLocalMembersDirectory(data);
-          localStorage.setItem(STORAGE_SESSION_KEY, JSON.stringify(data));
-          onUpdate(data);
-        }
-      },
-      (err) => {
-        console.debug('Realtime member subscription notice (using local active cache):', err?.message);
-        const active = getActiveMemberSession();
-        if (active && active.uid === uid) {
-          onUpdate(active);
-        }
-      }
-    );
-  } catch {
-    return () => {};
-  }
+  return () => {
+    active = false;
+    window.clearInterval(timer);
+    window.removeEventListener('aurabio_credits_deducted', handleRefresh);
+    window.removeEventListener('aurabio_session_updated', handleRefresh);
+  };
 }
 
 /**
@@ -2385,7 +2448,7 @@ export function checkMemberAccess(user: UserMember | null): {
                           Boolean(user.isDealerRequested);
 
   if (isDealerAccount) {
-    const credits = typeof user.creditsBalance === 'number' ? user.creditsBalance : 100;
+    const credits = typeof user.creditsBalance === 'number' ? user.creditsBalance : 0;
     return {
       isLoggedIn: true,
       isAdmin: false,
@@ -2524,48 +2587,33 @@ export async function adminAddCreditsToMember(
   creditsToAdd: number
 ): Promise<{ success: boolean; newBalance: number; message: string }> {
   try {
-    const localList = getLocalMembersDirectory();
-    let user = localList.find(m => m.uid === uid) || getActiveMemberSession();
-    if (!user || user.uid !== uid) {
-      user = await fetchMemberProfile(uid);
-    }
-    if (!user) {
-      return { success: false, newBalance: 0, message: 'Kullanıcı bulunamadı.' };
+    const { applyAdminCreditChange } = await import('./resellerManager');
+    const outcome = await applyAdminCreditChange(uid, { delta: creditsToAdd });
+    if (!outcome.success) {
+      return { success: false, newBalance: outcome.remainingCredits, message: outcome.message };
     }
 
-    const currentBalance = Number(user.creditsBalance) || 0;
-    const newBalance = Math.max(0, currentBalance + creditsToAdd);
-
-    const updatedUser: UserMember = {
-      ...user,
-      creditsBalance: newBalance,
-      isAllowed: newBalance > 0 ? true : user.isAllowed,
-      paymentStatus: newBalance > 0 ? 'PAID' : user.paymentStatus,
-    };
-
-    saveToLocalMembersDirectory(updatedUser);
-    const active = getActiveMemberSession();
-    if (active && active.uid === uid) {
-      localStorage.setItem(STORAGE_SESSION_KEY, JSON.stringify(updatedUser));
-      window.dispatchEvent(new CustomEvent('aurabio_session_updated', { detail: updatedUser }));
-    }
-
-    try {
-      const docRef = doc(db, 'users', uid);
-      await setDoc(docRef, {
-        creditsBalance: newBalance,
-        isAllowed: newBalance > 0 ? true : user.isAllowed,
-        paymentStatus: newBalance > 0 ? 'PAID' : user.paymentStatus,
-        updatedAt: new Date().toISOString()
-      }, { merge: true });
-    } catch (fsErr) {
-      console.warn('Admin add credits Firestore notice:', fsErr);
+    const newBalance = outcome.remainingCredits;
+    const user = getLocalMembersDirectory().find(m => m.uid === uid) || await fetchMemberProfile(uid);
+    if (user) {
+      const updatedUser: UserMember = { ...user, creditsBalance: newBalance };
+      saveToLocalMembersDirectory(updatedUser);
+      const active = getActiveMemberSession();
+      if (active && active.uid === uid) {
+        localStorage.setItem(STORAGE_SESSION_KEY, JSON.stringify(updatedUser));
+        window.dispatchEvent(new CustomEvent('aurabio_session_updated', { detail: updatedUser }));
+      }
+      try {
+        await setDoc(doc(db, 'users', uid), { creditsBalance: newBalance, updatedAt: new Date().toISOString() }, { merge: true });
+      } catch (fsErr) {
+        console.debug('Admin credit mirror notice:', fsErr);
+      }
     }
 
     return {
       success: true,
       newBalance,
-      message: `${user.fullName} kullanıcısına ${creditsToAdd > 0 ? `+${creditsToAdd}` : creditsToAdd} seans kredisi tanımlandı. Yeni Bakiye: ${newBalance} Seans`
+      message: `${user?.fullName || uid} kullanıcısına ${creditsToAdd > 0 ? `+${creditsToAdd}` : creditsToAdd} seans kredisi tanımlandı. Yeni Bakiye: ${newBalance} Seans`
     };
   } catch (err: any) {
     console.error('Admin add credits error:', err);
@@ -2577,20 +2625,55 @@ export async function adminAddCreditsToMember(
  * Admin: Get all members from Firestore & local persistent directory
  */
 export async function adminGetAllMembers(): Promise<UserMember[]> {
+  const { getAdminToken } = await import('./adminSession');
+  const token = getAdminToken();
+  if (token) {
+    try {
+      const members: UserMember[] = [];
+      let page = 1;
+      let total = 0;
+      do {
+        const response = await fetch(`/api/v1/admin/dealers?page=${page}&pageSize=100`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok || data.status !== 'success') break;
+        total = Number(data.total) || 0;
+        for (const row of data.dealers || []) {
+          const profile = row.profile && typeof row.profile === 'object' ? row.profile : {};
+          const user: UserMember = {
+            ...profile,
+            uid: row.user_id,
+            fullName: row.full_name || profile.fullName || '',
+            email: row.email || '',
+            phone: row.phone || '',
+            role: row.role,
+            referralCode: row.referral_code || profile.referralCode,
+            resellerId: row.sponsor_id || profile.resellerId,
+            creditsBalance: Number(row.scan_credits) || 0,
+            isAllowed: Boolean(row.is_active) && !Boolean(row.is_locked),
+            expiryDate: row.activity_expires_at || profile.expiryDate,
+            createdAt: row.created_at || profile.createdAt,
+          };
+          members.push(user);
+          saveToLocalMembersDirectory(user);
+        }
+        page += 1;
+      } while ((page - 1) * 100 < total);
+      return members.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+    } catch (err) {
+      console.debug('Admin get all members server notice:', err);
+    }
+  }
+
   const memberMap = new Map<string, UserMember>();
-
-  // 1. Load local directory
-  getLocalMembersDirectory().forEach(m => {
-    if (m.uid) memberMap.set(m.uid, m);
+  getLocalMembersDirectory().forEach((member) => {
+    if (member.uid) memberMap.set(member.uid, member);
   });
-
-  // 2. Query Firestore and merge
   try {
-    const colRef = collection(db, 'users');
-    const snap = await getDocs(colRef);
-    snap.forEach((d) => {
-      // Legacy user documents may not store uid; Firestore document ID is canonical.
-      const data = { ...d.data(), uid: d.id } as UserMember;
+    const snap = await getDocs(collection(db, 'users'));
+    snap.forEach((document) => {
+      const data = { ...document.data(), uid: document.id } as UserMember;
       if (data.uid) {
         memberMap.set(data.uid, data);
         saveToLocalMembersDirectory(data);
@@ -2599,9 +2682,15 @@ export async function adminGetAllMembers(): Promise<UserMember[]> {
   } catch (err) {
     console.debug('Admin get all members Firestore query notice (loaded local list):', err);
   }
-
-  const list = Array.from(memberMap.values());
-  return list.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+  return Array.from(memberMap.values())
+    .map((member) => ({
+      ...member,
+      creditsBalance: undefined,
+      dealerDetails: member.dealerDetails
+        ? { ...member.dealerDetails, creditsBalance: undefined }
+        : undefined,
+    }))
+    .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
 }
 
 /**

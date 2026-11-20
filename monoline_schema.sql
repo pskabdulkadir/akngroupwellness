@@ -184,6 +184,19 @@ CREATE TABLE IF NOT EXISTS reseller_credits (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS credit_ledger (
+    id BIGSERIAL PRIMARY KEY,
+    request_id VARCHAR(120) NOT NULL UNIQUE,
+    user_id VARCHAR(64) NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    entry_type VARCHAR(50) NOT NULL,
+    delta INT NOT NULL,
+    previous_balance INT NOT NULL,
+    new_balance INT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_credit_ledger_user_created ON credit_ledger(user_id, created_at DESC);
+
 -- ------------------------------------------------------------------------------
 -- 7. İŞLEM İDEMPOTENCY VE YİNELEME ENGELLEME TABLOSU (idempotency_keys)
 -- ------------------------------------------------------------------------------

@@ -54,11 +54,8 @@ import {
   Reseller, 
   CommissionTransaction, 
   BankInfo, 
-  DealerPackage,
-  DEFAULT_DEALER_PACKAGES,
   getDealerPackages,
   subscribeToDealerPackages,
-  purchaseDealerPackage,
   getActiveResellerSession, 
   setActiveResellerSession, 
   clearStoredReferralCode, 
@@ -83,6 +80,7 @@ import {
   subscribeToResellersList
 } from '../utils/resellerManager';
 import { UserMember, BANK_INFO, ADMIN_PHONE } from '../utils/authManager';
+import { DEFAULT_DEALER_PACKAGES, type DealerPackage } from '../config/dealerPackages';
 import { getMemberRegionalPendingUsd, getMemberRegionalUsdBalance } from '../utils/walletRegion';
 import { redirectToDealerRegistrationPortal, syncFrekansWithMonolineEngine } from '../utils/monolineSyncBridge';
 import { getSiteContent } from '../utils/siteContentManager';
@@ -222,7 +220,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
   const [selectedPkgForOrder, setSelectedPkgForOrder] = useState<DealerPackage | null>(null);
   const [showOrderModal, setShowOrderModal] = useState<boolean>(false);
   const [orderPaymentRef, setOrderPaymentRef] = useState<string>('');
-  const [orderPaymentMethod, setOrderPaymentMethod] = useState<'credit_card_3d'>('credit_card_3d');
+  const [orderPaymentMethod, setOrderPaymentMethod] = useState<'credit_card_3d' | 'bank_transfer'>('credit_card_3d');
   const [posCardHolder, setPosCardHolder] = useState<string>('');
   const [posCardNumber, setPosCardNumber] = useState<string>(SANDBOX_TEST_CARDS.SUCCESS.number);
   const [posCardExpiry, setPosCardExpiry] = useState<string>(SANDBOX_TEST_CARD_EXPIRY);
@@ -410,7 +408,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
             if (!prev) return prev;
             return {
               ...prev,
-              creditsBalance: matched.session_credits,
+              creditsBalance: undefined,
               totalSalesAmount: matched.personal_volume + matched.group_volume,
               totalEarnings: matched.wallets.total_earnings,
               paidEarnings: matched.wallets.total_withdrawn,
@@ -527,6 +525,25 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
         contracts: ['PRE_INFORMATION', 'DISTANCE_SALES', 'KVKK', 'MLM_TERMS'],
       });
       if (approvals.length !== 4) throw new Error('Sözleşme onayları sunucuya kaydedilemedi. Ödeme başlatılmadı.');
+      if (orderPaymentMethod === 'bank_transfer') {
+        const result = await requestDealerPackagePurchase(
+          activeReseller.uid,
+          activeReseller.resellerName,
+          activeReseller.email,
+          activeReseller.phone,
+          { ...selectedPkgForOrder, price: orderPrice, priceText: formatUsd(orderPrice) },
+          orderPaymentRef.trim(),
+          'bank_transfer',
+          undefined,
+          simOrderId
+        );
+        if (!result.success) throw new Error(result.message);
+        setShowOrderModal(false);
+        setPurchaseSuccessMsg(`Havale siparişiniz (${simOrderId}) yönetici onayına gönderildi. Ödeme onaylanınca kredileriniz yüklenecektir.`);
+        setTimeout(() => setPurchaseSuccessMsg(null), 10000);
+        return;
+      }
+
       const posRes = await defaultPaymentProcessor.chargeCreditCard(
         {
           cardHolder: posCardHolder || activeReseller.resellerName,
@@ -680,7 +697,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
         pendingEarnings: live?.pendingEarnings || 0,
         totalSalesAmount: live?.totalSalesAmount || 0,
         totalReferredUsers: live?.totalReferredUsers || 0,
-        creditsBalance: Number.isFinite(live?.creditsBalance) ? live!.creditsBalance! : (m.creditsBalance ?? 100),
+        creditsBalance: live?.creditsBalance,
         totalScans: live?.totalScans || 0,
         createdAt: m.createdAt || live?.createdAt || '',
         updatedAt: live?.updatedAt || '',
@@ -1337,7 +1354,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                           ? 'text-rose-400'
                           : 'text-teal-300'
                       }`}>
-                        {activeReseller.creditsBalance !== undefined ? activeReseller.creditsBalance : 64}
+                        {activeReseller.creditsBalance ?? '—'}
                       </span>
                       <span className="text-[10px] text-slate-400 font-semibold">Seans</span>
                     </div>
@@ -2065,7 +2082,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                               KÖK BAYİ (SİZ)
                             </span>
                             <span className="text-emerald-300 font-bold">
-                              {activeReseller.creditsBalance ?? 0} Kredi
+                              {activeReseller.creditsBalance ?? '—'} Kredi
                             </span>
                           </div>
                           <div className="text-sm font-extrabold truncate pt-1">
@@ -2099,7 +2116,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                                     ALT HAT #{idx + 1}
                                   </span>
                                   <span className="text-amber-300 font-bold">
-                                    {sub.creditsBalance ?? 0} Kredi
+                                    {sub.creditsBalance ?? '—'} Kredi
                                   </span>
                                 </div>
                                 <div className="text-sm font-bold truncate pt-1">
@@ -2161,7 +2178,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                       <AlertCircle className="w-4 h-4 text-amber-400" />
                     </div>
                     <div className="text-2xl font-bold text-amber-300 font-mono">
-                      {subResellers.filter(r => (r.creditsBalance ?? 0) < 20).length}
+                      {subResellers.filter(r => r.creditsBalance !== undefined && r.creditsBalance < 20).length}
                     </div>
                     <div className="text-[10px] text-amber-400/80">
                       20 seansın altında kredisi olan üyeler
@@ -2258,11 +2275,11 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                                 <div className="flex items-center justify-end gap-1.5">
                                   <Coins className="w-3.5 h-3.5 text-teal-500" />
                                   <span className={`text-sm font-extrabold font-mono ${creditColor(r.creditsBalance)}`}>
-                                    {r.creditsBalance ?? 0}
+                                    {r.creditsBalance ?? '—'}
                                   </span>
                                   <span className="text-[10px] text-slate-500">seans</span>
                                 </div>
-                                {(r.creditsBalance ?? 0) < 20 && (
+                                {r.creditsBalance !== undefined && r.creditsBalance < 20 && (
                                   <div className="text-[10px] text-rose-400 mt-0.5">Kredi azalıyor - yükleme önerilir</div>
                                 )}
                               </td>
@@ -2930,7 +2947,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                   <div className="px-4 py-2 rounded-2xl bg-teal-950/90 border border-teal-500/50 text-right shrink-0">
                     <div className="text-[10px] text-teal-400 font-semibold">Mevcut Seans Krediniz:</div>
                     <div className="text-xl font-black font-mono text-emerald-300">
-                      {activeReseller.creditsBalance !== undefined ? activeReseller.creditsBalance : 100} <span className="text-xs font-normal">Kredi</span>
+                      {activeReseller.creditsBalance ?? '—'} <span className="text-xs font-normal">Kredi</span>
                     </div>
                   </div>
                 </div>
@@ -3917,7 +3934,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                   <span>{selectedPkgForOrder.name}</span>
                 </h3>
                 <p className="text-xs text-slate-400">
-                  Kendi panelinizden seans kredisi satın aldığınızda krediniz yüklenir ve <strong className="text-emerald-300">aktifliğiniz 30 gün uzar</strong>.
+                  Kart ödemesi sunucuda doğrulanır. Havale siparişinde krediler yalnızca yönetici onayından sonra yüklenir.
                 </p>
               </div>
 
@@ -3933,8 +3950,20 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                 </div>
               </div>
 
-              {/* Sadece Kredi Kartı / Sanal POS (Banka Denetimi Uyumlu) */}
-              <div className="p-4 rounded-2xl bg-emerald-950/30 border border-emerald-500/40 space-y-3 text-xs">
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setOrderPaymentMethod('credit_card_3d')}
+                  className={`py-2 rounded-xl border text-xs font-bold ${orderPaymentMethod === 'credit_card_3d' ? 'bg-emerald-600 text-white border-emerald-500' : 'bg-slate-950 text-slate-400 border-slate-800'}`}
+                >3D Secure Kart</button>
+                <button
+                  type="button"
+                  onClick={() => setOrderPaymentMethod('bank_transfer')}
+                  className={`py-2 rounded-xl border text-xs font-bold ${orderPaymentMethod === 'bank_transfer' ? 'bg-teal-600 text-white border-teal-500' : 'bg-slate-950 text-slate-400 border-slate-800'}`}
+                >Banka Havalesi</button>
+              </div>
+
+              {orderPaymentMethod === 'credit_card_3d' && <div className="p-4 rounded-2xl bg-emerald-950/30 border border-emerald-500/40 space-y-3 text-xs">
                 <div className="flex items-center justify-between text-emerald-300 font-bold">
                   <span className="flex items-center gap-1.5">
                     <CreditCard className="w-4 h-4" />
@@ -4022,7 +4051,25 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                 <p className="text-[11px] text-emerald-200/90">
                   ✓ Ödeme onaylandığı anda <strong>+{selectedPkgForOrder.scanCredits} Seans Kredisi</strong> ve <strong>aktifliğiniz uzar</strong>.
                 </p>
-              </div>
+              </div>}
+
+              {orderPaymentMethod === 'bank_transfer' && (
+                <div className="p-4 rounded-2xl bg-teal-950/30 border border-teal-500/40 space-y-3 text-xs">
+                  <div className="font-bold text-teal-200">Havale Bilgileri</div>
+                  <div className="text-slate-300">{BANK_INFO.bankName} · {BANK_INFO.accountHolder}</div>
+                  <div className="font-mono text-white break-all">{BANK_INFO.iban}</div>
+                  <label className="block text-[11px] text-slate-400">
+                    Havale açıklaması veya dekont referansı (isteğe bağlı)
+                    <input
+                      value={orderPaymentRef}
+                      onChange={(event) => setOrderPaymentRef(event.target.value)}
+                      maxLength={200}
+                      className="mt-1 w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white font-mono"
+                    />
+                  </label>
+                  <p className="text-[11px] text-teal-100/80">Siparişiniz beklemede kalır; banka transferi yönetici tarafından doğrulandıktan sonra krediler yüklenir.</p>
+                </div>
+              )}
 
               {/* Form & Yasal Sözleşme Onay Kutuları (Compliance Checkboxes) */}
               <form onSubmit={handleConfirmOrderSubmit} className="space-y-3.5">
@@ -4146,12 +4193,12 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                     {isSubmittingOrder ? (
                       <>
                         <Loader2 className="w-4 h-4 animate-spin" />
-                        <span>Sanal POS İşleniyor...</span>
+                        <span>{orderPaymentMethod === 'bank_transfer' ? 'Havale talebi kaydediliyor...' : 'Sanal POS İşleniyor...'}</span>
                       </>
                     ) : (
                       <>
                         <Check className="w-4 h-4" />
-                        <span>Ödemeyi Tamamla &amp; Kredi + Aktifliği Başlat</span>
+                        <span>{orderPaymentMethod === 'bank_transfer' ? 'Havale Talebi Oluştur' : 'Ödemeyi Tamamla &amp; Kredi + Aktifliği Başlat'}</span>
                       </>
                     )}
                   </button>

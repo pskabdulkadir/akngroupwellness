@@ -49,6 +49,8 @@ import { voiceAssistant, VoiceCommandEvent } from '../utils/voiceAssistant';
 import { TreatmentSelection } from './FrequencyLoadingModal';
 
 interface CameraViewProps {
+  onScanStart?: () => Promise<string | null>;
+  onScanCancel?: () => void;
   onScanComplete: (result: ScanResult) => void;
   onOpenFrequencySelector: () => void;
   onOpenUserGuide?: () => void;
@@ -62,6 +64,8 @@ interface CameraViewProps {
 }
 
 export const CameraView: React.FC<CameraViewProps> = ({
+  onScanStart,
+  onScanCancel,
   onScanComplete,
   onOpenFrequencySelector,
   onOpenUserGuide,
@@ -104,6 +108,10 @@ export const CameraView: React.FC<CameraViewProps> = ({
   const isTreatmentRunningRef = useRef<boolean>(false);
   const isScanningRef = useRef<boolean>(false);
   const scanIntervalRef = useRef<any>(null);
+  const onScanStartRef = useRef(onScanStart);
+  const onScanCancelRef = useRef(onScanCancel);
+  onScanStartRef.current = onScanStart;
+  onScanCancelRef.current = onScanCancel;
 
   // Handle Cancel/Stop Scan
   const handleCancelScan = useCallback(() => {
@@ -111,8 +119,10 @@ export const CameraView: React.FC<CameraViewProps> = ({
       clearInterval(scanIntervalRef.current);
       scanIntervalRef.current = null;
     }
+    isScanningRef.current = false;
     setIsScanning(false);
     setScanProgress(0);
+    onScanCancelRef.current?.();
     voiceAssistant.speak('Tarama durduruldu.');
   }, []);
 
@@ -483,12 +493,20 @@ export const CameraView: React.FC<CameraViewProps> = ({
   };
 
   // Start Real 15-Second Live Scanning Sequence for Human Bio-Field
-  const handleStartScan = () => {
-    const video = videoRef.current;
-
+  const handleStartScan = async () => {
+    if (isScanningRef.current) return;
     setHumanWarningMessage(null);
     setCameraError(null);
     setIsScanning(true);
+
+    const startError = await onScanStartRef.current?.();
+    if (startError) {
+      setIsScanning(false);
+      setCameraError(startError);
+      return;
+    }
+
+    const video = videoRef.current;
     setScanProgress(0);
     setScanSecondsLeft(15);
     setScanPhaseText('1/5: İnsan Biyo-Aura Foton & Elektromanyetik Alanı Ölçülüyor...');
@@ -569,6 +587,7 @@ export const CameraView: React.FC<CameraViewProps> = ({
         onScanComplete(scanResult);
       }
     }, 50);
+    scanIntervalRef.current = interval;
   };
 
   const activeAuraColor = detectionStatus.dominantAuraHex || '#10b981';

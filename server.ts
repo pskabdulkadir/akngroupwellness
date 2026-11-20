@@ -9,6 +9,9 @@ import {
   getIsPostgresAvailable,
   withTransaction,
   deductResellerCreditsAtomic,
+  refundResellerCreditsAtomic,
+  adjustResellerCreditsAtomic,
+  applyResellerCreditAdjustment,
   query as pgQuery,
   readApplicationState,
 } from './server/db.js';
@@ -87,6 +90,7 @@ import {
   getSubCareerCount,
 } from './src/types/monoline.js';
 import { BUSINESS_RULES } from './src/config/businessRules.js';
+import { DEFAULT_DEALER_PACKAGES } from './src/config/dealerPackages.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -223,6 +227,21 @@ interface AdminAuditLogRecord {
 let transactions: CommissionTransaction[] = [];
 let commissionLogs: CommissionLogRecord[] = [];
 let ordersLog: OrderLogRecord[] = [];
+interface DealerPackageOrderRecord {
+  order_id: string;
+  reseller_id: string;
+  package_id: string;
+  package_name: string;
+  scan_credits: number;
+  amount: number;
+  payment_method: 'BANK_TRANSFER';
+  payment_reference: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  created_at: string;
+  approved_at: string | null;
+  admin_note: string | null;
+}
+let dealerPackageOrders: DealerPackageOrderRecord[] = [];
 let systemWallet: SystemWalletRecord = {
   id: 1,
   system_pool_balance: 0,
@@ -342,6 +361,7 @@ function buildPersistentState() {
     transactions,
     commissionLogs,
     ordersLog,
+    dealerPackageOrders,
     systemWallet,
     unclaimedCommissions,
     queueJobs,
@@ -409,7 +429,7 @@ function uniqueRowsBy<T>(rows: T[], keyFor: (row: T) => string): T[] {
   return Array.from(new Map(rows.map((row) => [keyFor(row), row])).values());
 }
 
-function persistApplicationState() {
+function persistApplicationState(transactionClient?: import('pg').PoolClient) {
   const snapshot = buildPersistentState();
   const userRows = uniqueRowsBy(members.map((member) => {
     const credentials = memberCredentials.get(member.user_id);
@@ -546,8 +566,7 @@ function persistApplicationState() {
     created_at: entry.created_at,
     entry_data: entry,
   }));
-  const nextWrite = statePersistPromise.then(() =>
-    withTransaction(async (client) => {
+  const writeState = async (client: import('pg').PoolClient) => {
       await client.query(
         `INSERT INTO users (user_id, full_name, email, phone, city, referral_code, sponsor_id, monoline_position, career_level, max_career_level, active_career_level, personal_volume_30d, group_volume_30d, active_direct_referrals_30d, activity_expires_at, is_active, is_locked, scan_credits, has_tax_company, tc_identity_no, assigned_leg, left_leg_volume, right_leg_volume, password_salt, password_hash, member_data, created_at, updated_at)
          SELECT user_id, full_name, email, phone, city, referral_code, sponsor_id, monoline_position, career_level, max_career_level, active_career_level, personal_volume_30d, group_volume_30d, active_direct_referrals_30d, activity_expires_at, is_active, is_locked, scan_credits, has_tax_company, tc_identity_no, assigned_leg, left_leg_volume, right_leg_volume, password_salt, password_hash, member_data, created_at, updated_at
@@ -635,7 +654,9 @@ function persistApplicationState() {
          ON CONFLICT (state_key) DO UPDATE SET payload = EXCLUDED.payload, updated_at = CURRENT_TIMESTAMP`,
         [JSON.stringify(snapshot)]
       );
-    })
+  };
+  const nextWrite = statePersistPromise.then(() =>
+    transactionClient ? writeState(transactionClient) : withTransaction(writeState)
   );
   statePersistPromise = nextWrite.catch(() => {});
   return nextWrite;
@@ -700,6 +721,22 @@ async function hydrateApplicationState() {
   const stored = await readApplicationState();
   if (!stored || typeof stored !== 'object') return false;
   const state = stored as Record<string, any>;
+  applyPersistentState(state);
+  if (state.v2ArchitectureConfig) {
+    v2ArchitectureConfig = {
+      ...v2ArchitectureConfig,
+      ...state.v2ArchitectureConfig,
+      unilevel_infinity_enabled: false,
+    };
+  }
+  return true;
+}
+
+function captureRollbackState(): Record<string, any> {
+  return JSON.parse(JSON.stringify(buildPersistentState()));
+}
+
+function applyPersistentState(state: Record<string, any>) {
   const arrays: Record<string, (value: any[]) => void> = {
     activityLogs: (value) => (activityLogs = value),
     members: (value) => (members = value),
@@ -708,6 +745,7 @@ async function hydrateApplicationState() {
     transactions: (value) => (transactions = value),
     commissionLogs: (value) => (commissionLogs = value),
     ordersLog: (value) => (ordersLog = value),
+    dealerPackageOrders: (value) => (dealerPackageOrders = value),
     unclaimedCommissions: (value) => (unclaimedCommissions = value),
     queueJobs: (value) => (queueJobs = value),
     withdrawalRequests: (value) => (withdrawalRequests = value),
@@ -736,13 +774,6 @@ async function hydrateApplicationState() {
   if (state.ethicsGuidelinesContent) ethicsGuidelinesContent = state.ethicsGuidelinesContent;
   if (state.systemWallet) systemWallet = state.systemWallet;
   if (state.distributionParams) distributionParams = state.distributionParams;
-  if (state.v2ArchitectureConfig) {
-    v2ArchitectureConfig = {
-      ...v2ArchitectureConfig,
-      ...state.v2ArchitectureConfig,
-      unilevel_infinity_enabled: false,
-    };
-  }
   if (state.activeBusinessRules) Object.assign(activeBusinessRules, state.activeBusinessRules);
   if (Array.isArray(state.memberCredentials)) {
     memberCredentials.clear();
@@ -806,7 +837,6 @@ async function hydrateApplicationState() {
   counters.forEach((key) => {
     if (state[key] !== undefined) targets[key](state[key]);
   });
-  return true;
 }
 
 function enqueueNotification(params: {
@@ -1701,13 +1731,17 @@ function processOrderCommission(payload: OrderCommissionPayload): CommissionTran
 
   const amount = Number(payload.order_amount);
   if (isNaN(amount) || amount <= 0) {
-    throw new Error('Geçersiz sipariş tutarı (order_amount > 0 olmalıdır).');
+    const err: any = new Error('Geçersiz sipariş tutarı (order_amount > 0 olmalıdır).');
+    err.statusCode = 400;
+    throw err;
   }
 
   let buyerIndex = members.findIndex((m) => m.user_id === payload.user_id);
   if (buyerIndex === -1) {
     if (String(payload.user_id).startsWith('GECERSIZ')) {
-      throw new Error(`Kullanıcı bulunamadı: ${payload.user_id}`);
+      const err: any = new Error(`Kullanıcı bulunamadı: ${payload.user_id}`);
+      err.statusCode = 404;
+      throw err;
     }
     // Auto-onboard external Frekans app user into Monoline Global Single Line
     const nextLineId = members.length + 1;
@@ -2800,7 +2834,7 @@ function upsertPurchaseInvoiceDraft(params: {
   const { orderId, member, amount, currency, productName, itemDescription, orderType, isPaymentConfirmed, createdAt } = params;
   const existing = accountingEvents.find((event) => event.source_event_id === orderId);
   const wasFlaggedForFraud = existing?.accounting_status === 'FRAUD_REVIEW';
-  const accountingStatus = !isPaymentConfirmed
+  const accountingStatus: 'AWAITING_PAYMENT' | 'FRAUD_REVIEW' | 'NEEDS_REVIEW' = !isPaymentConfirmed
     ? 'AWAITING_PAYMENT'
     : wasFlaggedForFraud
       ? 'FRAUD_REVIEW'
@@ -2808,7 +2842,7 @@ function upsertPurchaseInvoiceDraft(params: {
   const draft = {
     source_event_id: orderId,
     event_type: orderType === 'DEALER_REGISTRATION' ? 'DEALER_REGISTRATION_PURCHASE' : 'ACTIVITY_RENEWAL_PURCHASE',
-    accounting_status,
+    accounting_status: accountingStatus,
     tax_status: 'NEEDS_REVIEW' as const,
     invoice_status: 'DRAFT_PREPARED' as const,
     amount,
@@ -2871,8 +2905,11 @@ function upsertDealerInvoiceDraft(params: {
 }
 
 function resetToCleanSlate(includeAdmin = true) {
+  const preservedAdmin = members.find((member) => member.user_id === 'USR-ADMIN');
+  const preservedAdminCredentials = memberCredentials.get('USR-ADMIN');
   creditsOwnedByServer.clear();
   memberCredentials.clear();
+  if (preservedAdminCredentials) memberCredentials.set('USR-ADMIN', preservedAdminCredentials);
   careerTiers = structuredClone(INITIAL_CAREER_TIERS);
   distributionParams = {
     system_fund_percent: SYSTEM_FUND_PERCENT,
@@ -2897,13 +2934,30 @@ function resetToCleanSlate(includeAdmin = true) {
   unclaimedCommissions = [];
   queueJobs = [];
   withdrawalRequests = [];
+  taxRefundInvoices = [];
+  nextTaxRefundId = 1;
+  feedbackTickets = [];
+  nextTicketNumber = 1;
   userRewardsLog = [];
   notificationOutbox = [];
+  fomoCountdownAlerts = [];
+  p2pTransfers = [];
+  activationVouchers = [];
   fraudAlerts = [];
   ipActivityEvents = [];
   webhookLogs = [];
   cronLogs = [];
   poolDistributions = [];
+  expenseVouchers = [];
+  payoutBatches = [];
+  payoutBatchItems = [];
+  accountingEvents = [];
+  journalEntries = [];
+  nextVoucherSequence = 1;
+  nextPayoutBatchSequence = 1;
+  nextJournalEntryId = 1;
+  sharedDocuments.clear();
+  processedEventIdempotencyKeys.clear();
   processedOrderIds = new Set();
   idempotentBlockedCount = 0;
   systemCareerFundBalance = 0;
@@ -2918,6 +2972,8 @@ function resetToCleanSlate(includeAdmin = true) {
   nextNotificationId = 1;
   nextFraudAlertId = 1;
   activityLogs = [];
+  adminAuditLogs = [];
+  nextAdminAuditLogId = 1;
   members = includeAdmin
     ? [
         {
@@ -2973,6 +3029,88 @@ function resetToCleanSlate(includeAdmin = true) {
         } as any,
       ]
     : [];
+  if (includeAdmin && preservedAdmin) {
+    members = [{
+      ...preservedAdmin,
+      id: 1,
+      global_line_id: 1,
+      sponsor_id: null,
+      sponsor_db_id: null,
+      is_active: true,
+      is_locked: false,
+      personal_volume: 0,
+      group_volume: 0,
+      active_direct_referrals: 0,
+      activity_expires_at: createFutureExpiryIso(),
+      wallets: Object.fromEntries(
+        Object.entries(preservedAdmin.wallets).map(([key, value]) => [key, typeof value === 'number' ? 0 : value])
+      ) as MonolineMember['wallets'],
+    }];
+  }
+}
+
+async function persistFactoryReset() {
+  const admin = members.find((member) => member.user_id === 'USR-ADMIN');
+  if (!admin) throw new Error('USR-ADMIN yöneticisi bulunamadı; sıfırlama iptal edildi.');
+
+  const snapshot = buildPersistentState();
+  const resetWrite = statePersistPromise.then(() => withTransaction(async (client) => {
+    await client.query('DELETE FROM payout_batch_items');
+    await client.query('DELETE FROM accounting_bank_transactions');
+    await client.query('DELETE FROM accounting_events');
+    await client.query('DELETE FROM journal_entries');
+    await client.query('DELETE FROM commission_logs');
+    await client.query('DELETE FROM orders_log');
+    await client.query('DELETE FROM withdrawal_requests');
+    await client.query('DELETE FROM expense_vouchers');
+    await client.query('DELETE FROM payout_batches');
+    await client.query('DELETE FROM admin_wallet_adjustments');
+    await client.query('DELETE FROM notification_outbox');
+    await client.query("DELETE FROM reseller_credits WHERE user_id <> 'USR-ADMIN'");
+    await client.query('DELETE FROM idempotency_keys');
+    await client.query("DELETE FROM users WHERE user_id <> 'USR-ADMIN'");
+
+    const adminUpdate = await client.query(
+      `UPDATE users SET sponsor_id = NULL, monoline_position = 1, career_level = 1,
+         max_career_level = 1, active_career_level = 1, personal_volume_30d = 0,
+         group_volume_30d = 0, active_direct_referrals_30d = 0, is_active = TRUE,
+         is_locked = FALSE, scan_credits = $1, member_data = $2::jsonb,
+         updated_at = CURRENT_TIMESTAMP WHERE user_id = 'USR-ADMIN'`,
+      [admin.session_credits || 0, JSON.stringify(admin)]
+    );
+    if (!adminUpdate.rowCount) throw new Error('USR-ADMIN veritabanında bulunamadı; sıfırlama iptal edildi.');
+
+    await client.query(
+      `INSERT INTO wallets (user_id, balance, pending_balance, total_withdrawn, total_earned,
+         unilevel_earnings, monoline_incentive_earnings, direct_sponsor_earnings, wallet_data)
+       VALUES ('USR-ADMIN', 0, 0, 0, 0, 0, 0, 0, $1::jsonb)
+       ON CONFLICT (user_id) DO UPDATE SET balance = 0, pending_balance = 0,
+         total_withdrawn = 0, total_earned = 0, unilevel_earnings = 0,
+         monoline_incentive_earnings = 0, direct_sponsor_earnings = 0,
+         wallet_data = EXCLUDED.wallet_data, updated_at = CURRENT_TIMESTAMP`,
+      [JSON.stringify(admin.wallets)]
+    );
+    await client.query(
+      `INSERT INTO reseller_credits (user_id, credits_balance, total_allocated, total_consumed)
+       VALUES ('USR-ADMIN', $1, $1, 0)
+       ON CONFLICT (user_id) DO UPDATE SET credits_balance = EXCLUDED.credits_balance,
+         total_allocated = EXCLUDED.total_allocated, total_consumed = 0,
+         last_deduction_request_id = NULL, last_scan_at = NULL, updated_at = CURRENT_TIMESTAMP`,
+      [admin.session_credits || 0]
+    );
+    await client.query(
+      `UPDATE system_wallet SET system_pool_balance = 0, unclaimed_pool_balance = 0,
+         career_pool_balance = 0, updated_at = CURRENT_TIMESTAMP WHERE id = 1`
+    );
+    await client.query('DELETE FROM application_state');
+    await client.query(
+      `INSERT INTO application_state (state_key, payload, updated_at)
+       VALUES ('main', $1::jsonb, CURRENT_TIMESTAMP)`,
+      [JSON.stringify(snapshot)]
+    );
+  }));
+  statePersistPromise = resetWrite.catch(() => {});
+  await resetWrite;
 }
 
 function seedInitialData(emptyOnly = true) {
@@ -6998,41 +7136,6 @@ async function startServer(options: { listen?: boolean } = {}) {
   // const commissionQueue = new Queue('commission-processing', { connection: redisConfig });
   // const worker = new Worker('commission-processing', async (job) => { ... }, { connection: redisConfig });
   // ============================================================================
-  const worker = {
-    queueName: 'commission-processing',
-    process: async (job: {
-      name: 'process-commission';
-      data: OrderCommissionPayload;
-      opts: { attempts: number; backoff: number };
-    }): Promise<CommissionTransaction> => {
-      return runInAtomicTransaction(() =>
-        processOrderCommission({
-          ...job.data,
-          user_id: String(job.data.user_id),
-          order_id: String(job.data.order_id),
-          order_amount: Number(job.data.order_amount),
-          package_id: String(job.data.package_id || 'PKG_MINI_DENEME'),
-          timestamp: job.data.timestamp || new Date().toISOString(),
-        })
-      );
-    },
-  };
-
-  const commissionQueue = {
-    name: 'commission-processing',
-    add: async (
-      jobName: 'process-commission',
-      jobData: OrderCommissionPayload,
-      opts: { attempts: number; backoff: number } = { attempts: 3, backoff: 5000 }
-    ): Promise<CommissionTransaction> => {
-      return worker.process({
-        name: jobName,
-        data: jobData,
-        opts,
-      });
-    },
-  };
-
   async function handleOrderWebhook(req: express.Request, res: express.Response) {
     if (!sandboxPaymentsEnabled()) {
       return res.status(503).json({ status: 'error', message: 'Sandbox settlement üretim ortamında kapalıdır.' });
@@ -7167,65 +7270,96 @@ async function startServer(options: { listen?: boolean } = {}) {
         claimedPayment = verifiedPayment;
       }
 
-      // 2. Siparişi Geçici Olarak Kaydet:
-      // INSERT INTO orders_log (order_id, user_id, package_id, amount) VALUES ($1, (SELECT id FROM users WHERE external_app_user_id = $2), $3, $4)
-      const matchedUser = members.find((m) => m.user_id === String(user_id));
-      ordersLog.unshift({
-        order_id: normalizedOrderId,
-        user_id: matchedUser ? matchedUser.id : 0,
-        external_user_id: String(user_id),
-        user_full_name: matchedUser ? matchedUser.full_name : String(user_id),
-        package_id: String(package_id || 'PKG_MINI_DENEME'),
-        amount: Number(order_amount),
-        status: 'PENDING',
-        merchant_oid: String(merchant_oid),
-        transaction_id: String(transaction_id),
-        payment_method: String(payment_method),
-        created_at: timestamp || new Date().toISOString(),
-      });
-
-      // 3. Kuyruğa İş Emri Ekle (Arka Planda Güvenli İşlenecek)
-      const transaction = await commissionQueue.add(
-        'process-commission',
-        {
-          user_id: String(user_id),
-          order_id: normalizedOrderId,
-          order_amount: Number(order_amount),
-          package_id: String(package_id || 'PKG_MINI_DENEME'),
-          timestamp: timestamp || new Date().toISOString(),
-          enforce_career_depth_lock,
-          order_type: order_type || 'STANDARD_ORDER',
-          payment_method,
-        },
-        { attempts: 3, backoff: 5000 }
-      );
-
-      if (normalizedOrderId.startsWith('ORD-KAYIT-') && matchedUser) {
-        const packageId = normalizePackageId(String(package_id || ''));
-        if (packageId) {
-          upsertDealerInvoiceDraft({
-            orderId: normalizedOrderId,
-            member: matchedUser,
-            amount: Number(order_amount),
-            packageId,
-            isPaymentConfirmed: true,
-            createdAt: timestamp || new Date().toISOString(),
-          });
-        }
-      }
-
-      if (normalizedOrderId.startsWith('ORD-KAYIT-')) {
-        const paidMember = members.find((member) => member.user_id === String(user_id));
-        if (paidMember && getIsPostgresAvailable()) {
+      const rollbackStateBeforeOrder = captureRollbackState();
+      let totalCredits: number | undefined;
+      let transaction: ReturnType<typeof processOrderCommission>;
+      try {
+        transaction = await runInAtomicTransaction(async () => {
+          const rollbackState = captureRollbackState();
           try {
-            await pgQuery(
-              'UPDATE users SET scan_credits = $1, is_active = $2, is_locked = $3, activity_expires_at = $4, updated_at = CURRENT_TIMESTAMP WHERE user_id = $5',
-              [paidMember.session_credits, paidMember.is_active, paidMember.is_locked, paidMember.activity_expires_at, paidMember.user_id]
-            );
-          } catch (dbErr: any) {
-            console.warn('[PostgreSQL-18] Paid registration update notice:', dbErr.message);
+            const matchedUser = members.find((m) => m.user_id === String(user_id));
+            if (!matchedUser) throw new Error('Sipariş sahibi sunucuda bulunamadı.');
+            ordersLog.unshift({
+              order_id: normalizedOrderId,
+              user_id: matchedUser.id,
+              external_user_id: String(user_id),
+              user_full_name: matchedUser.full_name,
+              package_id: String(package_id || 'PKG_MINI_DENEME'),
+              amount: Number(order_amount),
+              status: 'PENDING',
+              merchant_oid: String(merchant_oid),
+              transaction_id: String(transaction_id),
+              payment_method: String(payment_method),
+              created_at: timestamp || new Date().toISOString(),
+            });
+
+            const result = processOrderCommission({
+              user_id: String(user_id),
+              order_id: normalizedOrderId,
+              order_amount: Number(order_amount),
+              package_id: String(package_id || 'PKG_MINI_DENEME'),
+              timestamp: timestamp || new Date().toISOString(),
+              enforce_career_depth_lock,
+              order_type: order_type || 'STANDARD_ORDER',
+              payment_method,
+            });
+
+            if (normalizedOrderId.startsWith('ORD-KAYIT-')) {
+              const packageId = normalizePackageId(String(package_id || ''));
+              if (packageId) {
+                upsertDealerInvoiceDraft({
+                  orderId: normalizedOrderId,
+                  member: matchedUser,
+                  amount: Number(order_amount),
+                  packageId,
+                  isPaymentConfirmed: true,
+                  createdAt: timestamp || new Date().toISOString(),
+                });
+              }
+            }
+
+            const settledCredits = await withTransaction(async (client) => {
+              if (normalizedOrderId.startsWith('ORD-KAYIT-')) {
+                await client.query(
+                  'UPDATE users SET is_active = $1, is_locked = $2, activity_expires_at = $3, updated_at = CURRENT_TIMESTAMP WHERE user_id = $4',
+                  [matchedUser.is_active, matchedUser.is_locked, matchedUser.activity_expires_at, matchedUser.user_id]
+                );
+              }
+              let remainingCredits: number;
+              if (Number(result.session_credits_added) > 0) {
+                const credit = await applyResellerCreditAdjustment(
+                  client,
+                  matchedUser.user_id,
+                  { delta: Number(result.session_credits_added) },
+                  `ORDER_CREDIT:${normalizedOrderId}`
+                );
+                if (!credit.success) throw new Error(credit.message);
+                remainingCredits = credit.remainingCredits;
+              } else {
+                const balance = await client.query('SELECT scan_credits FROM users WHERE user_id = $1', [matchedUser.user_id]);
+                remainingCredits = Number(balance.rows[0]?.scan_credits) || 0;
+              }
+              matchedUser.session_credits = remainingCredits;
+              creditsOwnedByServer.add(matchedUser.user_id);
+              await persistApplicationState(client);
+              return remainingCredits;
+            });
+            totalCredits = settledCredits;
+            return result;
+          } catch (err) {
+            applyPersistentState(rollbackState);
+            throw err;
           }
-        }
+        });
+      } catch (dbErr: any) {
+        applyPersistentState(rollbackStateBeforeOrder);
+        console.error('[PostgreSQL-18] Paid order settlement failed:', dbErr.message);
+        if (claimedPayment) claimedPayment.consumed = false;
+        return res.status(503).json({
+          status: 'error',
+          code: 'CREDIT_SETTLEMENT_FAILED',
+          message: 'Ödeme alındı ancak kredi defteri güncellenemedi. İşlem numarasıyla desteğe başvurun.',
+        });
       }
 
       return res.status(200).json({
@@ -7240,6 +7374,7 @@ async function startServer(options: { listen?: boolean } = {}) {
           ? `Sipariş kuyruğa alındı ve işleniyor. (+${transaction.session_credits_added} Kredi, Aktiflik süresi +${ACTIVITY_PERIOD_DAYS} gün uzatıldı)`
           : `Sipariş kuyruğa alındı ve işleniyor. (+${transaction.session_credits_added} Kredi ve komisyon dağıtımı tamamlandı)`,
         transaction,
+        totalCredits: normalizedOrderId.startsWith('ORD-KAYIT-') ? totalCredits : undefined,
         member_token: normalizedOrderId.startsWith('ORD-KAYIT-')
           ? issueMemberToken(String(user_id))
           : undefined,
@@ -7247,27 +7382,24 @@ async function startServer(options: { listen?: boolean } = {}) {
       });
     } catch (err: any) {
       if (claimedPayment) claimedPayment.consumed = false;
-      // Remove temporary orders_log entry if validation/processing threw before completion
-      const failedOrderId = String(req.body?.order_id || '').trim();
-      if (failedOrderId && !processedOrderIds.has(failedOrderId)) {
-        ordersLog = ordersLog.filter((o) => !(o.order_id === failedOrderId && o.status === 'PENDING'));
-      }
 
-      const statusCode = err?.statusCode || 400;
       const isIdemp = Boolean(err?.isIdempotent);
+      const statusCode = isIdemp ? 200 : Number.isInteger(err?.statusCode) ? err.statusCode : 500;
+      const detail = err?.message || 'Hata';
+      if (statusCode >= 500) {
+        console.error(`[order-commission] ${String(req.body?.order_id || 'BİLİNMİYOR')} işlenemedi:`, err);
+      }
 
       webhookLogs.unshift({
         id: `WH-${Date.now().toString().slice(-5)}-${isIdemp ? 'IDEMP' : 'ERR'}`,
         endpoint: 'POST /api/v1/integrations/order-commission',
-        http_status: isIdemp ? 200 : statusCode,
+        http_status: statusCode,
         status: isIdemp ? 'IDEMPOTENT_REJECTED' : 'FAILED',
         order_id: String(req.body?.order_id || 'ERR'),
         user_id: String(req.body?.user_id || 'ERR'),
         order_amount: Number(req.body?.order_amount || 0),
         payload_json: JSON.stringify(req.body),
-        response_message: `${isIdemp ? '200 ALREADY_RECEIVED' : `${statusCode} Bad Request`} — ${
-          err?.message || 'Hata'
-        }`,
+        response_message: `${statusCode} — ${detail}`,
         processing_ms: Math.max(1, Date.now() - startMs),
         created_at: new Date().toISOString(),
       });
@@ -7283,8 +7415,11 @@ async function startServer(options: { listen?: boolean } = {}) {
 
       return res.status(statusCode).json({
         status: 'error',
-        code: 'WEBHOOK_ERROR',
-        message: err?.message || 'Sipariş işlenirken hata oluştu.',
+        code: statusCode >= 500 ? 'WEBHOOK_INTERNAL_ERROR' : 'WEBHOOK_ERROR',
+        message:
+          statusCode >= 500
+            ? 'Sipariş sunucuda tamamlanamadı; işlem geri alındı. Destek ekibine işlem numarasını iletin.'
+            : detail,
         state: buildStateResponse(),
       });
     }
@@ -7323,6 +7458,288 @@ async function startServer(options: { listen?: boolean } = {}) {
         status: 'error',
         message: err?.message || 'Kredi düşüm işleminde sunucu hatası.',
       });
+    }
+  });
+
+  app.post('/api/v1/members/:userId/refund-scan-credit', requireAdminOrOwnMember, async (req, res) => {
+    try {
+      const { requestId, request_id } = req.body || {};
+      const targetId = String(req.params.userId || '').trim();
+      const reqId = String(requestId || request_id || '').trim();
+      if (!targetId || !reqId) {
+        return res.status(400).json({ status: 'error', message: 'Geçersiz iade isteği.' });
+      }
+      const result = await refundResellerCreditsAtomic(targetId, reqId);
+
+      const matched = members.find(
+        (m) => m.user_id === targetId || (m.email && m.email.toLowerCase() === targetId.toLowerCase())
+      );
+      if (matched && result.success) {
+        matched.session_credits = result.remainingCredits;
+        creditsOwnedByServer.add(matched.user_id);
+      }
+
+      return res.json({
+        status: result.success ? 'success' : 'error',
+        ...result,
+        state: matched && result.success ? buildStateResponse() : undefined,
+      });
+    } catch (err: any) {
+      return res.status(500).json({
+        status: 'error',
+        message: err?.message || 'Kredi iade işleminde sunucu hatası.',
+      });
+    }
+  });
+
+  app.post('/api/v1/admin/members/:userId/credits', requireAdminJwt, async (req, res) => {
+    try {
+      const { delta, exact, requestId } = req.body || {};
+      const targetId = String(req.params.userId || '').trim();
+      const reqId = String(requestId || '').trim();
+      const change = typeof exact === 'number' ? { exact } : typeof delta === 'number' ? { delta } : null;
+      if (!targetId || !reqId || !change) {
+        return res.status(400).json({ status: 'error', message: 'Geçersiz kredi güncelleme isteği.' });
+      }
+      const result = await adjustResellerCreditsAtomic(targetId, change, reqId);
+
+      const matched = members.find(
+        (m) => m.user_id === targetId || (m.email && m.email.toLowerCase() === targetId.toLowerCase())
+      );
+      if (matched && result.success) {
+        matched.session_credits = result.remainingCredits;
+        creditsOwnedByServer.add(matched.user_id);
+      }
+
+      return res.json({
+        status: result.success ? 'success' : 'error',
+        ...result,
+        state: matched && result.success ? buildStateResponse(true) : undefined,
+      });
+    } catch (err: any) {
+      return res.status(500).json({
+        status: 'error',
+        message: err?.message || 'Kredi güncelleme işleminde sunucu hatası.',
+      });
+    }
+  });
+
+  app.get('/api/v1/members/:userId/credits', requireAdminOrOwnMember, async (req, res) => {
+    try {
+      const targetId = String(req.params.userId || '').trim();
+      const result = await pgQuery('SELECT scan_credits FROM users WHERE user_id = $1', [targetId]);
+      if (!result || result.rows.length === 0) {
+        return res.status(404).json({ status: 'error', message: 'Bayi kredi hesabı bulunamadı.' });
+      }
+      return res.json({
+        status: 'success',
+        user_id: targetId,
+        balance: Number(result.rows[0].scan_credits) || 0,
+      });
+    } catch (err: any) {
+      return res.status(500).json({
+        status: 'error',
+        message: err?.message || 'Kredi bakiyesi okunamadı.',
+      });
+    }
+  });
+
+  app.get('/api/v1/admin/dealer-package-orders', requireAdminJwt, (_req, res) => {
+    const orders = dealerPackageOrders.map((order) => {
+      const member = members.find((item) => item.user_id === order.reseller_id);
+      return {
+        ...order,
+        reseller_name: member?.full_name || order.reseller_id,
+        reseller_email: member?.email || '',
+        reseller_phone: member?.phone || '',
+      };
+    });
+    return res.json({ status: 'success', orders });
+  });
+
+  app.post('/api/v1/members/:userId/dealer-package-orders', requireAdminOrOwnMember, async (req, res) => {
+    try {
+      const resellerId = String(req.params.userId || '').trim();
+      const orderId = String(req.body?.order_id || '').trim();
+      const pkg = DEFAULT_DEALER_PACKAGES.find((item) => item.id === String(req.body?.package_id || '').trim());
+      const normalizedPackageId = pkg ? normalizePackageId(pkg.id) : null;
+      if (!orderId || !pkg || !normalizedPackageId) {
+        return res.status(400).json({ status: 'error', message: 'Geçersiz bayi paketi siparişi.' });
+      }
+      const expectedAmount = getPackageOrderAmount(resellerId, normalizedPackageId);
+      const pendingContracts = new Set(['DISTANCE_SALES', 'PRE_INFORMATION', 'MLM_TERMS', 'KVKK']);
+      userContractApprovals.forEach((approval) => {
+        if (
+          approval.order_id === orderId &&
+          approval.user_id === resellerId &&
+          Math.round(Number(approval.order_amount) * 100) === Math.round(expectedAmount * 100) &&
+          Boolean(approval.product_summary)
+        ) {
+          pendingContracts.delete(approval.contract_type);
+        }
+      });
+      if (pendingContracts.size) {
+        return res.status(400).json({ status: 'error', message: 'Havale siparişi için zorunlu sözleşme onayları bulunamadı.' });
+      }
+      const outcome = await runInAtomicTransaction(async () => {
+        const existing = dealerPackageOrders.find((o) => o.order_id === orderId);
+        if (existing) {
+          if (existing.reseller_id !== resellerId || existing.package_id !== pkg.id) {
+            return { httpStatus: 409, body: { status: 'error', message: 'Bu sipariş numarası başka bir sipariş için kullanılmış.' } };
+          }
+          return { httpStatus: 200, body: { status: 'success', order: existing } };
+        }
+        const member = await pgQuery('SELECT user_id FROM users WHERE user_id = $1', [resellerId]);
+        if (!member?.rows.length) {
+          return { httpStatus: 404, body: { status: 'error', message: 'Bayi hesabı bulunamadı.' } };
+        }
+        const rollbackState = captureRollbackState();
+        try {
+          const order: DealerPackageOrderRecord = {
+            order_id: orderId,
+            reseller_id: resellerId,
+            package_id: pkg.id,
+            package_name: pkg.name,
+            scan_credits: pkg.scanCredits,
+            amount: expectedAmount,
+            payment_method: 'BANK_TRANSFER',
+            payment_reference: String(req.body?.payment_reference || '').trim().slice(0, 200),
+            status: 'PENDING',
+            created_at: new Date().toISOString(),
+            approved_at: null,
+            admin_note: null,
+          };
+          dealerPackageOrders.unshift(order);
+          await persistApplicationState();
+          return { httpStatus: 201, body: { status: 'success', order } };
+        } catch (error) {
+          applyPersistentState(rollbackState);
+          throw error;
+        }
+      });
+      return res.status(outcome.httpStatus).json(outcome.body);
+    } catch (err: any) {
+      return res.status(500).json({ status: 'error', message: err?.message || 'Havale siparişi kaydedilemedi.' });
+    }
+  });
+
+  app.post('/api/v1/admin/dealer-package-orders/:orderId/approve', requireAdminJwt, async (req, res) => {
+    try {
+      const orderId = String(req.params.orderId || '').trim();
+      const adminNote = typeof req.body?.admin_note === 'string' ? req.body.admin_note.trim().slice(0, 500) : null;
+      const outcome = await runInAtomicTransaction(async () => {
+        const order = dealerPackageOrders.find((item) => item.order_id === orderId);
+        if (!order) {
+          return { httpStatus: 404, body: { status: 'error', message: 'Sipariş sunucuda bulunamadı.' } };
+        }
+        if (order.status === 'APPROVED') {
+          const balance = await pgQuery('SELECT scan_credits FROM users WHERE user_id = $1', [order.reseller_id]);
+          return {
+            httpStatus: 200,
+            body: {
+              status: 'success',
+              order,
+              remainingCredits: Number(balance?.rows[0]?.scan_credits) || 0,
+              idempotentReplay: true,
+            },
+          };
+        }
+        if (order.status !== 'PENDING' || order.payment_method !== 'BANK_TRANSFER') {
+          return { httpStatus: 409, body: { status: 'error', message: 'Yalnızca bekleyen havale siparişleri onaylanabilir.' } };
+        }
+        const packageDef = DEFAULT_DEALER_PACKAGES.find((item) => item.id === order.package_id);
+        const member = members.find((item) => item.user_id === order.reseller_id);
+        if (
+          !packageDef ||
+          !member ||
+          !orderId ||
+          !Number.isFinite(Number(order.amount)) ||
+          Number(order.amount) <= 0 ||
+          Number(order.scan_credits) !== packageDef.scanCredits
+        ) {
+          return { httpStatus: 404, body: { status: 'error', message: 'Sipariş, paket veya bayi sunucuda bulunamadı.' } };
+        }
+
+        const rollbackState = captureRollbackState();
+        try {
+          const transaction = processOrderCommission({
+            user_id: member.user_id,
+            order_id: order.order_id,
+            order_amount: order.amount,
+            package_id: packageDef.id,
+            timestamp: new Date().toISOString(),
+            order_type: 'STANDARD_ORDER',
+            payment_method: 'BANK_TRANSFER',
+            skip_credit_addition: true,
+          } as any);
+          const credit = await withTransaction(async (client) => {
+            const result = await applyResellerCreditAdjustment(
+              client,
+              member.user_id,
+              { delta: packageDef.scanCredits },
+              `DEALER_ORDER:${order.order_id}`
+            );
+            if (!result.success) throw new Error(result.message);
+
+            order.scan_credits = packageDef.scanCredits;
+            order.status = 'APPROVED';
+            order.approved_at = new Date().toISOString();
+            order.admin_note = adminNote;
+            member.session_credits = result.remainingCredits;
+            creditsOwnedByServer.add(member.user_id);
+            transaction.session_credits_added = packageDef.scanCredits;
+            await persistApplicationState(client);
+            return result;
+          });
+
+          return {
+            httpStatus: 200,
+            body: {
+              status: 'success',
+              message: `Sipariş onaylandı! ${packageDef.scanCredits} seans kredisi bayi hesabına yüklendi.`,
+              order,
+              remainingCredits: credit.remainingCredits,
+              transaction,
+              state: buildStateResponse(true),
+            },
+          };
+        } catch (err) {
+          applyPersistentState(rollbackState);
+          throw err;
+        }
+      });
+
+      return res.status(outcome.httpStatus).json(outcome.body);
+    } catch (err: any) {
+      return res.status(500).json({
+        status: 'error',
+        message: err?.message || 'Sipariş onaylanırken sunucu hatası oluştu.',
+      });
+    }
+  });
+
+  app.post('/api/v1/admin/dealer-package-orders/:orderId/reject', requireAdminJwt, async (req, res) => {
+    try {
+      const orderId = String(req.params.orderId || '').trim();
+      const adminNote = typeof req.body?.admin_note === 'string' ? req.body.admin_note.trim().slice(0, 500) : null;
+      const outcome = await runInAtomicTransaction(async () => {
+        const order = dealerPackageOrders.find((item) => item.order_id === orderId);
+        if (!order) return { httpStatus: 404, message: 'Sipariş sunucuda bulunamadı.' };
+        if (order.status !== 'PENDING') return { httpStatus: 409, message: 'Yalnızca bekleyen siparişler reddedilebilir.' };
+        const rollbackState = captureRollbackState();
+        try {
+          order.status = 'REJECTED';
+          order.admin_note = adminNote;
+          await persistApplicationState();
+          return { httpStatus: 200, message: 'Sipariş reddedildi.' };
+        } catch (error) {
+          applyPersistentState(rollbackState);
+          throw error;
+        }
+      });
+      return res.status(outcome.httpStatus).json({ status: outcome.httpStatus < 300 ? 'success' : 'error', message: outcome.message });
+    } catch (err: any) {
+      return res.status(500).json({ status: 'error', message: err?.message || 'Sipariş reddedilemedi.' });
     }
   });
 
@@ -7447,10 +7864,6 @@ async function startServer(options: { listen?: boolean } = {}) {
 
           if (!existing) {
             const nextLineId = members.length + 1;
-            const initialCreditsVal =
-              typeof fm.creditsBalance === 'number' && fm.creditsBalance > 0
-                ? fm.creditsBalance
-                : 0;
             existing = {
               id: nextLineId,
               user_id: uid,
@@ -7469,7 +7882,7 @@ async function startServer(options: { listen?: boolean } = {}) {
               sponsor_id: null,
               sponsor_db_id: null,
               highest_package_id: pkgKey,
-              session_credits: initialCreditsVal,
+              session_credits: 0,
               personal_volume: 0,
               group_volume: 0,
               active_direct_referrals: 0,
@@ -7517,13 +7930,7 @@ async function startServer(options: { listen?: boolean } = {}) {
             if (fm.referralCode) {
               existing.ref_code = String(fm.referralCode).trim().toUpperCase();
             }
-            if (
-              typeof fm.creditsBalance === 'number' &&
-              fm.creditsBalance > (existing.session_credits || 0) &&
-              !creditsOwnedByServer.has(existing.user_id)
-            ) {
-              existing.session_credits = fm.creditsBalance;
-            }
+
             if (fm.bankName) existing.bank_details.bank_name = String(fm.bankName).trim();
             if (fm.iban) existing.bank_details.iban = String(fm.iban).trim();
             if (fm.ibanHolder) {
@@ -7636,23 +8043,6 @@ async function startServer(options: { listen?: boolean } = {}) {
           });
         }
 
-        // 4. Sync authoritative session_credits from Frekans member's reconciled creditsBalance
-        for (const fm of incomingMembers) {
-          if (!fm || !fm.uid) continue;
-          const uid = String(fm.uid).trim();
-          const email = String(fm.email || '').trim().toLowerCase();
-          const member = members.find(
-            (m) => m.user_id === uid || (email && m.email && m.email.toLowerCase() === email)
-          );
-          if (
-            member &&
-            typeof fm.creditsBalance === 'number' &&
-            fm.creditsBalance >= 0 &&
-            !creditsOwnedByServer.has(member.user_id)
-          ) {
-            member.session_credits = fm.creditsBalance;
-          }
-        }
 
         recalculateAllCareers('POST_COMMISSION_EVENT');
       });
@@ -7910,6 +8300,13 @@ async function startServer(options: { listen?: boolean } = {}) {
         newMember.welcome_bonus_credits = 0;
       }
 
+      (newMember as any).role = 'dealer';
+      (newMember as any).dealerStatus = isPendingPayment ? 'pending' : 'approved';
+      (newMember as any).isDealerRequested = true;
+      if (req.body?.company_title) {
+        (newMember as any).dealerDetails = { companyName: String(req.body.company_title).trim() };
+      }
+
       // In-Memory dizisini anında senkronize et
       members.push(newMember);
 
@@ -7969,7 +8366,7 @@ async function startServer(options: { listen?: boolean } = {}) {
                 newMember.sponsor_id,
                 newMember.global_line_id,
                 newMember.career_level,
-                newMember.session_credits,
+                0,
                 newMember.is_active,
                 newMember.is_locked,
                 newMember.activity_expires_at,
@@ -7979,6 +8376,19 @@ async function startServer(options: { listen?: boolean } = {}) {
                 nowIso,
               ]
             );
+
+            if (effectiveCredits > 0) {
+              const openingCredit = await applyResellerCreditAdjustment(
+                client,
+                newUserId,
+                { delta: effectiveCredits },
+                `OPENING:${newUserId}`
+              );
+              if (!openingCredit.success) {
+                throw new Error(openingCredit.message);
+              }
+              creditsOwnedByServer.add(newUserId);
+            }
 
             await client.query(
               `INSERT INTO wallets (user_id, balance, pending_balance, total_withdrawn, total_earned)
@@ -8267,37 +8677,6 @@ async function startServer(options: { listen?: boolean } = {}) {
     });
   });
 
-  app.post('/api/v1/members/:userId/sync-credits', requireAdminOrOwnMember, (req, res) => {
-    const targetId = String(req.params.userId || '').trim();
-    const { session_credits, email, ref_code } = req.body || {};
-    const cleanEmail = String(email || '').trim().toLowerCase();
-    const cleanCode = String(ref_code || '').trim().toUpperCase();
-
-    const member = members.find((m) => m.user_id === targetId) ||
-      (res.locals.adminUid
-        ? members.find(
-            (m) =>
-              (cleanEmail && m.email && m.email.toLowerCase() === cleanEmail) ||
-              (cleanCode && m.ref_code && m.ref_code.toUpperCase() === cleanCode)
-          )
-        : undefined);
-    if (!member) {
-      res.status(404).json({ status: 'error', message: 'Üye bulunamadı.' });
-      return;
-    }
-
-    if (typeof session_credits === 'number' && session_credits >= 0) {
-      member.session_credits = Math.round(session_credits);
-      creditsOwnedByServer.add(member.user_id);
-    }
-
-    res.json({
-      status: 'success',
-      session_credits: member.session_credits,
-      state: buildStateResponse(Boolean(res.locals.adminUid), member.user_id),
-    });
-  });
-
   app.post('/api/v1/members/:userId/2fa', requireAdminOrOwnMember, (req, res) => {
     const member = members.find((m) => m.user_id === req.params.userId);
     if (!member) {
@@ -8396,7 +8775,6 @@ async function startServer(options: { listen?: boolean } = {}) {
       sponsor_id,
       swap_direction,
       target_line_id,
-      session_credits,
       full_name,
       city,
       ref_code,
@@ -8421,9 +8799,6 @@ async function startServer(options: { listen?: boolean } = {}) {
       });
     }
     if (typeof is_locked === 'boolean') member.is_locked = is_locked;
-    if (typeof session_credits === 'number' && session_credits >= 0) {
-      member.session_credits = Math.round(session_credits);
-    }
     if (full_name && String(full_name).trim()) member.full_name = String(full_name).trim();
     if (city && String(city).trim()) member.city = String(city).trim();
     if (ref_code && String(ref_code).trim()) {
@@ -11020,6 +11395,7 @@ async function startServer(options: { listen?: boolean } = {}) {
         wallet_transaction: result.walletTransaction,
         transfer: result.p2pRecord,
         buyer: result.buyer,
+        totalCredits: result.buyer.session_credits,
         member_token: isDealerRegistration ? issueMemberToken(result.buyer.user_id) : undefined,
         state: buildStateResponse(),
       });
@@ -11375,14 +11751,29 @@ async function startServer(options: { listen?: boolean } = {}) {
     });
   });
 
-  app.post('/api/v1/reset', requireAdminJwt, (_req, res) => {
-    resetToCleanSlate(true);
-    res.json({
-      status: 'success',
-      message:
-        'Sistem tamamen sıfırlandı. Tüm simülasyon verileri, demo kayıtlar, finansal cüzdanlar ve havuzlar temizlendi. Sistem sıfırdan canlı üretime hazır.',
-      state: buildStateResponse(),
-    });
+  app.post('/api/v1/reset', requireAdminJwt, async (_req, res) => {
+    try {
+      await statePersistPromise;
+      resetToCleanSlate(true);
+      await persistFactoryReset();
+      res.json({
+        status: 'success',
+        message: 'Fabrika sıfırlaması tamamlandı. USR-ADMIN ve sistem ayarları korundu; diğer üyeler ve işlem kayıtları kalıcı olarak temizlendi.',
+        state: buildStateResponse(),
+      });
+    } catch (error: any) {
+      try {
+        await hydrateApplicationState();
+        await hydrateStateFromPostgres();
+      } catch (restoreError: any) {
+        console.error('[Factory reset rollback hydration error]:', restoreError.message);
+      }
+      console.error('[Factory reset error]:', error);
+      res.status(500).json({
+        status: 'error',
+        message: 'Sıfırlama tamamlanamadı; veritabanı işlemi geri alındı.',
+      });
+    }
   });
 
   app.post('/api/v1/admin/reset-metrics', requireAdminJwt, (_req, res) => {

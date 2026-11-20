@@ -20,7 +20,7 @@ import {
   Lock
 } from 'lucide-react';
 import { MembershipPackage, BANK_INFO, ADMIN_PHONE } from '../utils/authManager';
-import { DealerPackage } from '../utils/resellerManager';
+import type { DealerPackage } from '../config/dealerPackages';
 import { formatUsd } from '../utils/currency';
 
 interface PackageDetailModalProps {

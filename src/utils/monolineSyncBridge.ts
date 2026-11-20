@@ -29,7 +29,6 @@ import {
   getAllResellers,
   getLocalCommissions,
   getLocalResellers,
-  recordCreditTransaction,
   saveLocalCommissions,
   saveLocalResellers,
   setActiveResellerSession,
@@ -222,7 +221,6 @@ export async function syncFrekansWithMonolineEngine(options?: {
           referredByCode: string;
           resellerId: string;
           packageId: Exclude<PackageId, 'CUSTOM'>;
-          creditsBalance: number;
           createdAt: string;
           isAllowed: boolean;
           isDealer: boolean;
@@ -247,7 +245,6 @@ export async function syncFrekansWithMonolineEngine(options?: {
         referredByCode?: string;
         resellerId?: string;
         packageRaw?: string;
-        creditsBalance?: number;
         createdAt?: string;
         isAllowed?: boolean;
         isDealer?: boolean;
@@ -287,10 +284,6 @@ export async function syncFrekansWithMonolineEngine(options?: {
             referredByCode: person.referredByCode || existing.referredByCode,
             resellerId: person.resellerId || existing.resellerId,
             packageId: person.packageRaw ? mappedPkg : existing.packageId,
-            creditsBalance:
-              typeof person.creditsBalance === 'number'
-                ? person.creditsBalance
-                : existing.creditsBalance,
             isDealer: Boolean(person.isDealer || existing.isDealer),
             countryCode: person.countryCode || existing.countryCode,
             taxId: person.taxId || existing.taxId,
@@ -312,8 +305,6 @@ export async function syncFrekansWithMonolineEngine(options?: {
             referredByCode: (person.referredByCode || '').trim().toUpperCase(),
             resellerId: (person.resellerId || '').trim(),
             packageId: mappedPkg,
-            creditsBalance:
-              typeof person.creditsBalance === 'number' ? person.creditsBalance : 0,
             createdAt: person.createdAt || new Date().toISOString(),
             isAllowed: person.isAllowed !== false,
             isDealer: Boolean(person.isDealer),
@@ -341,7 +332,6 @@ export async function syncFrekansWithMonolineEngine(options?: {
           referredByCode: u.referredByCode,
           resellerId: u.resellerId,
           packageRaw: u.dealerPackageId || u.selectedPackage,
-          creditsBalance: u.creditsBalance,
           createdAt: u.createdAt,
           isAllowed: u.isAllowed,
           isDealer: u.role === 'dealer' || Boolean(u.isDealerRequested),
@@ -365,7 +355,6 @@ export async function syncFrekansWithMonolineEngine(options?: {
           referredByCode: (r as any).referredByCode,
           resellerId: (r as any).resellerId,
           packageRaw: r.dealerPackageId,
-          creditsBalance: r.creditsBalance,
           createdAt: r.createdAt || (r as any).joinedAt,
           isAllowed: r.status !== 'suspended',
           isDealer: true,
@@ -389,7 +378,6 @@ export async function syncFrekansWithMonolineEngine(options?: {
           referredByCode: activeMember.referredByCode,
           resellerId: activeMember.resellerId,
           packageRaw: activeMember.dealerPackageId || activeMember.selectedPackage,
-          creditsBalance: activeMember.creditsBalance,
           createdAt: activeMember.createdAt,
           isAllowed: activeMember.isAllowed,
           isDealer: activeMember.role === 'dealer' || Boolean(activeMember.isDealerRequested),
@@ -411,7 +399,6 @@ export async function syncFrekansWithMonolineEngine(options?: {
           referralCode: activeReseller.referralCode,
           referredByCode: (activeReseller as any).referredByCode,
           packageRaw: activeReseller.dealerPackageId,
-          creditsBalance: activeReseller.creditsBalance,
           createdAt: activeReseller.createdAt,
           isAllowed: activeReseller.status !== 'suspended',
           isDealer: true,
@@ -439,7 +426,6 @@ export async function syncFrekansWithMonolineEngine(options?: {
       >();
 
       const usersWithExplicitOrder = new Set<string>();
-      const purchasedCreditsByUser = new Map<string, number>();
 
       dealerOrders.forEach((dOrder: DealerPackageOrder) => {
         if (!dOrder || !dOrder.id || dOrder.status !== 'approved') return;
@@ -468,15 +454,6 @@ export async function syncFrekansWithMonolineEngine(options?: {
         if (cleanEmail) usersWithExplicitOrder.add(cleanEmail);
 
         const mappedPkg = mapFrekansPkgToMonolinePkgId(dOrder.packageId, amt);
-        const orderCredits = Number(
-          dOrder.scanCredits || PACKAGES[mappedPkg]?.sessionCredits || 32
-        );
-        if (!String(dOrder.id).startsWith('ORD-KAYIT-')) {
-          purchasedCreditsByUser.set(
-            canonicalUserId,
-            (purchasedCreditsByUser.get(canonicalUserId) || 0) + orderCredits
-          );
-        }
 
         unifiedOrdersMap.set(dOrder.id, {
           order_id: dOrder.id,
@@ -558,24 +535,6 @@ export async function syncFrekansWithMonolineEngine(options?: {
           }
         }
       });
-
-      // Prevent & heal any credit balance that was inflated on previous page refreshes
-      for (const [uid, mem] of unifiedMembersMap.entries()) {
-        const explicitPurchased = purchasedCreditsByUser.get(uid) || 0;
-        const maxLegitCredits = 64 + explicitPurchased;
-        if (mem.creditsBalance > maxLegitCredits) {
-          if (explicitPurchased > 0) {
-            let corrected = mem.creditsBalance;
-            while (corrected > maxLegitCredits && corrected - explicitPurchased >= 0) {
-              corrected -= explicitPurchased;
-            }
-            mem.creditsBalance = corrected;
-          } else {
-            mem.creditsBalance = 64;
-          }
-          unifiedMembersMap.set(uid, mem);
-        }
-      }
 
       const { getAdminToken } = await import('./adminSession');
       const adminToken = getAdminToken();
@@ -695,10 +654,8 @@ export async function mirrorMonolineStateBackToFrekans(
       const nextSalesAmount = m.personal_volume + m.group_volume;
       const nextReferredUsers = m.active_direct_referrals;
 
-      const nextCreditsBalance = m.session_credits;
-
       if (
-        r.creditsBalance !== nextCreditsBalance ||
+        r.creditsBalance !== undefined ||
         r.totalEarnings !== nextTotalEarnings ||
         r.paidEarnings !== nextPaidEarnings ||
         r.pendingEarnings !== nextPendingEarnings ||
@@ -716,8 +673,8 @@ export async function mirrorMonolineStateBackToFrekans(
         resellersChanged = true;
         return {
           ...r,
-          creditsBalance: nextCreditsBalance,
-          updatedAt: r.creditsBalance !== nextCreditsBalance ? new Date().toISOString() : r.updatedAt,
+          creditsBalance: undefined,
+          updatedAt: r.updatedAt,
           referredByCode: nextReferredByCode,
           resellerId: nextResellerId,
           totalEarnings: nextTotalEarnings,
@@ -755,13 +712,13 @@ export async function mirrorMonolineStateBackToFrekans(
       );
       if (
         matchedActive &&
-        (matchedActive.creditsBalance !== activeRes.creditsBalance ||
+        (matchedActive.creditsBalance !== undefined ||
           (matchedActive as any).isActive !== (activeRes as any).isActive ||
           (matchedActive as any).activityExpiresAt !== (activeRes as any).activityExpiresAt)
       ) {
         setActiveResellerSession({
           ...activeRes,
-          creditsBalance: matchedActive.creditsBalance,
+          creditsBalance: undefined,
           isActive: (matchedActive as any).isActive,
           activityExpiresAt: (matchedActive as any).activityExpiresAt,
           updatedAt: new Date().toISOString(),
@@ -893,7 +850,6 @@ export async function recordMonolinePackageOrderToFrekans(
       }
     }
 
-    let finalCreditsBalance = buyerMember?.session_credits || creditsAdded;
     let primaryResellerUid = activeRes?.uid || payload.user_id;
     let primaryResellerName =
       buyerMember?.full_name || activeRes?.resellerName || tx.buyer_name || 'Yetkili Bayi';
@@ -901,20 +857,13 @@ export async function recordMonolinePackageOrderToFrekans(
     if (matchedIndices.length > 0) {
       for (const rIdx of matchedIndices) {
         const targetRes = allResellers[rIdx];
-        const prevCredits = Number(targetRes.creditsBalance ?? 0);
-        const computedCredits = prevCredits + creditsAdded;
-        const nextCredits =
-          buyerMember && typeof buyerMember.session_credits === 'number'
-            ? Math.max(computedCredits, buyerMember.session_credits)
-            : computedCredits;
 
-        finalCreditsBalance = nextCredits;
         primaryResellerUid = targetRes.uid;
         primaryResellerName = targetRes.resellerName || primaryResellerName;
 
         const updatedReseller: Reseller = {
           ...targetRes,
-          creditsBalance: nextCredits,
+          creditsBalance: undefined,
           dealerPackageId: frekansPkgId,
           totalSalesAmount: (targetRes.totalSalesAmount || 0) + tx.order_amount,
           isActive: buyerMember?.is_active ?? (targetRes as any).isActive,
@@ -941,36 +890,25 @@ export async function recordMonolinePackageOrderToFrekans(
         }
 
         try {
-          await setDoc(doc(db, 'resellers', updatedReseller.uid), updatedReseller, {
+          const firestoreReseller = { ...updatedReseller };
+          delete firestoreReseller.creditsBalance;
+          await setDoc(doc(db, 'resellers', updatedReseller.uid), firestoreReseller, {
             merge: true,
           });
         } catch {
           // non-blocking
         }
 
-        await recordCreditTransaction({
-          resellerId: updatedReseller.uid,
-          resellerName: updatedReseller.resellerName,
-          type: 'purchase',
-          amount: creditsAdded,
-          previousBalance: prevCredits,
-          newBalance: nextCredits,
-          description: `${pkgMeta.name} (${tx.order_id}) Kredi Kartı / Paket Alımı (+${creditsAdded} Seans Kredisi)`,
-          performedBy: 'Bayi Paket Satın Alımı',
-        });
       }
       saveLocalResellers(allResellers);
     } else if (activeRes) {
       // Directly update activeResellerSession and insert into allResellers
-      const prevCredits = Number(activeRes.creditsBalance ?? 0);
-      const nextCredits = prevCredits + creditsAdded;
-      finalCreditsBalance = nextCredits;
       primaryResellerUid = activeRes.uid;
       primaryResellerName = activeRes.resellerName;
 
       const updatedActive: Reseller = {
         ...activeRes,
-        creditsBalance: nextCredits,
+        creditsBalance: undefined,
         dealerPackageId: frekansPkgId,
         totalSalesAmount: (activeRes.totalSalesAmount || 0) + tx.order_amount,
         isActive: buyerMember?.is_active ?? (activeRes as any).isActive,
@@ -980,20 +918,12 @@ export async function recordMonolinePackageOrderToFrekans(
       saveLocalResellers([updatedActive, ...allResellers]);
       setActiveResellerSession(updatedActive);
       try {
-        await setDoc(doc(db, 'resellers', updatedActive.uid), updatedActive, { merge: true });
+        const firestoreReseller = { ...updatedActive };
+        delete firestoreReseller.creditsBalance;
+        await setDoc(doc(db, 'resellers', updatedActive.uid), firestoreReseller, { merge: true });
       } catch {
         // non-blocking
       }
-      await recordCreditTransaction({
-        resellerId: updatedActive.uid,
-        resellerName: updatedActive.resellerName,
-        type: 'purchase',
-        amount: creditsAdded,
-        previousBalance: prevCredits,
-        newBalance: nextCredits,
-        description: `${pkgMeta.name} (${tx.order_id}) Kredi Kartı / Paket Alımı (+${creditsAdded} Seans Kredisi)`,
-        performedBy: 'Bayi Paket Satın Alımı',
-      });
     }
 
     // Also ensure activeResellerSession is updated if the buyer is the logged-in dealer
@@ -1007,14 +937,13 @@ export async function recordMonolinePackageOrderToFrekans(
           latestActiveRes.resellerName.trim().toLowerCase() === buyerName))
     ) {
       if (
-        (latestActiveRes.creditsBalance ?? 0) < finalCreditsBalance ||
         (buyerMember &&
           (latestActiveRes.activityExpiresAt !== buyerMember.activity_expires_at ||
             latestActiveRes.isActive !== buyerMember.is_active))
       ) {
         const syncedActive: Reseller = {
           ...latestActiveRes,
-          creditsBalance: finalCreditsBalance,
+          creditsBalance: undefined,
           dealerPackageId: frekansPkgId,
           isActive: buyerMember?.is_active ?? (latestActiveRes as any).isActive,
           activityExpiresAt: buyerMember?.activity_expires_at ?? (latestActiveRes as any).activityExpiresAt,
@@ -1077,11 +1006,9 @@ export async function recordMonolinePackageOrderToFrekans(
       ) || activeUser;
 
     if (uMatch) {
-      const prevUserCredits = Number(uMatch.creditsBalance ?? 0);
-      const nextUserCredits = Math.max(finalCreditsBalance, prevUserCredits + creditsAdded);
       const updatedUser: UserMember = {
         ...uMatch,
-        creditsBalance: nextUserCredits,
+        creditsBalance: undefined,
         dealerPackageId: frekansPkgId,
         selectedPackage: frekansPkgId,
         paymentStatus: 'PAID',
@@ -1091,7 +1018,7 @@ export async function recordMonolinePackageOrderToFrekans(
         dealerDetails: uMatch.dealerDetails
           ? {
               ...uMatch.dealerDetails,
-              creditsBalance: nextUserCredits,
+              creditsBalance: undefined,
             }
           : undefined,
       };
@@ -1107,18 +1034,17 @@ export async function recordMonolinePackageOrderToFrekans(
         window.dispatchEvent(new CustomEvent('aurabio_session_updated', { detail: updatedUser }));
       }
       try {
-        await setDoc(doc(db, 'users', updatedUser.uid), updatedUser, { merge: true });
+        const firestoreUser = structuredClone(updatedUser);
+        delete firestoreUser.creditsBalance;
+        if (firestoreUser.dealerDetails) delete firestoreUser.dealerDetails.creditsBalance;
+        await setDoc(doc(db, 'users', updatedUser.uid), firestoreUser, { merge: true });
       } catch {
         // non-blocking
       }
     }
 
     // Broadcast live credit pool update so ResellerDashboardModal, Header, and App.tsx update immediately
-    window.dispatchEvent(
-      new CustomEvent('aurabio_credits_deducted', {
-        detail: { remainingCredits: finalCreditsBalance },
-      })
-    );
+    window.dispatchEvent(new CustomEvent('aurabio_credits_deducted'));
     window.dispatchEvent(new CustomEvent('aurabio_resellers_updated'));
   } catch (err) {
     console.debug('recordMonolinePackageOrderToFrekans notice:', err);
@@ -1162,7 +1088,7 @@ export async function registerMonolineMemberToFrekans(
       expiryDate: null,
       selectedPackage: frekansPkgId,
       dealerPackageId: frekansPkgId,
-      creditsBalance: member.session_credits,
+      creditsBalance: undefined,
       paymentStatus: 'PAID',
       resellerId: member.sponsor_id || '',
       referredByCode: sponsorRefCode,
@@ -1180,7 +1106,7 @@ export async function registerMonolineMemberToFrekans(
         phone: member.phone,
         whatsapp: member.phone,
         referralCode: member.ref_code,
-        creditsBalance: member.session_credits,
+        creditsBalance: undefined,
         appliedAt: nowIso,
         approvedAt: nowIso,
       },
@@ -1188,7 +1114,10 @@ export async function registerMonolineMemberToFrekans(
 
     saveToLocalMembersDirectory(newUser);
     try {
-      await setDoc(doc(db, 'users', newUser.uid), newUser, { merge: true });
+      const firestoreUser = structuredClone(newUser);
+      delete firestoreUser.creditsBalance;
+      if (firestoreUser.dealerDetails) delete firestoreUser.dealerDetails.creditsBalance;
+      await setDoc(doc(db, 'users', newUser.uid), firestoreUser, { merge: true });
     } catch {
       // offline fallback
     }
@@ -1204,7 +1133,7 @@ export async function registerMonolineMemberToFrekans(
       referredByCode: sponsorRefCode,
       resellerId: member.sponsor_id || '',
       commissionRate: allResellers.find((r) => r.uid === member.user_id)?.commissionRate,
-      creditsBalance: member.session_credits,
+      creditsBalance: undefined,
       dealerPackageId: frekansPkgId,
       bankInfo: {
         bankName: member.bank_details?.bank_name || '',
@@ -1223,7 +1152,9 @@ export async function registerMonolineMemberToFrekans(
 
     saveLocalResellers([newReseller, ...allResellers.filter((r) => r.uid !== newReseller.uid)]);
     try {
-      await setDoc(doc(db, 'resellers', newReseller.uid), newReseller, { merge: true });
+      const firestoreReseller = { ...newReseller };
+      delete firestoreReseller.creditsBalance;
+      await setDoc(doc(db, 'resellers', newReseller.uid), firestoreReseller, { merge: true });
     } catch {
       // offline fallback
     }
@@ -1282,7 +1213,7 @@ export function redirectToDealerRegistrationPortal(sponsor?: {
           email: sponsor.email || '',
           phone: sponsor.phone || '',
           referralCode: cleanCode,
-          creditsBalance: 64,
+          creditsBalance: undefined,
           dealerPackageId: 'pkg-5k',
           bankInfo: {
             bankName: '',

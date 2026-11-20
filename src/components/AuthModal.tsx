@@ -38,9 +38,9 @@ import {
 import { DealerDetails } from '../types';
 import { getPackagePriceForRegion, MEMBER_COUNTRY_OPTIONS, resolveMemberRegion } from '../utils/walletRegion';
 import { formatUsd } from '../utils/currency';
+import type { DealerPackage } from '../config/dealerPackages';
 import { 
   Reseller, 
-  DealerPackage,
   getDealerPackages,
   subscribeToDealerPackages,
   getActiveResellers, 
