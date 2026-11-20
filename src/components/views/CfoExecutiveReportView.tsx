@@ -63,10 +63,9 @@ export const CfoExecutiveReportView: React.FC<CfoExecutiveReportViewProps> = ({
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const profile = companyProfile || COMPANY_PROFILE;
 
-  // Vergi Karşılıkları Havuzu (Kasadaki devlete ait paranın tam kuruş hesabı)
   const taxReservePoolTRY = summary.vatPayableNet + summary.totalWithholdingTax360;
 
-  // Net Şirket Hakedişi (Tüm vergiler ve komisyonlar çıktıktan sonra şirkete kalan saf nakit)
+  // Bu toplam, mutabakat ve müşavir incelemesi tamamlanana kadar yalnızca tahmindir.
   const netCompanyProfitTRY = Math.max(
     0,
     summary.totalGrossRevenueTRY -
@@ -75,15 +74,9 @@ export const CfoExecutiveReportView: React.FC<CfoExecutiveReportViewProps> = ({
       summary.totalExpenses770TRY
   );
 
-  const executiveSpeechText = `Sayın Yönetici, AKN Global Group Ltd. günlük mali durum raporunu sunuyorum. Bu ay yurt dışı hizmet ihracatı ciromuz ${summary.totalExportSalesUSD.toLocaleString(
-    'en-US'
-  )} Dolar seviyesindedir ve toplam brüt ciromuz ${summary.totalGrossRevenueTRY.toLocaleString(
+  const executiveSpeechText = `Bu rapordaki ciro, vergi karşılığı ve şirket neti müşavir incelemesi ile banka mutabakatı yapılana kadar ön göstergedir. Hesaplanan tahmini şirket neti ${netCompanyProfitTRY.toLocaleString(
     'tr-TR'
-  )} Türk Lirası oldu. Kasadaki nakdin ${taxReservePoolTRY.toLocaleString(
-    'tr-TR'
-  )} lirası devlete ait olup, vergi tampon cüzdanında güvenceye alınmıştır. Tüm vergi ve bayi komisyonları düşüldükten sonra AKN Global Group Ltd.'nin net şirket kârı ${netCompanyProfitTRY.toLocaleString(
-    'tr-TR'
-  )} Türk Lirasıdır.`;
+  )} Türk Lirasıdır; resmi kâr veya kesin nakit bakiyesi değildir.`;
 
   const handleToggleSpeak = () => {
     if (isPlayingAudio) {
@@ -209,7 +202,7 @@ export const CfoExecutiveReportView: React.FC<CfoExecutiveReportViewProps> = ({
               2. Vergi Karşılıkları Havuzu
             </span>
             <span className="text-[10px] font-mono bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-bold">
-              Devletin Emaneti
+              Tahmini Karşılık
             </span>
           </div>
 
@@ -218,7 +211,7 @@ export const CfoExecutiveReportView: React.FC<CfoExecutiveReportViewProps> = ({
               {taxReservePoolTRY.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺
             </span>
             <p className="text-[11px] text-amber-800 mt-1">
-              Kasadaki paranın devlete ait olan, harcanmaması gereken kısmı
+              Resmi vergi hesabı ve banka mutabakatıyla doğrulanmamış tahmini tutar
             </p>
           </div>
 
@@ -246,7 +239,7 @@ export const CfoExecutiveReportView: React.FC<CfoExecutiveReportViewProps> = ({
               3. Net Şirket Hakedişi
             </span>
             <span className="text-[10px] font-mono bg-emerald-800 text-emerald-200 px-2 py-0.5 rounded-full font-bold">
-              Saf Şirket Kârı
+              Tahmini Net (Ön Gösterge)
             </span>
           </div>
 
@@ -255,7 +248,7 @@ export const CfoExecutiveReportView: React.FC<CfoExecutiveReportViewProps> = ({
               {netCompanyProfitTRY.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺
             </span>
             <p className="text-[11px] text-emerald-200 mt-1">
-              Tüm vergiler, bayi komisyonları ve giderler sonrası AKN Global Group Ltd.'ye kalan nakit
+              Tahmini tutar; vergi, resmi gider ve banka mutabakatı yerine geçmez.
             </p>
           </div>
 
@@ -288,18 +281,18 @@ export const CfoExecutiveReportView: React.FC<CfoExecutiveReportViewProps> = ({
                 AKN Vergi Tampon Cüzdanı (Tax Buffer Vault)
               </h3>
               <span className="text-[10px] font-mono bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-bold">
-                Korumalı
+                Ön Gösterge
               </span>
             </div>
             <p className="text-xs text-amber-900 mt-1 max-w-2xl leading-relaxed">
-              Otonom motorumuz, önümüzdeki ayın 26'sına kadar devlete ödenecek <strong>{taxReservePoolTRY.toLocaleString('tr-TR')} ₺</strong> vergi tutarını şirket ana operasyon hesabından ayırıp güvenceye almıştır. Böylece vergi ödeme gününde nakit krizi yaşanması engellenir.
+              Hesaplanan <strong>{taxReservePoolTRY.toLocaleString('tr-TR')} ₺</strong> tutar bir ön göstergedir; ayrı bir banka hesabına aktarıldığı veya vergi borcunun kesinleştiği anlamına gelmez. Resmi tutar mali müşavir ve banka mutabakatıyla doğrulanmalıdır.
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-3 shrink-0">
           <div className="text-right">
-            <span className="text-[11px] text-amber-800 block">Kilitli Vergi Rezervi:</span>
+            <span className="text-[11px] text-amber-800 block">Hesaplanan Vergi Rezervi:</span>
             <span className="text-xl font-bold font-mono text-amber-950">
               {taxBufferVaultTRY.toLocaleString('tr-TR')} ₺
             </span>

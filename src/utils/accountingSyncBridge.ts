@@ -60,15 +60,19 @@ class AccountingSyncBridge {
 
       const token = getAdminToken() || getAccountingToken();
       if (!token) return;
+      const sourceEventType = payload.isDealerCommission
+        ? 'COMMISSION_PENDING_ACCRUED'
+        : 'ORDER_PAYMENT_CONFIRMED';
+      const eventKey = `${sourceEventType}:${payload.orderId}`;
 
       fetch('/api/v1/integrations/accounting/sync-event', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           source_system: 'AKN_WELLNESS_MONOLINE',
-          source_event_type: payload.isDealerCommission ? 'COMMISSION_PENDING_ACCRUED' : 'ORDER_PAYMENT_CONFIRMED',
-          source_event_id: payload.orderId,
-          idempotency_key: `IDEMP-${payload.orderId}`,
+          source_event_type: sourceEventType,
+          source_event_id: eventKey,
+          idempotency_key: `IDEMP-${eventKey}`,
           payload: { ...payload, payment_status: 'PAID' },
         }),
       }).catch((e) => console.warn('Async accounting sync notice failed:', e));

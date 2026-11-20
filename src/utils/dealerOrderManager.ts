@@ -126,6 +126,20 @@ export function subscribeToDealerPackageOrders(
   };
 }
 
+const DEALER_ORDER_MAX_ATTEMPTS = 3;
+
+async function postDealerOrderWithRetry(url: string, init: RequestInit): Promise<Response> {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      const response = await fetch(url, init);
+      if (response.status < 500 || attempt === DEALER_ORDER_MAX_ATTEMPTS) return response;
+    } catch (error) {
+      if (attempt === DEALER_ORDER_MAX_ATTEMPTS) throw error;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 500 * attempt));
+  }
+}
+
 /**
  * Reseller creates a package purchase order through the supported server payment flows.
  */
@@ -182,7 +196,7 @@ export async function requestDealerPackagePurchase(
       ]);
       const token = getAdminToken() || getMemberWalletToken();
       if (!token) return { success: false, message: 'Bayi oturumu sunucuda doğrulanamadı.' };
-      const response = await fetch(`/api/v1/members/${encodeURIComponent(resellerId)}/dealer-package-orders`, {
+      const response = await postDealerOrderWithRetry(`/api/v1/members/${encodeURIComponent(resellerId)}/dealer-package-orders`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({

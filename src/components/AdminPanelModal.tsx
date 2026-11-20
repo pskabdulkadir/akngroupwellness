@@ -931,8 +931,8 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
       return;
     }
 
-    if (manPassword.trim().length < 4) {
-      alert('Şifre en az 4 karakter olmalıdır.');
+    if (manPassword.trim().length < 12 || ['123456', '123456789', 'password123', 'qwerty123'].includes(manPassword.trim().toLowerCase())) {
+      alert('Şifre en az 12 karakter olmalı ve kolay tahmin edilen bir parola olmamalıdır.');
       return;
     }
 
@@ -957,7 +957,7 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
 
       if (res.success) {
         setShowManualDealerModal(false);
-        setActionSuccessMsg(`Onaylı Bayi Hesabı Açıldı: ${manFullName} (${res.referralCode})`);
+        setActionSuccessMsg(`Yönetici hibesiyle bayi etkinleştirildi: ${manFullName} (${res.referralCode})`);
         setTimeout(() => setActionSuccessMsg(null), 4000);
         await loadMembers();
         if (onMemberUpdated) onMemberUpdated();
@@ -6772,10 +6772,10 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
                       <input
                         type="text"
                         required
-                        minLength={4}
+                        minLength={12}
                         value={manPassword}
                         onChange={(e) => setManPassword(e.target.value)}
-                        placeholder="En az 4 karakter (örn: 123456)"
+                        placeholder="En az 12 karakterli güçlü bir parola"
                         className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-amber-300 font-mono font-bold text-xs outline-none focus:border-amber-500"
                       />
                     </div>
@@ -6877,12 +6877,14 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
                   </div>
 
                   <div className="space-y-1 pt-1">
-                    <label className="text-xs font-medium text-slate-300">Yönetici Notu (Özel Notlar)</label>
+                    <label className="text-xs font-medium text-slate-300">Hibe gerekçesi (en az 10 karakter) *</label>
                     <input
                       type="text"
+                      required
+                      minLength={10}
                       value={manNotes}
                       onChange={(e) => setManNotes(e.target.value)}
-                      placeholder="Örn: AKN VIP İstanbul Bayisi - Telefonla anlaşıldı."
+                      placeholder="Hibe gerekçesini ve dayanağını yazın"
                       className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-200 text-xs outline-none focus:border-slate-500"
                     />
                   </div>

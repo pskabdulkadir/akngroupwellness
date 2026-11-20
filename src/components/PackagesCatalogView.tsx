@@ -34,6 +34,7 @@ import {
   recordUserContractApprovals,
 } from '../utils/paymentProcessor';
 import { formatUsd } from '../utils/currency';
+import { getMemberWalletToken } from '../utils/authManager';
 import { getPackagePriceForRegion, resolveMemberRegion } from '../utils/walletRegion';
 
 interface PackagesCatalogViewProps {
@@ -165,6 +166,7 @@ export const PackagesCatalogView: React.FC<PackagesCatalogViewProps> = ({
       product_summary: `${selectedPkg.name} · ${selectedPkg.sessionCreditsLabel} · ACTIVITY_RENEWAL`,
       contracts: ['DISTANCE_SALES', 'PRE_INFORMATION', 'MLM_TERMS', 'KVKK'],
       version: 'v2.2',
+      authorizationToken: getMemberWalletToken() || '',
     });
     if (approvals.length !== 4) {
       setCheckoutWarning('Sözleşme onayları sunucuya kaydedilemedi. Ödeme başlatılmadı.');

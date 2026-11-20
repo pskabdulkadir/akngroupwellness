@@ -40,9 +40,12 @@ import {
   recordMemberOrder,
   completePaidDealerRegistration,
   getMemberWalletToken,
+  getRegistrationConsentToken,
+  clearRegistrationConsentToken,
   saveMemberWalletToken
 } from '../utils/authManager';
 import { getDealerPackages, subscribeToDealerPackages } from '../utils/resellerManager';
+import { wasRecordedAfterUnknownCommit } from '../utils/persistenceVerification';
 import type { DealerPackage } from '../config/dealerPackages';
 import { DemoProtocolModal } from './DemoProtocolModal';
 import { LegalContractsModal, LegalContractTab } from './LegalContractsModal';
@@ -337,6 +340,9 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
         product_summary: contractProductSummary,
         contracts: ['PRE_INFORMATION', 'DISTANCE_SALES', 'KVKK', 'MLM_TERMS'],
         version: 'v2.2',
+        authorizationToken: isPendingDealerRegistration
+          ? getRegistrationConsentToken() || ''
+          : getMemberWalletToken() || '',
       });
       if (approvals.length !== 4) throw new Error('Sözleşme onayları sunucuya kaydedilemedi. Ödeme başlatılmadı.');
 
@@ -362,6 +368,9 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
           }),
         });
         const settlement = await walletResponse.json().catch(() => ({}));
+        if (!walletResponse.ok && (await wasRecordedAfterUnknownCommit(walletResponse.status, settlement, walletToken))) {
+          throw new Error('Sponsor cüzdan ödemesi sunucuda kaydedildi ancak yanıt doğrulanamadı. Ödeme tekrar gönderilmedi; lütfen destekle iletişime geçin.');
+        }
         const grantedCredits = Number(settlement.transaction?.session_credits_added);
         const totalCredits = Number(settlement.totalCredits);
         if (
@@ -490,6 +499,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
         items: activeItems,
       }, orderUser);
       if (!orderRecorded) throw new Error(`Ödeme alındı ancak sipariş kaydedilemedi. İşlem numarası: ${paymentReference}`);
+      if (isPendingDealerRegistration) clearRegistrationConsentToken();
 
       setPosSuccessReceipt({
         orderId,

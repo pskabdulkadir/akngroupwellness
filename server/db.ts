@@ -117,6 +117,21 @@ export async function initPostgresDatabase(options: { applySchema?: boolean } = 
         event_data JSONB NOT NULL DEFAULT '{}'::jsonb
       );
       CREATE INDEX IF NOT EXISTS idx_accounting_events_created_at ON accounting_events(created_at DESC);
+      CREATE TABLE IF NOT EXISTS user_contract_approvals (
+        id BIGSERIAL PRIMARY KEY,
+        consent_nonce VARCHAR(128) NOT NULL,
+        user_id VARCHAR(64) NOT NULL,
+        user_name VARCHAR(150) NOT NULL,
+        order_id VARCHAR(100) NOT NULL,
+        contract_type VARCHAR(40) NOT NULL,
+        version VARCHAR(20) NOT NULL,
+        order_amount NUMERIC(15,2) NOT NULL,
+        product_summary TEXT NOT NULL,
+        ip_address VARCHAR(64) NOT NULL,
+        approved_at TIMESTAMP WITH TIME ZONE NOT NULL,
+        UNIQUE (consent_nonce, contract_type)
+      );
+      CREATE INDEX IF NOT EXISTS idx_contract_approvals_user_order ON user_contract_approvals(user_id, order_id);
       CREATE TABLE IF NOT EXISTS accounting_bank_accounts (
         account_id VARCHAR(64) PRIMARY KEY,
         bank_name VARCHAR(200) NOT NULL,

@@ -248,10 +248,10 @@ export const CommissionsView: React.FC<CommissionsViewProps> = ({
         <div>
           <h2 className="text-lg font-bold text-slate-900 tracking-tight flex items-center gap-2">
             <Landmark className="w-5 h-5 text-indigo-700" />
-            Monoline MLM Muhasebe, e-Gider Pusulası &amp; Toplu Bayi Ödeme Motoru
+            Bayi Hakedişleri, Gider Pusulası Taslakları ve Ödeme Mutabakatı
           </h2>
           <p className="text-xs text-slate-500">
-            14 günlük yasal cayma süresi korumalı otomatik e-gider pusulası tanzimi, GVK 94/10-b stopaj kesintisi ve banka toplu transfer konsolu
+            14 günlük bekleme sonrası hakedişler incelemeye alınır. Resmi gider pusulası, stopaj ve ödeme banka kanıtı ile müşavir onayı olmadan kesinleşmez.
           </p>
         </div>
 
@@ -273,7 +273,7 @@ export const CommissionsView: React.FC<CommissionsViewProps> = ({
             }`}
           >
             <FileText className="w-3.5 h-3.5" />
-            Resmi Gider Pusulaları ({expenseVouchers.length})
+            Gider Pusulası Kayıtları ({expenseVouchers.length})
           </button>
           <button
             onClick={() => setActiveTab('BATCHES')}
@@ -415,11 +415,12 @@ export const CommissionsView: React.FC<CommissionsViewProps> = ({
 
               <button
                 onClick={() => setShowConfirmModal(true)}
-                disabled={selectedIds.size === 0 || isLoading}
-                className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-xs transition-colors disabled:opacity-50"
+                disabled
+                title="Ödeme, banka ekstresiyle eşleştirilmeden kesinleştirilemez."
+                className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-bold text-white bg-slate-400 rounded-lg shadow-xs cursor-not-allowed"
               >
                 <CheckCircle className="w-3.5 h-3.5" />
-                Seçilenleri Onayla ve Ödemeyi Tamamla
+                Banka kanıtı olmadan ödeme kesinleştirilemez
               </button>
             </div>
           </div>
@@ -434,9 +435,9 @@ export const CommissionsView: React.FC<CommissionsViewProps> = ({
                   <th className="py-3 px-4">Hak Sahibi Bayi (TCKN/VKN)</th>
                   <th className="py-3 px-4">Banka &amp; IBAN Bilgisi</th>
                   <th className="py-3 px-4 text-right">Brüt Hakediş</th>
-                  <th className="py-3 px-4 text-right">Stopaj (%20)</th>
-                  <th className="py-3 px-4 text-right font-bold text-emerald-800">Net Ödenecek</th>
-                  <th className="py-3 px-4 text-center">Yasal Statü</th>
+                  <th className="py-3 px-4 text-right">Tahmini Stopaj</th>
+                  <th className="py-3 px-4 text-right font-bold text-emerald-800">Tahmini Net</th>
+                  <th className="py-3 px-4 text-center">İnceleme Durumu</th>
                   <th className="py-3 px-4 text-right">İşlem</th>
                 </tr>
               </thead>
@@ -576,7 +577,7 @@ export const CommissionsView: React.FC<CommissionsViewProps> = ({
           <div className="p-4 border-b border-slate-200 flex items-center justify-between">
             <div>
               <h3 className="text-sm font-semibold text-slate-900">
-                Resmi e-Gider Pusulası &amp; e-Dönüşüm Arşivi (213 Sayılı VUK Madde 234)
+                Gider Pusulası Taslakları · Resmi belge değildir
               </h3>
               <p className="text-xs text-slate-500">
                 GİB standartlarında üretilen, stopajı ayrıştırılmış resmi belgeler ve XML çıktıları

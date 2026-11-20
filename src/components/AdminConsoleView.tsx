@@ -163,7 +163,6 @@ interface AdminConsoleViewProps {
     initial_package_id: Exclude<PackageId, 'CUSTOM'>;
     initial_order_amount?: number;
     manual_career_override?: number | null;
-    skip_initial_order?: boolean;
     assigned_leg?: 'LEFT' | 'RIGHT' | 'AUTO';
     password?: string;
   }) => Promise<void>;
@@ -535,8 +534,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
   const [newDealerPkgId, setNewDealerPkgId] =
     useState<Exclude<PackageId, 'CUSTOM'>>('PKG_ALTIN_PRO');
   const [newDealerCareerOverride, setNewDealerCareerOverride] = useState<string>('');
-  const [newDealerSkipOrder, setNewDealerSkipOrder] = useState<boolean>(false);
-  const [newDealerPassword, setNewDealerPassword] = useState<string>('123456');
+  const [newDealerPassword, setNewDealerPassword] = useState<string>('');
   const [showNewDealerPassword, setShowNewDealerPassword] = useState<boolean>(false);
   const [newDealerLeg, setNewDealerLeg] = useState<'LEFT' | 'RIGHT' | 'AUTO'>('AUTO');
 
@@ -1189,15 +1187,14 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
       initial_package_id: newDealerPkgId,
       manual_career_override:
         newDealerCareerOverride === '' ? null : Number(newDealerCareerOverride),
-      skip_initial_order: newDealerSkipOrder,
-      password: newDealerPassword.trim() || '123456',
+      password: newDealerPassword.trim(),
       assigned_leg: newDealerLeg,
     });
     setNewDealerName('');
     setNewDealerEmail('');
     setNewDealerPhone('');
     setNewDealerRefCode('');
-    setNewDealerPassword('123456');
+    setNewDealerPassword('');
     setNewDealerLeg('AUTO');
   };
 
@@ -1578,7 +1575,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                 : 'bg-teal-100 text-teal-950 hover:bg-teal-200 border border-teal-300'
             }`}
           >
-            <span>🧾 Vergi İadesi &amp; Fatura Onayı (%20 İade · {pendingTaxRefunds.length} Bekleyen)</span>
+            <span>Vergi Belgeleri · Müşavir İncelemesi Bekleyen ({pendingTaxRefunds.length})</span>
           </button>
           <button
             type="button"
@@ -3547,13 +3544,13 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-white/15 pb-4">
               <div>
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 text-xs font-bold mb-1.5">
-                  <span>🧾 YÖNETİCİ VERGİ İADESİ &amp; FATURA ONAY PANELİ (%20 STOPAJ / VERGİ İADESİ)</span>
+                  <span>VERGİ BELGELERİ · MÜŞAVİR İNCELEMESİ</span>
                 </div>
                 <h3 className="text-lg sm:text-xl font-bold text-white break-words">
-                  Fatura Yükleyen Bayilerin %20 Vergi İadesi Talepleri ve Cüzdan Aktarım Merkezi
+                  Yüklenen Vergi Belgeleri ve İnceleme Durumu
                 </h3>
                 <p className="text-xs text-slate-300 mt-1">
-                  Bayiler nakit çekim talebi oluşturduklarında <strong>%20 vergi kesilerek Sistem Fonuna</strong> aktarılır. Vergi iadesini (%20) almak isteyen bayilerin cihazdan yüklediği faturalar aşağıda listelenir; <strong>Onayla &amp; Hesaba Aktar</strong> butonuna tıkladığınızda kesilen %20 tutar Sistem Fonundan bayinin çekilebilir cüzdan bakiyesine anında aktarılır.
+                  Yüklenen belgeler tek başına stopaj oranını veya iade tutarını doğrulamaz. Mali müşavir incelemesi ve resmi vergi kaydı olmadan iade onaylanmaz veya cüzdana aktarılmaz.
                 </p>
               </div>
 
@@ -3567,7 +3564,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                   <div className="text-lg font-extrabold text-amber-300">{pendingTaxRefunds.length}</div>
                 </div>
                 <div className="px-3.5 py-2.5 rounded-xl bg-emerald-500/20 border border-emerald-400/40">
-                  <div className="text-[10px] text-emerald-200 uppercase">İade Edilen (%20)</div>
+                  <div className="text-[10px] text-emerald-200 uppercase">Önceki kayıtlardaki iadeler</div>
                   <div className="text-lg font-extrabold text-emerald-300">
                     {taxRefundInvoices
                       .filter((i) => i.status === 'APPROVED_CREDITED')
@@ -3607,10 +3604,10 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                       <th className="whitespace-nowrap py-3 px-2">Yüklenen Fatura Dosyası</th>
                       <th className="whitespace-nowrap py-3 px-2 text-right">Brüt Çekim</th>
                       <th className="whitespace-nowrap py-3 px-2 text-right text-emerald-700 font-bold">
-                        İade Edilecek %20 Vergi
+                        Beyan Edilen Tutar · İnceleme Bekliyor
                       </th>
                       <th className="whitespace-nowrap py-3 px-2">Durum</th>
-                      <th className="whitespace-nowrap py-3 pl-2 pr-4 text-right">Yönetici Onay / Aktarım</th>
+                      <th className="whitespace-nowrap py-3 pl-2 pr-4 text-right">İnceleme Durumu</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-200 font-mono tabular-nums">
@@ -3679,7 +3676,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                         <td className="py-3 px-2 font-sans">
                           {inv.status === 'PENDING_ADMIN_APPROVAL' && (
                             <span className="px-2 py-0.5 rounded bg-amber-100 text-amber-900 font-bold text-[11px]">
-                              ⏳ ONAY BEKLİYOR
+                              MÜŞAVİR İNCELEMESİ BEKLİYOR
                             </span>
                           )}
                           {inv.status === 'APPROVED_CREDITED' && (
@@ -3698,13 +3695,13 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                             <div className="inline-flex flex-wrap items-center justify-end gap-1.5">
                               <button
                                 type="button"
-                                disabled={taxRefundBusyId === inv.id}
-                                onClick={() => handleDecideTaxRefund(inv.id, 'APPROVED')}
-                                className="inline-flex items-center gap-1 px-3 py-2.5 sm:py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg cursor-pointer shadow-2xs disabled:opacity-50"
+                                disabled
+                                title="Mali müşavir incelemesi olmadan iade aktarılamaz."
+                                className="inline-flex items-center gap-1 px-3 py-2.5 sm:py-1.5 bg-slate-400 text-white text-xs font-bold rounded-lg cursor-not-allowed shadow-2xs"
                               >
                                 <Check className="w-3.5 h-3.5" />
                                 <span>
-                                  Onayla &amp; +{(inv.tax_deducted_amount || 0).toLocaleString('tr-TR')} $ Aktar
+                                  Müşavir onayı bekleniyor
                                 </span>
                               </button>
                               <button
@@ -3808,14 +3805,11 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                       <>
                         <button
                           type="button"
-                          onClick={async () => {
-                            await handleDecideTaxRefund(previewInvoice.id, 'APPROVED');
-                            setPreviewInvoice(null);
-                          }}
-                          className="px-4 py-2.5 sm:py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold cursor-pointer"
+                          disabled
+                          title="Mali müşavir incelemesi olmadan iade aktarılamaz."
+                          className="px-4 py-2.5 sm:py-2 rounded-xl bg-slate-400 text-white text-xs font-bold cursor-not-allowed"
                         >
-                          ✅ Faturayı Onayla &amp; +
-                          {previewInvoice.tax_deducted_amount.toLocaleString('tr-TR')} $ Hesaba Aktar
+                          Müşavir incelemesi bekleniyor
                         </button>
                         <button
                           type="button"
@@ -3849,19 +3843,19 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                   GET /api/v1/admin/withdrawals · PUT /api/v1/admin/withdrawals/:id
                 </div>
                 <h3 className="text-lg font-bold text-slate-900 mt-0.5">
-                  Komisyon Çekim Talepleri (%20 Vergi Kesintisi &amp; Net Ödeme) Onay / Red &amp; Toplu CSV Çıktısı
+                  Komisyon Çekim Talepleri · Stopaj İncelemesi ve Banka Mutabakatı
                 </h3>
               </div>
 
               <div className="flex flex-wrap items-center gap-3">
                 <button
                   type="button"
-                  disabled={isSubmitting || pendingWithdrawals.length === 0}
-                  onClick={onBulkApproveWithdrawals}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold rounded-xl transition-colors cursor-pointer disabled:opacity-40"
+                  disabled
+                  title="Her ödeme banka ekstresindeki tutar ve referansla eşleştirilmelidir."
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-slate-400 text-white text-xs font-semibold rounded-xl cursor-not-allowed"
                 >
                   <Check className="w-4 h-4" />
-                  <span>Tüm Bekleyenleri Toplu Onayla ({pendingWithdrawals.length})</span>
+                  <span>Banka kanıtı olmadan onay kapalı ({pendingWithdrawals.length})</span>
                 </button>
 
                 <button
@@ -3889,8 +3883,8 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                     <th className="whitespace-nowrap py-2.5 px-3">Üye &amp; Monoline Sırası</th>
                     <th className="whitespace-nowrap py-2.5 px-3">Banka &amp; IBAN</th>
                     <th className="whitespace-nowrap py-2.5 px-3 text-right">Brüt Tutar</th>
-                    <th className="whitespace-nowrap py-2.5 px-3 text-right">%20 Vergi (Sistem Fonu)</th>
-                    <th className="whitespace-nowrap py-2.5 px-3 text-right">Net Ödenecek (%80)</th>
+                    <th className="whitespace-nowrap py-2.5 px-3 text-right">Stopaj Ön Hesaplama</th>
+                    <th className="whitespace-nowrap py-2.5 px-3 text-right">Tahmini Net</th>
                     <th className="whitespace-nowrap py-2.5 px-3">%20 Vergi İadesi Faturası</th>
                     <th className="whitespace-nowrap py-2.5 px-3">Çekim Durumu</th>
                     <th className="whitespace-nowrap py-2.5 pl-3 text-right">Yönetici Aksiyonu</th>
@@ -3949,11 +3943,11 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                               {linkedInv.status === 'PENDING_ADMIN_APPROVAL' && (
                                 <button
                                   type="button"
-                                  disabled={taxRefundBusyId === linkedInv.id}
-                                  onClick={() => handleDecideTaxRefund(linkedInv.id, 'APPROVED')}
-                                  className="px-2 py-0.5 rounded bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold cursor-pointer"
+                                  disabled
+                                  title="Mali müşavir incelemesi olmadan iade aktarılamaz."
+                                  className="px-2 py-0.5 rounded bg-slate-400 text-white text-[10px] font-bold cursor-not-allowed"
                                 >
-                                  ✓ Faturayı Onayla (+{tax.toLocaleString('tr-TR')} $ İade)
+                                  Müşavir incelemesi bekleniyor
                                 </button>
                               )}
                               {linkedInv.status === 'APPROVED_CREDITED' && (
@@ -3963,7 +3957,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                               )}
                             </div>
                           ) : (
-                            <span className="text-[11px] text-slate-400">Fatura Yüklenmedi</span>
+                            <span className="text-[11px] text-slate-400">Belge yüklenmedi</span>
                           )}
                         </td>
                         <td className="py-3 px-3 font-sans">
@@ -3971,7 +3965,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                             <span className="text-amber-700 font-semibold">PENDING (Bekliyor)</span>
                           )}
                           {w.status === 'APPROVED' && (
-                            <span className="text-emerald-700 font-semibold">APPROVED (Ödendi)</span>
+                            <span className="text-emerald-700 font-semibold">Ödendi (önceki kayıt)</span>
                           )}
                           {w.status === 'REJECTED' && (
                             <span className="text-red-700 font-semibold">REJECTED (İade)</span>
@@ -3982,12 +3976,12 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                             <div className="inline-flex items-center gap-1.5">
                               <button
                                 type="button"
-                                disabled={isSubmitting}
-                                onClick={() => onDecideWithdrawal(w.id, 'APPROVED')}
-                                className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold rounded-lg cursor-pointer"
+                                disabled
+                                title="Banka ekstresi eşleşmesi olmadan ödendi durumu verilemez."
+                                className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-400 text-white text-xs font-semibold rounded-lg cursor-not-allowed"
                               >
                                 <Check className="w-3.5 h-3.5" />
-                                <span>Onayla</span>
+                                <span>Ödeme kanıtı gerekir</span>
                               </button>
                               <button
                                 type="button"
@@ -4849,7 +4843,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                     <button
                       type="button"
                       onClick={() => {
-                        const randomPass = 'Aura' + Math.floor(100000 + Math.random() * 900000) + '!';
+                        const randomPass = `${crypto.randomUUID().replace(/-/g, '').slice(0, 12)}!`;
                         setNewDealerPassword(randomPass);
                       }}
                       className="text-[10px] text-emerald-700 hover:text-emerald-800 font-bold underline cursor-pointer"
@@ -4863,7 +4857,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                       required
                       value={newDealerPassword}
                       onChange={(e) => setNewDealerPassword(e.target.value)}
-                      placeholder="Şifre belirleyin (Varsayılan: 123456)"
+                      placeholder="En az 12 karakterli güçlü bir şifre belirleyin"
                       className="w-full pl-3 pr-8 py-2 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 font-mono font-medium"
                     />
                     <button
@@ -4956,15 +4950,6 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                 </div>
 
                 <div className="flex flex-col justify-end">
-                  <label className="inline-flex items-center gap-2 text-xs text-slate-700 mb-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={!newDealerSkipOrder}
-                      onChange={(e) => setNewDealerSkipOrder(!e.target.checked)}
-                      className="rounded border-slate-300"
-                    />
-                    <span>Paket sipariş komisyonunu üst hatta dağıt</span>
-                  </label>
                   <button
                     type="submit"
                     disabled={isSubmitting || !newDealerName.trim()}

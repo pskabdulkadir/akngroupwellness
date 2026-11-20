@@ -79,7 +79,7 @@ import {
   getReferredUsersForReseller,
   subscribeToResellersList
 } from '../utils/resellerManager';
-import { UserMember, BANK_INFO, ADMIN_PHONE } from '../utils/authManager';
+import { UserMember, BANK_INFO, ADMIN_PHONE, getMemberWalletToken } from '../utils/authManager';
 import { DEFAULT_DEALER_PACKAGES, type DealerPackage } from '../config/dealerPackages';
 import { getMemberRegionalPendingUsd, getMemberRegionalUsdBalance } from '../utils/walletRegion';
 import { redirectToDealerRegistrationPortal, syncFrekansWithMonolineEngine } from '../utils/monolineSyncBridge';
@@ -523,6 +523,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
         product_summary: `${selectedPkgForOrder.name} · ${selectedPkgForOrder.scanCredits} seans kredisi`,
         version: 'v2.2',
         contracts: ['PRE_INFORMATION', 'DISTANCE_SALES', 'KVKK', 'MLM_TERMS'],
+        authorizationToken: getMemberWalletToken() || '',
       });
       if (approvals.length !== 4) throw new Error('Sözleşme onayları sunucuya kaydedilemedi. Ödeme başlatılmadı.');
       if (orderPaymentMethod === 'bank_transfer') {

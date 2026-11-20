@@ -90,7 +90,7 @@ export const CAREER_TIER_CONFIG: Record<
     icon: '👑',
   },
   7: {
-    name: 'Kâmile (Sâfiye)',
+    name: 'Kâmile',
     color: 'amber',
     bg: 'bg-gradient-to-r from-amber-100 via-yellow-100 to-amber-200',
     border: 'border-amber-400',

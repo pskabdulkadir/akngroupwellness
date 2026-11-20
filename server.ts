@@ -219,10 +219,13 @@ let nextAdminAuditLogId = 1;
 
 interface AdminAuditLogRecord {
   id: number;
-  action: 'USD_TRY_RATE_UPDATED';
+  action: 'USD_TRY_RATE_UPDATED' | 'MEMBER_MANUAL_GRANT';
   admin_uid: string;
-  previous_value: number;
-  new_value: number;
+  previous_value?: number;
+  new_value?: number;
+  subject_user_id?: string;
+  credits_granted?: number;
+  reason?: string;
   created_at: string;
 }
 let transactions: CommissionTransaction[] = [];
@@ -571,6 +574,7 @@ function persistApplicationState(transactionClient?: import('pg').PoolClient) {
     entry_data: entry,
   }));
   const writeState = async (client: import('pg').PoolClient) => {
+      await client.query('UPDATE users SET monoline_position = NULL');
       await client.query(
         `INSERT INTO users (user_id, full_name, email, phone, city, referral_code, sponsor_id, monoline_position, career_level, max_career_level, active_career_level, personal_volume_30d, group_volume_30d, active_direct_referrals_30d, activity_expires_at, is_active, is_locked, scan_credits, has_tax_company, tc_identity_no, assigned_leg, left_leg_volume, right_leg_volume, password_salt, password_hash, member_data, created_at, updated_at)
          SELECT user_id, full_name, email, phone, city, referral_code, sponsor_id, monoline_position, career_level, max_career_level, active_career_level, personal_volume_30d, group_volume_30d, active_direct_referrals_30d, activity_expires_at, is_active, is_locked, scan_credits, has_tax_company, tc_identity_no, assigned_leg, left_leg_volume, right_leg_volume, password_salt, password_hash, member_data, created_at, updated_at
@@ -1707,12 +1711,20 @@ function calculateActiveCareer(buyerId: number | string) {
   return upgrades;
 }
 
-function processOrderCommission(payload: OrderCommissionPayload): CommissionTransaction {
+function processOrderCommission(
+  payload: OrderCommissionPayload,
+  allowPendingRegistrationSettlement = false
+): CommissionTransaction {
   const startMs = Date.now();
   const orderId = String(payload.order_id || `ORD-${Date.now().toString().slice(-6)}`).trim();
+  const pendingRegistrationOrder = ordersLog.find((order) => order.order_id === orderId);
+  const canSettlePendingRegistration =
+    allowPendingRegistrationSettlement &&
+    orderId.startsWith('ORD-KAYIT-') &&
+    pendingRegistrationOrder?.status === 'PENDING';
 
   // Section 5: Idempotency (Yinelenen Sipariş Engeli) — order_id UNIQUE kontrolü
-  if (processedOrderIds.has(orderId)) {
+  if (processedOrderIds.has(orderId) && !canSettlePendingRegistration) {
     idempotentBlockedCount++;
     const err: any = new Error(
       `Idempotency Hatası: '${orderId}' numaralı sipariş daha önce işlenmiş. Yinelenen sipariş engellendi.`
@@ -3131,7 +3143,7 @@ function runFullCareerJourneySimulation() {
     bank_name?: string;
     iban?: string;
   }> = [
-    // 1. KÖK LİDER (Hedef: 7. Kariyer Kâmile / Sâfiye — PV: 50.000 $, 7 Aktif Kol, PGV: 1.730.000 $, 2x Râziye + 2x Mutmainne)
+    // 1. KÖK LİDER (Hedef: 7. Kariyer Kâmile — PV: 50.000 $, 7 Aktif Kol, PGV: 1.730.000 $, 2x Râziye + 2x Mutmainne)
     {
       user_id: 'USR-1001',
       full_name: 'Dr. Selim Karahan',
@@ -3146,7 +3158,7 @@ function runFullCareerJourneySimulation() {
     },
 
     // #1'İN 7 DİREKT REFERANS KOLU (#2 .. #8):
-    // Kol 1 Lideri -> Hedef: 6. Kariyer Marziyye (Mardiyye)
+    // Kol 1 Lideri -> Hedef: 6. Kariyer Marziyye
     {
       user_id: 'USR-1002',
       full_name: 'Uzm. Zeynep Aydın',
@@ -4639,7 +4651,10 @@ async function ensureAccountingCredentials() {
   const result = await pgQuery('SELECT setting_value FROM system_settings WHERE setting_key = $1', ['ACCOUNTING_CREDENTIALS']);
   if (result?.rows[0]) return;
   const email = (process.env.ACCOUNTING_EMAIL || 'muhasebe@akngroupwellness.com').trim().toLowerCase();
-  const password = process.env.ACCOUNTING_PASSWORD || 'muhasebe123456';
+  const password = process.env.ACCOUNTING_PASSWORD?.trim();
+  if (!password || password.length < 12 || password.toLowerCase() === 'muhasebe123456') {
+    throw new Error('ACCOUNTING_PASSWORD en az 12 karakterlik, varsayılan olmayan bir parola olmalıdır.');
+  }
   const credentials = hashMemberPassword(password);
   await pgQuery(
     `INSERT INTO system_settings (setting_key, setting_value, updated_by)
@@ -4749,6 +4764,35 @@ function sanitizeMemberForPublicState(m: MonolineMember): MonolineMember {
 }
 
 const MEMBER_TOKEN_TTL_MS = 4 * 60 * 60 * 1000;
+const REGISTRATION_CONSENT_TTL_MS = 15 * 60 * 1000;
+
+function issueRegistrationConsentToken(userId: string, orderId: string): string {
+  const payload = Buffer.from(JSON.stringify({
+    sub: userId,
+    order_id: orderId,
+    nonce: randomBytes(24).toString('base64url'),
+    role: 'REGISTRATION_CONSENT',
+    exp: Date.now() + REGISTRATION_CONSENT_TTL_MS,
+  })).toString('base64url');
+  const signature = createHmac('sha256', getEffectiveAdminJwtSecret()).update(payload).digest('base64url');
+  return `${payload}.${signature}`;
+}
+
+function verifyRegistrationConsentToken(token: string): { userId: string; orderId: string; nonce: string } | null {
+  const secret = getEffectiveAdminJwtSecret();
+  const [payload, signature, extra] = token.split('.');
+  if (!secret || !payload || !signature || extra !== undefined) return null;
+  const expected = createHmac('sha256', secret).update(payload).digest('base64url');
+  if (!timingSafeEqual(sha256Digest(signature), sha256Digest(expected))) return null;
+  try {
+    const claims = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
+    if (claims.role !== 'REGISTRATION_CONSENT' || typeof claims.exp !== 'number' || claims.exp <= Date.now()) return null;
+    if (typeof claims.sub !== 'string' || typeof claims.order_id !== 'string' || typeof claims.nonce !== 'string') return null;
+    return { userId: claims.sub, orderId: claims.order_id, nonce: claims.nonce };
+  } catch {
+    return null;
+  }
+}
 
 function issueMemberToken(userId: string): string {
   const secret = getEffectiveMemberJwtSecret();
@@ -5056,7 +5100,7 @@ async function cleanupExpiredPendingRegistrations(): Promise<void> {
       [cutoffDate]
     );
   } catch (err: any) {
-    console.warn('[PostgreSQL-18 Pending Cleanup Notice]:', err.message);
+    logDatabaseError('pending-registration-cleanup', err);
   }
 }
 
@@ -5278,7 +5322,7 @@ async function hydrateStateFromPostgres(): Promise<void> {
         console.log(`[PostgreSQL-18] Yerel veritabanından ${loadedMembers.length} üye, cüzdan, sipariş, komisyon ve yevmiye kaydı yüklendi.`);
       }
     } catch (err: any) {
-      console.error('[PostgreSQL-18 Hydration Error]:', err.message);
+      logDatabaseError('state-hydration', err);
       throw err;
     }
   }
@@ -5373,8 +5417,13 @@ async function startServer(options: { listen?: boolean } = {}) {
       res.status(503).json({ status: 'error', code: 'STATE_REFRESH_FAILED', message: error?.message || 'Supabase verisi yüklenemedi.' });
     }
   });
-  app.use((req, res, next) => {
+  app.use(async (req, res, next) => {
     if (persistenceFailure && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {
+      await retryPersistenceRecovery();
+      if (!persistenceFailure) {
+        next();
+        return;
+      }
       res.setHeader('Retry-After', '60');
       res.status(503).json({
         status: 'error',
@@ -5390,7 +5439,7 @@ async function startServer(options: { listen?: boolean } = {}) {
     const sendJson = res.json.bind(res);
     let saveStarted = false;
     res.json = ((body: any) => {
-      if (saveStarted || res.statusCode >= 400) return sendJson(body);
+      if (saveStarted || res.statusCode >= 400 || res.locals.applicationStatePersisted) return sendJson(body);
       saveStarted = true;
       void persistApplicationState()
         .then(() => {
@@ -5401,18 +5450,64 @@ async function startServer(options: { listen?: boolean } = {}) {
           persistenceFailure = err?.message || 'PostgreSQL state write failed';
           logDatabaseError('application-state-persistence', err);
           if (!res.headersSent) {
+            const rawRequestId = req.body?.request_id ?? req.body?.requestId;
+            const requestId = typeof rawRequestId === 'string' && rawRequestId.trim() ? rawRequestId.trim() : null;
             res.setHeader('Retry-After', '60');
             res.status(503);
             sendJson({
               status: 'error',
               code: 'DATABASE_PERSISTENCE_FAILED',
-              message: 'Veritabanı yazma durumu doğrulanamadı. Tekrar göndermeden önce işlem geçmişini kontrol edin.',
+              message: 'Veritabanı yazma durumu doğrulanamadı. İşlem veritabanına yazılmış olabilir; tekrar göndermeden önce durumu sorgulayın.',
+              committed_state: 'UNKNOWN_VERIFY_REQUIRED',
+              request_id: requestId || null,
+              verify_endpoint: requestId ? `/api/v1/idempotency/${encodeURIComponent(requestId)}/status` : null,
+              retry_after_seconds: 60,
             });
           }
         });
       return res;
     }) as typeof res.json;
     next();
+  });
+
+  app.get('/api/v1/idempotency/:requestId/status', async (req, res) => {
+    const requestId = String(req.params.requestId || '').trim();
+    const authHeader = req.headers.authorization;
+    const token = authHeader?.startsWith('Bearer ') ? authHeader.slice('Bearer '.length).trim() : '';
+    const adminUid = token ? verifyAdminToken(token) : null;
+    const memberUid = !adminUid && token ? verifyMemberToken(token) : null;
+    if (!adminUid && !memberUid) {
+      res.status(403).json({ status: 'error', code: 'FORBIDDEN', message: 'Oturum geçersiz veya süresi dolmuş.' });
+      return;
+    }
+    if (!requestId) {
+      res.status(400).json({ status: 'error', code: 'REQUEST_ID_REQUIRED', message: 'request_id zorunludur.' });
+      return;
+    }
+    try {
+      const result = await pgQuery(
+        'SELECT request_id, scope, user_id FROM idempotency_keys WHERE request_id = ANY($1::text[])',
+        [[
+          requestId,
+          `WALLET_ORDER:${requestId}`,
+          `MANUAL_GRANT:${requestId}`,
+          `ADMIN_BONUS_CREDIT_GRANT:${requestId}`,
+          `REFUND:${requestId}`,
+        ]]
+      );
+      const row = (result?.rows || []).find(
+        (candidate: { user_id: string | null }) => adminUid || candidate.user_id === memberUid
+      );
+      res.json({
+        status: 'success',
+        request_id: requestId,
+        recorded: Boolean(row),
+        scope: row ? row.scope : null,
+      });
+    } catch (err: any) {
+      logDatabaseError('idempotency-status', err);
+      res.status(503).json({ status: 'error', code: 'IDEMPOTENCY_STATUS_UNAVAILABLE', message: 'İşlem durumu şu anda doğrulanamıyor. Daha sonra tekrar deneyin.' });
+    }
   });
 
   app.post('/api/v1/member/session', async (req, res) => {
@@ -6514,21 +6609,11 @@ async function startServer(options: { listen?: boolean } = {}) {
           throw new Error(payoutError);
         }
 
-        // Vergi Uyumu (GVK md. 94/10-b & GİB e-Fatura):
-        // Şirketi olan ve fatura kesen bayilerde stopaj %0'dır (Komisyon Faturası ile tam tutar ödenir).
-        // Bireysel bayilerde (şirketi olmayan) yasal %20 Gelir Vergisi Stopajı kesilerek Gider Pusulası düzenlenir.
-        const isCompanyDealer = Boolean(member.has_tax_company || req.body?.has_tax_company);
-        const taxRatePercent = isCompanyDealer ? 0 : 20;
-        const effectiveTaxRate = isCompanyDealer ? 0 : WITHDRAWAL_TAX_RATE;
         const grossAmount = reqAmount;
-        const taxDeduction = roundCurrency(grossAmount * effectiveTaxRate);
-        const netAmount = roundCurrency(grossAmount - taxDeduction);
+        const taxDeduction = 0;
+        const netAmount = grossAmount;
 
         debitMemberRegionalUsd(member, grossAmount, payoutRegion);
-
-        if (taxDeduction > 0) {
-          addSystemPoolBalance(taxDeduction);
-        }
 
         const {
           invoice_no,
@@ -6594,7 +6679,7 @@ async function startServer(options: { listen?: boolean } = {}) {
           gross_amount: grossAmount,
           tax_deduction: taxDeduction,
           net_amount: netAmount,
-          tax_rate_percent: taxRatePercent,
+          tax_rate_percent: undefined,
           has_tax_company: Boolean(member.has_tax_company),
           tc_identity_no: member.tc_identity_no || '11111111110',
           method: payoutMethod,
@@ -6613,8 +6698,8 @@ async function startServer(options: { listen?: boolean } = {}) {
           status: 'PENDING',
           created_at: nowIso,
           admin_note: hasUploadedInvoice
-            ? `%20 Vergi ($${taxDeduction.toFixed(2)}) Sistem Fonuna aktarıldı. Vergi İadesi faturası yüklendi.`
-            : `%20 Vergi ($${taxDeduction.toFixed(2)}) Sistem Fonuna aktarıldı.`,
+            ? 'Vergi belgesi mali müşavir incelemesi için yüklendi; stopaj oranı ve tutarı kesinleştirilmedi.'
+            : 'Stopaj oranı ve tutarı mali müşavir incelemesine kadar kesinleştirilmedi.',
           tax_refund_status: hasUploadedInvoice ? 'PENDING_ADMIN_APPROVAL' : 'NONE',
           tax_refund_invoice_id: createdInvoice ? createdInvoice.id : null,
           invoice_no: createdInvoice?.invoice_no,
@@ -6631,8 +6716,8 @@ async function startServer(options: { listen?: boolean } = {}) {
         status: 'success',
         endpoint: 'POST /api/v1/user/withdrawal-request',
         message: result.createdInvoice
-          ? `$${result.newWithdrawal.gross_amount?.toFixed(2)} Brüt Çekim Talebi oluşturuldu (%20 Vergi Kesintisi: -$${result.newWithdrawal.tax_deduction?.toFixed(2)} Sistem Fonuna aktarıldı → Net Ödenecek: $${result.newWithdrawal.net_amount?.toFixed(2)}). Yüklediğiniz fatura (${result.createdInvoice.invoice_file_name}) Yönetici Vergi İadesi Paneline iletildi!`
-          : `$${result.newWithdrawal.gross_amount?.toFixed(2)} Brüt Çekim Talebi oluşturuldu (%20 Vergi Kesintisi: -$${result.newWithdrawal.tax_deduction?.toFixed(2)} Sistem Fonuna aktarıldı → Bankaya Yatacak Net: $${result.newWithdrawal.net_amount?.toFixed(2)}). %20 Vergi iadesi almak için faturanızı cihazdan yükleyebilirsiniz.`,
+          ? `$${result.newWithdrawal.gross_amount?.toFixed(2)} çekim talebi oluşturuldu. Vergi belgeniz mali müşavir incelemesine alındı; stopaj ve iade tutarı henüz kesinleşmedi.`
+          : `$${result.newWithdrawal.gross_amount?.toFixed(2)} çekim talebi oluşturuldu. Stopaj oranı ve tutarı mali müşavir incelemesine kadar kesinleştirilmedi.`,
         withdrawal: result.newWithdrawal,
         tax_refund_invoice: result.createdInvoice,
         state: buildStateResponse(),
@@ -6723,6 +6808,13 @@ async function startServer(options: { listen?: boolean } = {}) {
         throw new Error('Çekim kararı APPROVED veya REJECTED olmalıdır.');
       }
       const targetStatus: 'APPROVED' | 'REJECTED' = requestedStatus;
+      if (targetStatus === 'APPROVED') {
+        return res.status(422).json({
+          status: 'error',
+          code: 'BANK_SETTLEMENT_PROOF_REQUIRED',
+          message: 'Çekim, banka ekstresinde eşleşen ödeme kanıtı bulunmadan ödendi olarak onaylanamaz.',
+        });
+      }
 
       const updated = await runInAtomicTransaction(() => {
         const withdrawal = withdrawalRequests.find((w) => w.id === reqId);
@@ -6735,27 +6827,12 @@ async function startServer(options: { listen?: boolean } = {}) {
 
         const member = members.find((m) => m.id === withdrawal.user_id);
 
-        if (targetStatus === 'APPROVED') {
-          const settlementRef = `EFT-2026-TR-${Date.now().toString().slice(-6)}-${Math.floor(1000 + Math.random() * 9000)}`;
-          withdrawal.status = 'APPROVED';
-          withdrawal.processed_at = new Date().toISOString();
-          withdrawal.admin_note = admin_note || `Yönetici tarafından onaylandı ve ödendi. Banka Referansı: ${settlementRef}`;
-          withdrawal.bank_settlement_ref = settlementRef;
-          withdrawal.payout_provider = withdrawal.region === 'INTERNATIONAL' ? 'SWIFT_INTERNATIONAL_PAYOUT' : 'ZIRAAT_FAST_EFT_TRANSFER';
-          if (member) {
-            member.wallets.total_withdrawn = roundCurrency(
-              member.wallets.total_withdrawn + withdrawal.amount
-            );
-          }
-        } else {
-          const isCompany = Boolean(withdrawal.has_tax_company || member?.has_tax_company);
-          const effectiveTaxRate = isCompany ? 0 : WITHDRAWAL_TAX_RATE;
-          const grossAmount = withdrawal.gross_amount ?? withdrawal.amount;
-          const taxDeduction = roundCurrency(grossAmount * effectiveTaxRate);
-          const netRefund = roundCurrency(grossAmount - taxDeduction);
+        const grossAmount = withdrawal.gross_amount ?? withdrawal.amount;
+        const taxDeduction = 0;
+        const netRefund = grossAmount;
           withdrawal.tax_deduction = taxDeduction;
           withdrawal.net_amount = netRefund;
-          withdrawal.tax_rate_percent = effectiveTaxRate * 100;
+          withdrawal.tax_rate_percent = undefined;
           const linkedInvoice = taxRefundInvoices.find(
             (invoice) =>
               invoice.id === withdrawal.tax_refund_invoice_id ||
@@ -6787,18 +6864,14 @@ async function startServer(options: { listen?: boolean } = {}) {
           withdrawal.status = 'REJECTED';
           withdrawal.processed_at = new Date().toISOString();
           withdrawal.admin_note = admin_note ||
-            `Çekim reddedildi. Net tutar $${netRefund.toFixed(2)} bölgesel cüzdana iade edildi; $${taxDeduction.toFixed(2)} stopaj sistem fonunda tutuldu.`;
-        }
+            `Çekim reddedildi. Brüt tutar $${netRefund.toFixed(2)} bölgesel cüzdana iade edildi; stopaj müşavir incelemesi olmadan kesilmedi.`;
         return withdrawal;
       });
 
       res.json({
         status: 'success',
         endpoint: `PUT /api/v1/admin/withdrawals/${reqId}`,
-        message:
-          targetStatus === 'APPROVED'
-            ? `Talep #${updated.id} (${updated.amount.toLocaleString('tr-TR')} $) onaylandı.`
-            : `Talep #${updated.id} reddedildi; %20 stopaj düşüldükten sonraki net tutar bölgesel cüzdana iade edildi.`,
+        message: `Talep #${updated.id} reddedildi; brüt tutar stopaj kesilmeden bölgesel cüzdana iade edildi.`,
         withdrawal: updated,
         state: buildStateResponse(),
       });
@@ -7204,7 +7277,20 @@ async function startServer(options: { listen?: boolean } = {}) {
       // 1. Idempotency Kontrolü:
       // const existingOrder = await db.query('SELECT order_id FROM orders_log WHERE order_id = $1', [order_id]);
       const existingOrder = ordersLog.find((o) => o.order_id === normalizedOrderId);
-      if (existingOrder || processedOrderIds.has(normalizedOrderId)) {
+      const normalizedWebhookPackageId = normalizePackageId(String(package_id || ''));
+      const pendingRegistrationOrderMatches = Boolean(
+        existingOrder &&
+          normalizedOrderId.startsWith('ORD-KAYIT-') &&
+          existingOrder.status === 'PENDING' &&
+          existingOrder.external_user_id === String(user_id) &&
+          Math.round(Number(existingOrder.amount) * 100) === Math.round(Number(order_amount) * 100) &&
+          normalizePackageId(String(existingOrder.package_id || '')) === normalizedWebhookPackageId &&
+          members.some((member) => member.user_id === String(user_id) && !member.is_active && member.is_locked)
+      );
+      if (
+        (existingOrder && !pendingRegistrationOrderMatches) ||
+        (processedOrderIds.has(normalizedOrderId) && !pendingRegistrationOrderMatches)
+      ) {
         idempotentBlockedCount++;
         webhookLogs.unshift({
           id: `WH-${Date.now().toString().slice(-5)}-IDEMP`,
@@ -7300,19 +7386,25 @@ async function startServer(options: { listen?: boolean } = {}) {
           try {
             const matchedUser = members.find((m) => m.user_id === String(user_id));
             if (!matchedUser) throw new Error('Sipariş sahibi sunucuda bulunamadı.');
-            ordersLog.unshift({
-              order_id: normalizedOrderId,
-              user_id: matchedUser.id,
-              external_user_id: String(user_id),
-              user_full_name: matchedUser.full_name,
-              package_id: String(package_id || 'PKG_MINI_DENEME'),
-              amount: Number(order_amount),
-              status: 'PENDING',
-              merchant_oid: String(merchant_oid),
-              transaction_id: String(transaction_id),
-              payment_method: String(payment_method),
-              created_at: timestamp || new Date().toISOString(),
-            });
+            if (pendingRegistrationOrderMatches && existingOrder) {
+              existingOrder.merchant_oid = String(merchant_oid);
+              existingOrder.transaction_id = String(transaction_id);
+              existingOrder.payment_method = String(payment_method);
+            } else {
+              ordersLog.unshift({
+                order_id: normalizedOrderId,
+                user_id: matchedUser.id,
+                external_user_id: String(user_id),
+                user_full_name: matchedUser.full_name,
+                package_id: String(package_id || 'PKG_MINI_DENEME'),
+                amount: Number(order_amount),
+                status: 'PENDING',
+                merchant_oid: String(merchant_oid),
+                transaction_id: String(transaction_id),
+                payment_method: String(payment_method),
+                created_at: timestamp || new Date().toISOString(),
+              });
+            }
 
             const result = processOrderCommission({
               user_id: String(user_id),
@@ -7323,7 +7415,7 @@ async function startServer(options: { listen?: boolean } = {}) {
               enforce_career_depth_lock,
               order_type: order_type || 'STANDARD_ORDER',
               payment_method,
-            });
+            }, pendingRegistrationOrderMatches);
 
             if (normalizedOrderId.startsWith('ORD-KAYIT-')) {
               const packageId = normalizePackageId(String(package_id || ''));
@@ -7383,6 +7475,7 @@ async function startServer(options: { listen?: boolean } = {}) {
         });
       }
 
+      res.locals.applicationStatePersisted = true;
       return res.status(200).json({
         success: true,
         status: 'success',
@@ -8095,9 +8188,6 @@ async function startServer(options: { listen?: boolean } = {}) {
         sponsor_id,
         initial_package_id,
         manual_career_override,
-        skip_initial_order,
-        pending_payment,
-        session_credits,
         password,
         assigned_leg,
         tc_identity_no,
@@ -8115,6 +8205,11 @@ async function startServer(options: { listen?: boolean } = {}) {
         });
         return;
       }
+      const normalizedPassword = typeof password === 'string' ? password : '';
+      if (normalizedPassword.length < 12 || ['123456', '123456789', 'password123', 'qwerty123'].includes(normalizedPassword.toLowerCase())) {
+        res.status(400).json({ status: 'error', code: 'WEAK_PASSWORD', message: 'Şifre en az 12 karakter olmalı ve kolay tahmin edilen bir parola olmamalıdır.' });
+        return;
+      }
       const normalizedCountryCode = String(country_code || 'TR').trim().toUpperCase();
       if (!/^[A-Z]{2}$/.test(normalizedCountryCode)) {
         res.status(400).json({
@@ -8122,6 +8217,31 @@ async function startServer(options: { listen?: boolean } = {}) {
           message: 'Ülke kodu ISO 3166-1 alpha-2 biçiminde olmalıdır (örn. TR, DE).',
         });
         return;
+      }
+
+      const rawRegistrationRequestId = req.body?.request_id ?? req.body?.requestId;
+      const registrationRequestId =
+        typeof rawRegistrationRequestId === 'string' && rawRegistrationRequestId.trim()
+          ? rawRegistrationRequestId.trim()
+          : null;
+      if (registrationRequestId && registrationRequestId.length > 120) {
+        res.status(400).json({ status: 'error', code: 'INVALID_REQUEST_ID', message: 'request_id en fazla 120 karakter olmalıdır.' });
+        return;
+      }
+      if (registrationRequestId) {
+        const previousRegistration = await pgQuery(
+          'SELECT request_id FROM idempotency_keys WHERE request_id = $1',
+          [registrationRequestId]
+        );
+        if (previousRegistration?.rows?.length) {
+          res.status(409).json({
+            status: 'error',
+            code: 'REQUEST_ALREADY_RECORDED',
+            request_id: registrationRequestId,
+            message: 'Bu kayıt isteği daha önce işlendi. Giriş yaparak hesabınızı kontrol edin.',
+          });
+          return;
+        }
       }
 
       const normalizedEmail = String(email || '').trim().toLowerCase();
@@ -8207,7 +8327,7 @@ async function startServer(options: { listen?: boolean } = {}) {
       const nowIso = new Date().toISOString();
       const customRef = ref_code ? String(ref_code).trim().toUpperCase() : '';
 
-      const isPendingPayment = !isCallingAdmin || Boolean(pending_payment);
+      const isPendingPayment = true;
       const manualCareer =
         isCallingAdmin &&
         manual_career_override !== undefined &&
@@ -8216,12 +8336,7 @@ async function startServer(options: { listen?: boolean } = {}) {
           ? Number(manual_career_override)
           : null;
 
-      const effectiveCredits =
-        isCallingAdmin && typeof session_credits === 'number' && session_credits >= 0
-          ? Math.round(session_credits)
-          : skip_initial_order && !isPendingPayment
-            ? PACKAGES[pkgKey]?.sessionCredits ?? 0
-            : 0;
+      const effectiveCredits = 0;
 
       let finalLeg: 'LEFT' | 'RIGHT' = 'LEFT';
       if (assigned_leg === 'LEFT' || assigned_leg === 'RIGHT') {
@@ -8304,8 +8419,7 @@ async function startServer(options: { listen?: boolean } = {}) {
         last_login_ip:
           req.body?.last_login_ip || `176.240.${Math.floor(10 + Math.random() * 200)}.${nextLineId}`,
         device_fingerprint: req.body?.device_fingerprint || `DEV-FP-${nextLineId}`,
-        kvkk_approved_at: nowIso,
-        contract_version: req.body?.contract_version || 'v2.0',
+        contract_version: undefined,
         daily_withdrawal_limit:
           DAILY_WITHDRAWAL_LIMITS_BY_CAREER[manualCareer || 1] || 5000,
         fast_start_awarded: false,
@@ -8328,42 +8442,27 @@ async function startServer(options: { listen?: boolean } = {}) {
         (newMember as any).dealerDetails = { companyName: String(req.body.company_title).trim() };
       }
 
-      // In-Memory dizisini anında senkronize et
+      const rollbackState = captureRollbackState();
       members.push(newMember);
 
-      // =========================================================================
-      // 2. KESİNTİSİZ ÖDEME YÖNLENDİRME (PAYMENT REDIRECTION / PAYTR / VPOS)
-      // =========================================================================
       const orderAmt = getPackageOrderAmount(newUserId, pkgKey);
-      const orderId = `ORD-KAYIT-${nextLineId}-${Date.now().toString().slice(-4)}`;
-      
-      const paymentToken = createHmac('sha256', process.env.ADMIN_JWT_SECRET || 'akn-secure-vpos-key')
-        .update(`${newUserId}-${orderId}-${orderAmt}-${Date.now()}`)
-        .digest('hex');
-      
-      const paymentUrl = `/api/v1/payments/checkout?order_id=${encodeURIComponent(
-        orderId
-      )}&token=${paymentToken}&amount=${orderAmt}&currency=TRY`;
+      const orderId = `ORD-KAYIT-${nextLineId}-${randomBytes(6).toString('hex').toUpperCase()}`;
+      const consentToken = issueRegistrationConsentToken(newUserId, orderId);
+      const commissionTx: any = null;
+      const orderRecord: OrderLogRecord = {
+        order_id: orderId,
+        user_id: newMember.id,
+        external_user_id: newMember.user_id,
+        user_full_name: newMember.full_name,
+        package_id: pkgKey,
+        amount: orderAmt,
+        status: 'PENDING',
+        payment_method: 'CARD_3D',
+        created_at: nowIso,
+      };
+      ordersLog.unshift(orderRecord);
 
-      let commissionTx: any = null;
-
-      if (isPendingPayment) {
-        commissionTx = null;
-      } else if (skip_initial_order) {
-        creditsOwnedByServer.add(newMember.user_id);
-
-        recalculateAllCareers('MANUAL_ADMIN');
-      } else {
-        commissionTx = processOrderCommission({
-          user_id: newUserId,
-          order_id: orderId,
-          order_amount: orderAmt,
-          package_id: pkgKey,
-          timestamp: nowIso,
-        });
-      }
-
-      const memberPass = password && String(password).length >= 4 ? String(password) : '123456';
+      const memberPass = normalizedPassword;
       const hashedCreds = hashMemberPassword(memberPass);
       memberCredentials.set(newMember.user_id, hashedCreds);
 
@@ -8418,12 +8517,18 @@ async function startServer(options: { listen?: boolean } = {}) {
               [newUserId]
             );
 
-            if (!isPendingPayment) {
+            await client.query(
+              `INSERT INTO orders_log (order_id, user_id, package_id, amount, status, payment_method, created_at)
+               VALUES ($1, $2, $3, $4, 'PENDING', 'CARD_3D', $5)
+               ON CONFLICT (order_id) DO NOTHING`,
+              [orderId, newUserId, pkgKey, orderAmt, nowIso]
+            );
+
+            if (registrationRequestId) {
               await client.query(
-                `INSERT INTO orders_log (order_id, user_id, package_id, amount, status, created_at)
-                 VALUES ($1, $2, $3, $4, $5, $6)
-                 ON CONFLICT (order_id) DO NOTHING`,
-                [orderId, newUserId, pkgKey, orderAmt, skip_initial_order ? 'COMPLETED' : 'PENDING', nowIso]
+                `INSERT INTO idempotency_keys (request_id, scope, user_id, response_payload)
+                 VALUES ($1, 'MEMBER_REGISTRATION', $2, $3::jsonb)`,
+                [registrationRequestId, newUserId, JSON.stringify({ order_id: orderId })]
               );
             }
 
@@ -8444,8 +8549,19 @@ async function startServer(options: { listen?: boolean } = {}) {
                 ]
               );
             }
+            upsertDealerInvoiceDraft({
+              orderId,
+              member: newMember,
+              amount: orderAmt,
+              packageId: pkgKey,
+              isPaymentConfirmed: false,
+              createdAt: nowIso,
+            });
+            await persistApplicationState(client);
           });
+          res.locals.applicationStatePersisted = true;
         } catch (dbErr: any) {
+          applyPersistentState(rollbackState);
           logDatabaseError('member-registration-write', dbErr);
           const error: any = new Error('Bayi kaydı PostgreSQL’e yazılamadı; işlem tamamlanmadı.');
           error.statusCode = 503;
@@ -8453,20 +8569,9 @@ async function startServer(options: { listen?: boolean } = {}) {
         }
       }
 
-      // =========================================================================
-      // 4. KULLANICIYA 201 CREATED & GÜVENLİ ÖDEME YÖNLENDİRME DÖNÜŞÜ
-      // =========================================================================
-      upsertDealerInvoiceDraft({
-        orderId,
-        member: newMember,
-        amount: orderAmt,
-        packageId: pkgKey,
-        isPaymentConfirmed: !isPendingPayment && (Boolean(skip_initial_order) || Boolean(commissionTx)),
-        createdAt: nowIso,
-      });
-
       res.status(201).json({
         status: 'success',
+        request_id: registrationRequestId,
         message: isPendingPayment
           ? `${newMember.full_name} için bayi hesabı ödeme bekliyor olarak oluşturuldu.`
           : commissionTx
@@ -8479,12 +8584,12 @@ async function startServer(options: { listen?: boolean } = {}) {
           package_id: pkgKey,
           amount: orderAmt,
           currency: 'TRY',
-          payment_status: isPendingPayment ? 'PENDING' : skip_initial_order ? 'COMPLETED' : 'PENDING',
+          payment_status: 'PENDING',
         },
-        payment_url: paymentUrl,
-        payment_token: paymentToken,
-        payment_provider: 'PAYTR_VPOS_GATEWAY',
-        redirect_required: !skip_initial_order && !isPendingPayment,
+        payment_url: null,
+        payment_provider: process.env.PAYMENT_PROVIDER && process.env.PAYMENT_PROVIDER !== 'SANDBOX_TEST_POS' ? process.env.PAYMENT_PROVIDER : null,
+        redirect_required: true,
+        consent_token: consentToken,
         transaction: commissionTx,
         state: buildStateResponse(),
       });
@@ -8501,8 +8606,73 @@ async function startServer(options: { listen?: boolean } = {}) {
   app.post('/api/v1/register', handleMemberRegistration);
   app.post('/api/v1/members/register', handleMemberRegistration);
 
-  // Güvenli Sanal POS / PayTR Ödeme Sayfası (Payment Redirection Endpoint)
+  app.post('/api/v1/admin/members/:userId/grant', requireAdminJwt, async (req, res) => {
+    const userId = String(req.params.userId || '').trim();
+    const requestId = String(req.body?.request_id || '').trim();
+    const reason = String(req.body?.reason || '').trim().slice(0, 500);
+    const credits = Number(req.body?.credits);
+    if (!/^[0-9a-f-]{36}$/i.test(requestId) || reason.length < 10 || !Number.isInteger(credits) || credits < 0) {
+      return res.status(400).json({ status: 'error', message: 'Geçerli bir istek kimliği, en az 10 karakterlik gerekçe ve sıfır veya üzeri tam sayı kredi zorunludur.' });
+    }
+    const member = members.find((entry) => entry.user_id === userId);
+    if (!member) return res.status(404).json({ status: 'error', message: 'Hibe tanımlanacak üye bulunamadı.' });
+    const rollbackState = captureRollbackState();
+    const adminUid = String(res.locals.adminUid || 'ADMIN-AKN-01');
+    const nowIso = new Date().toISOString();
+    try {
+      const result = await withTransaction(async (client) => {
+        const requestKey = `MANUAL_GRANT:${requestId}`;
+        const existing = await client.query('SELECT scope, user_id, response_payload FROM idempotency_keys WHERE request_id = $1', [requestKey]);
+        if (existing.rows.length) {
+          if (existing.rows[0].scope !== 'MANUAL_GRANT' || existing.rows[0].user_id !== userId) {
+            throw new Error('İstek kimliği başka bir yönetici hibesi için kullanılmış.');
+          }
+          return { ...(existing.rows[0].response_payload || {}), is_idempotent_replay: true };
+        }
+        if (member.is_active || !member.is_locked) throw new Error('Yönetici hibesi yalnızca bekleyen üyeye uygulanabilir.');
+        const creditResult = await applyResellerCreditAdjustment(client, userId, { delta: credits }, requestKey);
+        if (!creditResult.success) throw new Error(creditResult.message);
+        member.session_credits = creditResult.remainingCredits;
+        member.is_active = true;
+        member.is_locked = false;
+        (member as any).dealerStatus = 'approved';
+        (member as any).manual_grant_reason = reason;
+        creditsOwnedByServer.add(userId);
+        const audit = {
+          id: nextAdminAuditLogId++,
+          action: 'MEMBER_MANUAL_GRANT' as const,
+          admin_uid: adminUid,
+          subject_user_id: userId,
+          credits_granted: credits,
+          reason,
+          created_at: nowIso,
+        };
+        adminAuditLogs.unshift(audit);
+        const payload = { status: 'success', member: sanitizeMemberForPublicState(member), audit };
+        await client.query(
+          'INSERT INTO idempotency_keys (request_id, scope, user_id, response_payload) VALUES ($1, $2, $3, $4::jsonb)',
+          [requestKey, 'MANUAL_GRANT', userId, JSON.stringify(payload)]
+        );
+        await persistApplicationState(client);
+        return payload;
+      });
+      res.locals.applicationStatePersisted = true;
+      return res.json({ ...result, state: buildStateResponse() });
+    } catch (error: any) {
+      applyPersistentState(rollbackState);
+      logDatabaseError('admin-member-manual-grant', error);
+      return res.status(503).json({ status: 'error', code: 'MANUAL_GRANT_FAILED', message: error?.message || 'Yönetici hibesi kaydedilemedi.' });
+    }
+  });
+
+  // Ödeme sağlayıcısı yapılandırılana kadar sahte ödeme sayfası kapalıdır.
   app.get('/api/v1/payments/checkout', (req, res) => {
+    res.status(503).json({
+      status: 'error',
+      code: 'PAYMENT_PROVIDER_NOT_CONFIGURED',
+      message: 'Canlı ödeme sağlayıcısı henüz yapılandırılmadı. Kayıt ödeme onayı gelene kadar beklemede kalır.',
+    });
+    return;
     const { order_id, token, amount, currency } = req.query;
     const safeOrderId = String(order_id || 'ORD-KAYIT-001').replace(/[^a-zA-Z0-9-_]/g, '');
     const safeAmount = Number(amount) || 0;
@@ -8750,35 +8920,10 @@ async function startServer(options: { listen?: boolean } = {}) {
   });
 
   app.post('/api/v1/admin/withdrawals/bulk-approve', requireAdminJwt, (_req, res) => {
-    const pendingList = withdrawalRequests.filter((w) => w.status === 'PENDING');
-    if (pendingList.length === 0) {
-      res.status(400).json({ status: 'error', message: 'Bekleyen çekim talebi bulunmamaktadır.' });
-      return;
-    }
-
-    let totalApprovedAmt = 0;
-    const nowIso = new Date().toISOString();
-
-    for (const w of pendingList) {
-      const settlementRef = `EFT-2026-TR-${Date.now().toString().slice(-6)}-${Math.floor(1000 + Math.random() * 9000)}`;
-      w.status = 'APPROVED';
-      w.processed_at = nowIso;
-      w.bank_settlement_ref = settlementRef;
-      w.payout_provider = w.region === 'INTERNATIONAL' ? 'SWIFT_INTERNATIONAL_PAYOUT' : 'ZIRAAT_FAST_EFT_TRANSFER';
-      w.admin_note = `Toplu Ödeme (Batch Payout) ile onaylandı. Banka Referansı: ${settlementRef}`;
-      totalApprovedAmt = roundCurrency(totalApprovedAmt + w.amount);
-      const member = members.find((m) => m.id === w.user_id);
-      if (member) {
-        member.wallets.total_withdrawn = roundCurrency(member.wallets.total_withdrawn + w.amount);
-      }
-    }
-
-    res.json({
-      status: 'success',
-      message: `${pendingList.length} adet çekim talebi (${totalApprovedAmt.toLocaleString(
-        'tr-TR'
-      )} $) toplu olarak onaylandı.`,
-      state: buildStateResponse(),
+    return res.status(422).json({
+      status: 'error',
+      code: 'BANK_SETTLEMENT_PROOF_REQUIRED',
+      message: 'Toplu çekim onayı kapalıdır; her ödeme banka ekstresindeki tutar ve işlem referansıyla eşleştirilmelidir.',
     });
   });
 
@@ -8835,7 +8980,7 @@ async function startServer(options: { listen?: boolean } = {}) {
       const cLvl = Math.max(1, Math.min(7, Number(req.body.career_level) || 1));
       member.career_level = cLvl;
       member.manual_career_override = cLvl;
-      const titles = ['', 'Emmâre', 'Levvâme', 'Mülhime', 'Mutmainne', 'Râziye', 'Marziyye', 'Kâmile (Sâfiye)'];
+      const titles = ['', 'Emmâre', 'Levvâme', 'Mülhime', 'Mutmainne', 'Râziye', 'Marziyye', 'Kâmile'];
       member.career_title = titles[cLvl] || 'Emmâre';
     }
     if (sponsor_id !== undefined) {
@@ -8957,58 +9102,59 @@ async function startServer(options: { listen?: boolean } = {}) {
     });
   });
 
-  app.delete('/api/v1/admin/members/:userId', requireAdminJwt, (req, res) => {
+  app.delete('/api/v1/admin/members/:userId', requireAdminJwt, async (req, res) => {
     const idx = members.findIndex((m) => m.user_id === req.params.userId);
     if (idx === -1) {
       res.status(404).json({ status: 'error', message: 'Silinecek bayi/üye bulunamadı.' });
       return;
     }
 
+    const rollbackState = captureRollbackState();
     const removed = members[idx];
     const fallbackSponsor = removed.sponsor_id
       ? members.find((m) => m.user_id === removed.sponsor_id && m.user_id !== removed.user_id)
       : members.find((m) => m.user_id !== removed.user_id);
+    const targetUplineId = fallbackSponsor && fallbackSponsor.user_id !== removed.user_id ? fallbackSponsor.user_id : null;
 
-    members.splice(idx, 1);
+    try {
+      await runInAtomicTransaction(async () => {
+        await withTransaction(async (client) => {
+          await client.query('UPDATE users SET sponsor_id = $1 WHERE sponsor_id = $2', [targetUplineId, removed.user_id]);
+          await client.query('DELETE FROM users WHERE user_id = $1', [removed.user_id]);
 
-    // Reassign downline members whose sponsor was the deleted member
-    for (const m of members) {
-      if (m.sponsor_id === removed.user_id) {
-        if (fallbackSponsor && fallbackSponsor.user_id !== m.user_id) {
-          m.sponsor_id = fallbackSponsor.user_id;
-          m.sponsor_db_id = fallbackSponsor.id;
-        } else {
-          m.sponsor_id = null;
-          m.sponsor_db_id = null;
-        }
-      }
+          members.splice(idx, 1);
+          for (const member of members) {
+            if (member.sponsor_id === removed.user_id) {
+              member.sponsor_id = targetUplineId;
+              member.sponsor_db_id = fallbackSponsor?.id ?? null;
+            }
+          }
+
+          const ordered = [...members].sort((a, b) => a.global_line_id - b.global_line_id);
+          ordered.forEach((member, index) => {
+            member.global_line_id = index + 1;
+          });
+          recalculateAllCareers('MANUAL_ADMIN');
+          await persistApplicationState(client);
+        });
+      });
+
+      res.locals.applicationStatePersisted = true;
+      res.json({
+        status: 'success',
+        message: `${removed.full_name} (${removed.user_id}) sistemden kalıcı olarak çıkarıldı, alt ekibi üst sponsora (${fallbackSponsor?.full_name || 'Kök'}) bağlandı ve Monoline tek hat sıralaması yeniden düzenlendi.`,
+        state: buildStateResponse(),
+      });
+    } catch (error: any) {
+      applyPersistentState(rollbackState);
+      persistenceFailure = error?.message || 'PostgreSQL member deletion failed';
+      logDatabaseError('admin-member-delete', error);
+      res.status(503).json({
+        status: 'error',
+        code: 'DATABASE_PERSISTENCE_FAILED',
+        message: 'Üye silme işleminin veritabanına kaydı doğrulanamadı. Tekrar denemeden önce üye listesini yenileyin.',
+      });
     }
-
-    // Re-sequence Monoline global_line_id without gaps
-    const ordered = [...members].sort((a, b) => a.global_line_id - b.global_line_id);
-    ordered.forEach((m, i) => {
-      m.global_line_id = i + 1;
-    });
-
-    if (getIsPostgresAvailable()) {
-      try {
-        const targetUplineId = fallbackSponsor && fallbackSponsor.user_id !== removed.user_id ? fallbackSponsor.user_id : null;
-        pgQuery('UPDATE users SET sponsor_id = $1 WHERE sponsor_id = $2', [targetUplineId, removed.user_id])
-          .catch((err: any) => console.warn('[Postgres downline roll-up sync]:', err.message));
-        pgQuery('DELETE FROM users WHERE user_id = $1', [removed.user_id])
-          .catch((err: any) => console.warn('[Postgres user delete sync]:', err.message));
-      } catch (e: any) {
-        // non-blocking
-      }
-    }
-
-    recalculateAllCareers('MANUAL_ADMIN');
-
-    res.json({
-      status: 'success',
-      message: `${removed.full_name} (${removed.user_id}) sistemden kalıcı olarak çıkarıldı, alt ekibi üst sponsora (${fallbackSponsor?.full_name || 'Kök'}) bağlandı ve Monoline tek hat sıralaması yeniden düzenlendi.`,
-      state: buildStateResponse(),
-    });
   });
 
   // Instant Admin Career Bonus & Custom Wallet Bonus Payout Endpoint
@@ -11185,7 +11331,7 @@ async function startServer(options: { listen?: boolean } = {}) {
         status: 'PENDING_ADMIN_APPROVAL',
         requested_at: nowIso,
         processed_at: null,
-        admin_note: 'Bayi tarafından cihazdan fatura yüklendi; Yönetici Vergi İadesi Panelinde onay bekliyor.',
+        admin_note: 'Belge yüklendi; stopaj iadesi mali müşavir incelemesi ve doğrulanmış vergi kaydı bekliyor.',
       };
 
       taxRefundInvoices.unshift(newInvoice);
@@ -11201,7 +11347,7 @@ async function startServer(options: { listen?: boolean } = {}) {
 
       res.status(201).json({
         status: 'success',
-        message: `🧾 Faturanız (${newInvoice.invoice_file_name} · Fatura No: ${newInvoice.invoice_no}) yüklendi ve Yönetici Vergi İadesi ile Akıllı Muhasebe inceleme kuyruklarına iletildi. Yönetici onayladığında +${taxAmt.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} $ (%20 Vergi İadesi) hesabınıza aktarılacaktır.`,
+        message: `Faturanız (${newInvoice.invoice_file_name} · Fatura No: ${newInvoice.invoice_no}) inceleme kuyruğuna alındı. Stopaj iadesi mali müşavir incelemesi ve doğrulanmış vergi kaydı olmadan aktarılmayacaktır.`,
         invoice: newInvoice,
         state: buildStateResponse(),
       });
@@ -11213,13 +11359,20 @@ async function startServer(options: { listen?: boolean } = {}) {
     }
   });
 
-  // Yönetici Paneli: Vergi İadesi Faturasını Onaylama / Reddetme ve %20 Vergi İadesini Bayi Hesabına Aktarma
+  // Vergi iadesi aktarımı mali müşavir incelemesi tamamlanana kadar kapalıdır.
   app.post('/api/v1/admin/tax-refunds/:id/decision', requireAdminJwt, async (req, res) => {
     try {
       const invId = Number(req.params.id);
       const { decision, admin_note } = req.body || {};
       if (decision !== 'APPROVED' && decision !== 'REJECTED') {
         throw new Error('Vergi iadesi kararı APPROVED veya REJECTED olmalıdır.');
+      }
+      if (decision === 'APPROVED') {
+        return res.status(422).json({
+          status: 'error',
+          code: 'ACCOUNTANT_REVIEW_REQUIRED',
+          message: 'Stopaj iadesi mali müşavir incelemesi ve doğrulanmış vergi kaydı olmadan aktarılamaz.',
+        });
       }
 
       const result = await runInAtomicTransaction(() => {
@@ -11595,19 +11748,26 @@ async function startServer(options: { listen?: boolean } = {}) {
   // ============================================================================
   interface UserContractApprovalRow {
     id: number;
+    consent_nonce: string;
     user_id: string;
     user_name: string;
     order_id: string;
     contract_type: 'DISTANCE_SALES' | 'PRE_INFORMATION' | 'MLM_TERMS' | 'KVKK';
     version: string;
-    order_amount?: number;
-    product_summary?: string;
+    order_amount: number;
+    product_summary: string;
     ip_address: string;
     approved_at: string;
   }
 
   const userContractApprovals: UserContractApprovalRow[] = [];
-  let nextContractApprovalId = 1;
+  const storedContractApprovals = await pgQuery('SELECT * FROM user_contract_approvals ORDER BY id DESC');
+  userContractApprovals.push(...(storedContractApprovals?.rows || []).map((row: any) => ({
+    ...row,
+    order_amount: Number(row.order_amount),
+    approved_at: new Date(row.approved_at).toISOString(),
+  })));
+  let nextContractApprovalId = userContractApprovals.reduce((max, row) => Math.max(max, row.id), 0) + 1;
 
   interface PaymentLogRecord {
     id: number;
@@ -11648,10 +11808,7 @@ async function startServer(options: { listen?: boolean } = {}) {
     err instanceof PaymentProviderError ? err.code : 'PROVIDER_ERROR';
 
   const paymentProviderName = (): string => process.env.PAYMENT_PROVIDER || 'SANDBOX_TEST_POS';
-  const sandboxPaymentsEnabled = () =>
-    process.env.NODE_ENV !== 'production' ||
-    (process.env.ALLOW_SANDBOX_PAYMENTS === 'true' &&
-      process.env.ALLOW_SANDBOX_SETTLEMENT === 'true');
+  const sandboxPaymentsEnabled = () => process.env.NODE_ENV !== 'production';
 
   app.get('/api/v1/payments/regional-prices', (req, res) => {
     const userId = String(req.query.user_id || '').trim();
@@ -11859,57 +12016,108 @@ async function startServer(options: { listen?: boolean } = {}) {
     res.json({ status: 'success', logs: paymentLogs.slice(-500) });
   });
 
-  app.post('/api/v1/compliance/contract-approvals', (req, res) => {
-    const {
-      user_id = 'USR-1001',
-      user_name = 'AuraBio Bayi',
-      order_id = '',
-      order_amount,
-      product_summary = '',
-      version = 'v2.2',
-      contracts = ['PRE_INFORMATION', 'DISTANCE_SALES', 'KVKK', 'MLM_TERMS'],
-    } = req.body || {};
+  app.post('/api/v1/compliance/contract-approvals', async (req, res) => {
+    const { user_id, user_name, order_id, order_amount, product_summary, version, contracts, consent_id } = req.body || {};
+    const authorization = req.headers.authorization?.startsWith('Bearer ')
+      ? req.headers.authorization.slice('Bearer '.length).trim()
+      : '';
+    const registrationConsent = verifyRegistrationConsentToken(authorization);
+    const authenticatedUserId = registrationConsent ? null : verifyMemberToken(authorization);
+    const normalizedUserId = String(user_id || '').trim();
+    const normalizedOrderId = String(order_id || '').trim();
+    const normalizedVersion = String(version || '').trim();
+    const normalizedSummary = String(product_summary || '').trim();
+    const amount = Number(order_amount);
+    const requiredContracts: UserContractApprovalRow['contract_type'][] = [
+      'PRE_INFORMATION', 'DISTANCE_SALES', 'MLM_TERMS', 'KVKK',
+    ];
+    const contractList = Array.isArray(contracts) ? contracts : [];
+    const clientIp = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.socket.remoteAddress || 'unknown';
 
-    const clientIp =
-      (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
-      req.socket.remoteAddress ||
-      '176.240.10.1';
+    if ((!registrationConsent && authenticatedUserId !== normalizedUserId) || !normalizedUserId || !normalizedOrderId) {
+      return res.status(401).json({ status: 'error', message: 'Sözleşme onayı için ilgili üyeye ait doğrulanmış oturum gerekir.' });
+    }
+    if (registrationConsent && (registrationConsent.userId !== normalizedUserId || registrationConsent.orderId !== normalizedOrderId)) {
+      return res.status(401).json({ status: 'error', message: 'Kayıt onay oturumu bu üyeye veya siparişe ait değil.' });
+    }
+    if (!Number.isFinite(amount) || amount <= 0 || !normalizedSummary || normalizedVersion !== 'v2.2' ||
+      contractList.length !== requiredContracts.length || new Set(contractList).size !== requiredContracts.length ||
+      requiredContracts.some((type) => !contractList.includes(type))) {
+      return res.status(400).json({ status: 'error', message: 'Sipariş tutarı, ürün özeti ve zorunlu sözleşmeler eksiksiz olmalıdır.' });
+    }
+
+    const member = members.find((entry) => entry.user_id === normalizedUserId);
+    if (!member) return res.status(404).json({ status: 'error', message: 'Sözleşme sahibi üye bulunamadı.' });
+    if (registrationConsent) {
+      const orderResult = await pgQuery(
+        "SELECT user_id, amount, status FROM orders_log WHERE order_id = $1 AND user_id = $2 LIMIT 1",
+        [normalizedOrderId, normalizedUserId]
+      );
+      const pendingOrder = orderResult?.rows[0];
+      if (!pendingOrder || pendingOrder.status !== 'PENDING' || Math.round(Number(pendingOrder.amount) * 100) !== Math.round(amount * 100)) {
+        return res.status(409).json({ status: 'error', message: 'Kayıt siparişi kullanıcı veya tutar ile eşleşmiyor.' });
+      }
+    }
+
+    const consentNonce = registrationConsent?.nonce || String(consent_id || '').trim();
+    if (!consentNonce) return res.status(400).json({ status: 'error', message: 'Tekil onay kimliği zorunludur.' });
+    const existing = await pgQuery('SELECT * FROM user_contract_approvals WHERE consent_nonce = $1 ORDER BY id', [consentNonce]);
+    if (existing?.rows.length) {
+      const existingRows = existing.rows.map((row: any) => ({
+        ...row,
+        order_amount: Number(row.order_amount),
+        approved_at: new Date(row.approved_at).toISOString(),
+      })) as UserContractApprovalRow[];
+      const matches = existingRows.length === requiredContracts.length && existingRows.every((row) =>
+        row.user_id === normalizedUserId && row.order_id === normalizedOrderId &&
+        row.order_amount === amount && row.product_summary === normalizedSummary && row.version === normalizedVersion
+      );
+      return matches
+        ? res.status(200).json({ status: 'success', approvals: existingRows })
+        : res.status(409).json({ status: 'error', message: 'Bu onay kimliği başka bir sözleşme kaydı için kullanılmış.' });
+    }
+
     const nowIso = new Date().toISOString();
-
-    const createdRows: UserContractApprovalRow[] = [];
-    const contractList = Array.isArray(contracts)
-      ? contracts
-      : ['PRE_INFORMATION', 'DISTANCE_SALES', 'KVKK', 'MLM_TERMS'];
-
-    for (const cType of contractList) {
-      const row: UserContractApprovalRow = {
-        id: nextContractApprovalId++,
-        user_id: String(user_id),
-        user_name: String(user_name),
-        order_id: String(order_id),
-        contract_type: cType as UserContractApprovalRow['contract_type'],
-        version: String(version),
-        order_amount: Number.isFinite(Number(order_amount)) ? Number(order_amount) : undefined,
-        product_summary: String(product_summary),
-        ip_address: clientIp,
-        approved_at: nowIso,
-      };
-      userContractApprovals.unshift(row);
-      createdRows.push(row);
+    const createdRows: UserContractApprovalRow[] = requiredContracts.map((contract_type) => ({
+      id: 0,
+      consent_nonce: consentNonce,
+      user_id: normalizedUserId,
+      user_name: String(user_name || member.full_name),
+      order_id: normalizedOrderId,
+      contract_type,
+      version: normalizedVersion,
+      order_amount: amount,
+      product_summary: normalizedSummary,
+      ip_address: clientIp,
+      approved_at: nowIso,
+    }));
+    const rollbackState = captureRollbackState();
+    try {
+      await withTransaction(async (client) => {
+        for (const row of createdRows) {
+          const inserted = await client.query(
+            `INSERT INTO user_contract_approvals (consent_nonce, user_id, user_name, order_id, contract_type, version, order_amount, product_summary, ip_address, approved_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id`,
+            [row.consent_nonce, row.user_id, row.user_name, row.order_id, row.contract_type, row.version, row.order_amount, row.product_summary, row.ip_address, row.approved_at]
+          );
+          row.id = Number(inserted.rows[0].id);
+        }
+        member.kvkk_approved_at = nowIso;
+        member.contract_version = normalizedVersion;
+        member.last_login_ip = clientIp;
+        await persistApplicationState(client);
+      });
+      userContractApprovals.unshift(...createdRows);
+      res.locals.applicationStatePersisted = true;
+      return res.status(201).json({ status: 'success', approvals: createdRows });
+    } catch (error: any) {
+      applyPersistentState(rollbackState);
+      if (error?.code === '23505') {
+        return res.status(409).json({ status: 'error', message: 'Bu sözleşme onay oturumu daha önce kullanılmış.' });
+      }
+      logDatabaseError('contract-approval', error);
+      return res.status(503).json({ status: 'error', code: 'CONTRACT_APPROVAL_WRITE_FAILED', message: 'Sözleşme onayları veritabanına kaydedilemedi.' });
     }
-
-    const member = members.find((m) => m.user_id === user_id || String(m.id) === String(user_id));
-    if (member) {
-      member.kvkk_approved_at = nowIso;
-      member.contract_version = String(version);
-      member.last_login_ip = clientIp;
-    }
-
-    res.status(201).json({
-      status: 'success',
-      message: `${createdRows.length} adet yasal sözleşme onayı (user_contract_approvals · Versiyon ${version} · IP: ${clientIp}) kayıt altına alındı.`,
-      approvals: createdRows,
-    });
   });
 
   app.get('/api/v1/compliance/contract-approvals', requireAdminJwt, (_req, res) => {
@@ -12354,27 +12562,13 @@ async function startServer(options: { listen?: boolean } = {}) {
   });
 
   // 7. Çekim Onayı Banka Settlement Eşleştirmesi
-  app.post('/api/v1/integrations/accounting/settle-withdrawal', (req, res) => {
-    try {
-      const { withdrawal_id, bank_settlement_ref, payout_provider, net_amount_try } = req.body;
-      if (!withdrawal_id || !bank_settlement_ref) {
-        return res.status(400).json({
-          error: 'Eksik veri: withdrawal_id ve bank_settlement_ref zorunludur.',
-        });
-      }
-      res.json({
-        success: true,
-        message: `Çekim #${withdrawal_id} banka dekontu (${bank_settlement_ref}) ile eşleştirildi. 102.02 Banka Çıkışı kaydedildi.`,
-        withdrawal_id,
-        bank_settlement_ref,
-        payout_provider: payout_provider || 'BANK_FAST_TRANSFER',
-        net_amount_try,
-        status: 'SETTLED',
-        settled_at: new Date().toISOString(),
-      });
-    } catch (error: any) {
-      res.status(500).json({ error: error.message || 'Settlement kayıt hatası' });
-    }
+  app.post('/api/v1/integrations/accounting/settle-withdrawal', requireAdminJwt, (_req, res) => {
+    return res.status(422).json({
+      success: false,
+      code: 'BANK_SETTLEMENT_RECONCILIATION_REQUIRED',
+      message: 'Çekim settlement’ı onaylı banka ekstresiyle işlem ve tutar eşleştirilmeden kesinleştirilemez.',
+      status: 'AWAITING_BANK_PROOF',
+    });
   });
 
   app.get('/api/v1/accounting/bank-statements', requireAccountingOrAdmin, async (_req, res) => {
@@ -12698,8 +12892,8 @@ async function startServer(options: { listen?: boolean } = {}) {
     });
     return {
       generatedCount: 0,
-      totalGrossGenerated: pendingReviewLogs.reduce((sum, log) => sum + Number(log.amount || 0), 0),
-      totalNetGenerated: 0,
+      documentStatus: 'NOT_GENERATED_REQUIRES_ACCOUNTANT_APPROVAL',
+      totalGrossPendingReview: pendingReviewLogs.reduce((sum, log) => sum + Number(log.amount || 0), 0),
       pendingReviewCount: pendingReviewLogs.length,
     };
   }
@@ -12852,176 +13046,13 @@ async function startServer(options: { listen?: boolean } = {}) {
     }
   });
 
-  // Seçilenleri Onayla ve Ödemeyi Tamamla (Atomik PostgreSQL Transaction)
-  app.post('/api/v1/accounting/payouts/execute-batch', requireAdminJwt, async (req, res) => {
-    try {
-      const { commission_ids, bank_name = 'GARANTI', executed_by = 'Yönetici' } = req.body || {};
-      const ids: string[] = Array.isArray(commission_ids) ? commission_ids : [];
-
-      if (ids.length === 0) {
-        return res.status(400).json({ error: 'Ödenecek komisyon veya pusula listesi seçilmedi.' });
-      }
-
-      // Seçilen pusulaları doğrula
-      const targetVouchers = expenseVouchers.filter(
-        (v) => (ids.includes(v.commission_log_id) || ids.includes(v.voucher_number)) && v.status !== 'PAID_SETTLED'
-      );
-
-      if (targetVouchers.length === 0) {
-        return res.status(400).json({
-          error: 'Seçilen hakedişler arasında ödemeye uygun bekleyen kayıt bulunamadı (zaten ödenmiş olabilir).',
-        });
-      }
-
-      const totalGross = targetVouchers.reduce((s, v) => s + v.gross_amount, 0);
-      const totalWithholding = targetVouchers.reduce((s, v) => s + v.withholding_amount, 0);
-      const totalNet = targetVouchers.reduce((s, v) => s + v.net_amount, 0);
-
-      const batchSeq = nextPayoutBatchSequence++;
-      const batchId = `BATCH-${bank_name}-${Date.now().toString().slice(-6)}-${batchSeq.toString().padStart(3, '0')}`;
-      const nowIso = new Date().toISOString();
-
-      // Atomik İşlem: Cüzdan düşümü + Çift taraflı muhasebe fişi (102.01 Banka Çıkışı) + Durum güncellemesi
-      await runInAtomicTransaction(async () => {
-        for (const v of targetVouchers) {
-          // 1. Cüzdan bakiyesinden net tutar düş
-          const member = members.find(
-            (m) => m.user_id === v.dealer_user_id || m.full_name === v.dealer_full_name
-          );
-          if (member) {
-            member.wallets.total_earnings = Math.max(
-              0,
-              roundCurrency(member.wallets.total_earnings - v.net_amount)
-            );
-            member.wallets.total_withdrawn = roundCurrency(
-              (member.wallets.total_withdrawn || 0) + v.net_amount
-            );
-
-            await pgQuery(
-              `UPDATE wallets
-               SET balance = GREATEST(0, balance - $1),
-                   total_withdrawn = COALESCE(total_withdrawn, 0) + $1,
-                   updated_at = $2
-               WHERE user_id = $3`,
-              [v.net_amount, nowIso, member.user_id]
-            );
-          }
-
-          const txId = `TX-PAYOUT-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`;
-          walletTransactions.unshift({
-            id: nextWalletTransactionId++,
-            transaction_id: txId,
-            user_id: member?.id || 1,
-            external_user_id: v.dealer_user_id,
-            user_full_name: v.dealer_full_name,
-            order_id: v.order_id,
-            transaction_type: 'PAYOUT',
-            direction: 'DEBIT',
-            amount: v.net_amount,
-            balance_before: member ? member.wallets.total_earnings + v.net_amount : v.net_amount,
-            balance_after: member ? member.wallets.total_earnings : 0,
-            description: `Banka EFT/FAST Toplu Bayi Ödemesi (${bank_name}) - Pusula: ${v.voucher_number}`,
-            status: 'COMPLETED',
-            created_at: nowIso,
-          });
-
-          // 3. Gider pusulası durumunu PAID_SETTLED yap
-          v.status = 'PAID_SETTLED';
-          v.paid_at = nowIso;
-
-          // 4. Komisyon logunu güncelle
-          const comm = commissionLogs.find((c) => String(c.id) === v.commission_log_id);
-          if (comm) {
-            comm.clawback_status = 'RELEASED_TO_BALANCE';
-          }
-
-          // 5. Çift taraflı muhasebe fişi oluştur
-          await postDoubleEntryJournal({
-            voucher_number: `YEV-PAYOUT-${v.voucher_number}`,
-            source_event_type: 'DEALER_BANK_PAYOUT_SETTLED',
-            source_event_id: v.voucher_number,
-            user_id: v.dealer_user_id,
-            currency: 'TRY',
-            debit_account_code: '320.01',
-            debit_account_name: 'Satıcılar / Bayi Cari Borçları',
-            debit_amount: v.net_amount,
-            credit_account_code: '102.01',
-            credit_account_name: `${bank_name} Ticari Banka Mevduat Hesabı`,
-            credit_amount: v.net_amount,
-            description: `Toplu Bayi Banka FAST/EFT Çıkışı: ${v.voucher_number} - ${v.dealer_full_name}`,
-          });
-
-          // Batch Item Kaydı
-          payoutBatchItems.unshift({
-            id: payoutBatchItems.length + 1,
-            batch_id: batchId,
-            voucher_id: v.voucher_number,
-            commission_id: v.commission_log_id,
-            dealer_user_id: v.dealer_user_id,
-            dealer_name: v.dealer_full_name,
-            iban: v.dealer_iban,
-            gross_amount: v.gross_amount,
-            withholding_amount: v.withholding_amount,
-            net_amount: v.net_amount,
-            status: 'PAID',
-            wallet_tx_id: txId,
-            created_at: nowIso,
-          });
-
-          await pgQuery(
-            `UPDATE expense_vouchers SET status = 'PAID', voucher_data = jsonb_set(voucher_data, '{status}', '"PAID"'::jsonb) WHERE voucher_number = $1`,
-            [v.voucher_number]
-          );
-        }
-
-        // Toplu Paket Kaydı (Payout Batch)
-        const newBatch: PayoutBatchRecord = {
-          id: batchSeq,
-          batch_id: batchId,
-          bank_name,
-          total_gross: totalGross,
-          total_withholding: totalWithholding,
-          total_net: totalNet,
-          currency: 'TRY',
-          item_count: targetVouchers.length,
-          status: 'SETTLED_COMPLETED',
-          file_export_format: 'CSV',
-          executed_by,
-          created_at: nowIso,
-          executed_at: nowIso,
-        };
-        payoutBatches.unshift(newBatch);
-
-        await pgQuery(
-          `INSERT INTO payout_batches (id, bank_code, total_amount, total_items, file_content, status, created_at, batch_data)
-           VALUES ($1, $2, $3, $4, $5, 'COMPLETED', $6, $7::jsonb)
-           ON CONFLICT (id) DO UPDATE SET status = 'COMPLETED', batch_data = EXCLUDED.batch_data`,
-          [batchId, bank_name, totalNet, targetVouchers.length, `BATCH-${batchId}-${bank_name}`, nowIso, JSON.stringify(newBatch)]
-        );
-        for (const item of payoutBatchItems.filter((entry) => entry.batch_id === batchId)) {
-          await pgQuery(
-            `INSERT INTO payout_batch_items (batch_id, voucher_id, commission_id, dealer_user_id, dealer_name, iban, gross_amount, withholding_amount, net_amount, status, wallet_tx_id, created_at, item_data)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13::jsonb)
-             ON CONFLICT (batch_id, voucher_id) DO UPDATE SET status = EXCLUDED.status, wallet_tx_id = EXCLUDED.wallet_tx_id, item_data = EXCLUDED.item_data`,
-            [item.batch_id, item.voucher_id, item.commission_id, item.dealer_user_id, item.dealer_name, item.iban, item.gross_amount, item.withholding_amount, item.net_amount, item.status, item.wallet_tx_id || null, item.created_at, JSON.stringify(item)]
-          );
-        }
-      });
-
-      res.json({
-        status: 'success',
-        message: `Toplu Bayi Banka Ödemesi Başarıyla Tamamlandı! ${targetVouchers.length} bayiye toplam ${totalNet.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺ transfer edildi. Cüzdanlar güncellendi ve 102.01 Banka Çıkış fişi yevmiye defterine işlendi.`,
-        batch_id: batchId,
-        processed_count: targetVouchers.length,
-        total_gross: totalGross,
-        total_withholding: totalWithholding,
-        total_net: totalNet,
-        bank_name,
-        timestamp: nowIso,
-      });
-    } catch (err: any) {
-      res.status(500).json({ error: err.message || 'Toplu ödeme işlemi başarısız.' });
-    }
+  app.post('/api/v1/accounting/payouts/execute-batch', requireAdminJwt, (_req, res) => {
+    return res.status(422).json({
+      status: 'error',
+      code: 'BANK_SETTLEMENT_PROOF_REQUIRED',
+      message: 'Toplu ödeme ve muhasebe settlement’ı doğrulanmış banka ekstresiyle eşleşmeden kesinleştirilemez.',
+      settlement_status: 'AWAITING_BANK_PROOF',
+    });
   });
 
   // Toplu Ödeme Geçmişi

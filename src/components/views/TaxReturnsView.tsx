@@ -68,7 +68,7 @@ export const TaxReturnsView: React.FC<TaxReturnsViewProps> = ({ summary, invoice
             Vergi &amp; Beyanname Simülatörü
           </h2>
           <p className="text-xs text-slate-500">
-            Dönem içi satışlar ve komisyon giderlerine göre anlık GİB e-Beyanname projeksiyonları
+            Dönem içi verilerden hesaplanan ön gösterge; mali müşavir ve resmi kayıtlarla doğrulanmış beyanname değildir.
           </p>
         </div>
 
@@ -146,7 +146,7 @@ export const TaxReturnsView: React.FC<TaxReturnsViewProps> = ({ summary, invoice
                   className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 rounded-lg shadow-xs transition-colors cursor-pointer"
                 >
                   <Download className="w-3.5 h-3.5" />
-                  <span>GİB KDV1 XML İndir</span>
+                  <span>KDV1 Taslak XML İndir</span>
                 </button>
                 <div className="text-right font-mono text-xs text-slate-500">
                   <span>Dönem: {summary.periodMonth}</span>
@@ -278,7 +278,7 @@ export const TaxReturnsView: React.FC<TaxReturnsViewProps> = ({ summary, invoice
                 )}
                 <div className="pt-1 text-[11px] text-slate-400 flex items-center gap-1.5">
                   <CheckCircle className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                  <span>GİB Beyanname onay kodlaması hazırdır.</span>
+                  <span>Taslak hesaplamadır; mali müşavir onayı ve resmi beyan yerine geçmez.</span>
                 </div>
               </div>
             </div>
@@ -307,7 +307,7 @@ export const TaxReturnsView: React.FC<TaxReturnsViewProps> = ({ summary, invoice
                 className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 rounded-lg shadow-xs transition-colors cursor-pointer"
               >
                 <Download className="w-3.5 h-3.5" />
-                <span>MUHSGK XML İndir</span>
+                <span>MUHSGK Taslak XML İndir</span>
               </button>
               <div className="text-right font-mono text-xs text-slate-500">
                 <span>Muhtasar Kodu: 012 / 145</span>
@@ -319,9 +319,7 @@ export const TaxReturnsView: React.FC<TaxReturnsViewProps> = ({ summary, invoice
           <div className="p-4 bg-amber-50/60 border border-amber-200 rounded-lg text-xs text-amber-900 space-y-1">
             <p className="font-semibold">Mevzuat Uygulama Esası:</p>
             <p className="text-[11px] leading-relaxed text-amber-800">
-              Şirket ve vergi mükellefiyeti bulunmayan bireysel MLM / Monoline bayilerine ödenen satış
-              aracılık komisyonlarından %20 Gelir Vergisi Kesintisi (Stopaj) yapılarak Gider Pusulası
-              düzenlenmiştir. Bu kesintiler Muhtasar beyanname ile vergi dairesine yatırılır.
+              Bireysel bayi komisyonları için gösterilen stopaj oranı ve tutarlar varsayımsal ön hesaplamadır. Uygulanabilirlik, oran, gider pusulası ve beyan yükümlülüğü mali müşavir tarafından doğrulanmalıdır; burada resmi belge oluşturulmaz.
             </p>
           </div>
 
@@ -410,7 +408,7 @@ export const TaxReturnsView: React.FC<TaxReturnsViewProps> = ({ summary, invoice
                 className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 rounded-lg shadow-xs transition-colors cursor-pointer"
               >
                 <Download className="w-3.5 h-3.5" />
-                <span>Geçici Vergi XML İndir</span>
+                <span>Geçici Vergi Taslak XML İndir</span>
               </button>
               <div className="text-right font-mono text-xs text-slate-500">
                 <span className="text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
@@ -482,7 +480,7 @@ export const TaxReturnsView: React.FC<TaxReturnsViewProps> = ({ summary, invoice
                 className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 rounded-lg shadow-xs transition-colors cursor-pointer"
               >
                 <Download className="w-3.5 h-3.5" />
-                <span>KVK XML İndir</span>
+                <span>KVK Taslak XML İndir</span>
               </button>
               <div className="text-right font-mono text-xs text-slate-500">
                 <span>Vergi Oranı: %25</span>

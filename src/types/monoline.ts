@@ -1058,7 +1058,7 @@ export const UNILEVEL_INFINITY_RULES: UnilevelInfinityRule[] = [
   { career_level: 4, career_title: 'Mutmainne', infinity_bonus_percent: 0.0, matching_bonus_percent: 15.0 },
   { career_level: 5, career_title: 'Râziye', infinity_bonus_percent: 0.0, matching_bonus_percent: 20.0 },
   { career_level: 6, career_title: 'Marziyye', infinity_bonus_percent: 0.0, matching_bonus_percent: 25.0 },
-  { career_level: 7, career_title: 'Kâmile (Sâfiye)', infinity_bonus_percent: 0.0, matching_bonus_percent: 25.0 },
+  { career_level: 7, career_title: 'Kâmile', infinity_bonus_percent: 0.0, matching_bonus_percent: 25.0 },
 ];
 
 export const INITIAL_MONOLINE_DEPTH_RATES: DepthDistributionRule[] = [
@@ -1184,8 +1184,8 @@ export const DAILY_WITHDRAWAL_LIMITS_BY_CAREER: Record<number, number> = {
   3: 20000, // Mülhime: Günlük 20.000 $
   4: 35000, // Mutmainne: Günlük 35.000 $
   5: 50000, // Râziye: Günlük 50.000 $
-  6: 75000, // Mardiyye: Günlük 75.000 $
-  7: 100000, // Sâfiye: Günlük 100.000 $
+  6: 75000, // Marziyye: Günlük 75.000 $
+  7: 100000, // Kâmile: Günlük 100.000 $
 };
 
 // V2.1 Kariyer Atlama Tek Seferlik Ödülleri (Rank-Up Cash / Gift Bonus)
@@ -1210,11 +1210,11 @@ export const RANK_UP_REWARDS_BY_CAREER: Record<
     cash_value: 25000,
   },
   6: {
-    description: '6. Kariyer (Mardiyye) VIP Liderlik Tatili + Kurumsal Ofis Desteği',
+    description: '6. Kariyer (Marziyye) VIP Liderlik Tatili + Kurumsal Ofis Desteği',
     cash_value: 50000,
   },
   7: {
-    description: '7. Kariyer (Sâfiye) Lüks Araç Katkı Fonu & Elmas Liderlik Ödülü',
+    description: '7. Kariyer (Kâmile) Lüks Araç Katkı Fonu & Elmas Liderlik Ödülü',
     cash_value: 125000,
   },
 };

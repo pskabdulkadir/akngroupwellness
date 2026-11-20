@@ -556,7 +556,20 @@ export interface UserMember {
 
 const STORAGE_SESSION_KEY = 'aurabio_active_session_v1';
 const MEMBER_WALLET_TOKEN_KEY = 'aurabio_member_wallet_token_v1';
+const REGISTRATION_CONSENT_TOKEN_KEY = 'aurabio_registration_consent_token_v1';
 const STORAGE_DEMO_BLACKLIST_KEY = 'aurabio_demo_used_blacklist_v1';
+
+export function getRegistrationConsentToken(): string | null {
+  return typeof window === 'undefined' ? null : sessionStorage.getItem(REGISTRATION_CONSENT_TOKEN_KEY);
+}
+
+export function saveRegistrationConsentToken(token: string): void {
+  if (typeof window !== 'undefined') sessionStorage.setItem(REGISTRATION_CONSENT_TOKEN_KEY, token);
+}
+
+export function clearRegistrationConsentToken(): void {
+  if (typeof window !== 'undefined') sessionStorage.removeItem(REGISTRATION_CONSENT_TOKEN_KEY);
+}
 
 async function requestMemberWalletToken(
   email: string,
@@ -984,8 +997,8 @@ export async function registerMember(
       return { success: false, message: 'Lütfen tüm alanları doldurunuz.' };
     }
 
-    if (password.length < 4) {
-      return { success: false, message: 'Şifre en az 4 karakter olmalıdır.' };
+    if (password.length < 12 || ['123456', '123456789', 'password123', 'qwerty123'].includes(password.toLowerCase())) {
+      return { success: false, message: 'Şifre en az 12 karakter olmalı ve kolay tahmin edilen bir parola olmamalıdır.' };
     }
 
     // If registering with admin email -> automatically elevate to Admin
@@ -1206,6 +1219,7 @@ export async function registerMember(
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        request_id: `REG-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
         user_id: uid,
         full_name: companyName || cleanFullName,
         city: completeDealerDetails.address || completeDealerDetails.taxOffice || 'İstanbul',
@@ -1226,9 +1240,11 @@ export async function registerMember(
     }
     if (isPendingDealerRegistration) {
       const pendingDealerOrderId = registrationResult?.order?.order_id;
-      if (typeof pendingDealerOrderId !== 'string' || !pendingDealerOrderId) {
-        throw new Error('Bekleyen bayi kaydının ödeme siparişi oluşturulamadı.');
+      const consentToken = registrationResult?.consent_token;
+      if (typeof pendingDealerOrderId !== 'string' || !pendingDealerOrderId || typeof consentToken !== 'string') {
+        throw new Error('Bekleyen bayi kaydının sipariş ve onay oturumu oluşturulamadı.');
       }
+      saveRegistrationConsentToken(consentToken);
       registeredUser = { ...newUser, pendingDealerOrderId };
       try {
         await setDoc(doc(db, 'users', uid), { pendingDealerOrderId }, { merge: true });
@@ -1464,13 +1480,17 @@ export async function adminCreateDealerDirectly(data: {
     const cleanPhone = data.phone.trim();
     const cleanCompany = data.companyName.trim();
     const cleanPassword = data.password.trim();
+    const grantReason = data.notes?.trim() || '';
 
+    if (grantReason.length < 10) {
+      return { success: false, message: 'Ödemesiz yönetici hibesi için en az 10 karakterlik gerekçe girilmelidir.' };
+    }
     if (!cleanEmail || !cleanFullName || !cleanPhone || !cleanCompany || !cleanPassword) {
       return { success: false, message: 'Lütfen Ad Soyad, E-posta, Şifre, Telefon ve Firma Adı alanlarını doldurunuz.' };
     }
 
-    if (cleanPassword.length < 4) {
-      return { success: false, message: 'Şifre en az 4 karakter olmalıdır.' };
+    if (cleanPassword.length < 12 || ['123456', '123456789', 'password123', 'qwerty123'].includes(cleanPassword.toLowerCase())) {
+      return { success: false, message: 'Şifre en az 12 karakter olmalı ve kolay tahmin edilen bir parola olmamalıdır.' };
     }
 
     const localList = getLocalMembersDirectory();
@@ -1493,13 +1513,13 @@ export async function adminCreateDealerDirectly(data: {
       fullName: cleanFullName,
       phone: cleanPhone,
       passwordHash: hashPassword(cleanPassword),
-      isAllowed: true, // Directly approved by admin
-      isApproved: true,
+      isAllowed: false,
+      isApproved: false,
       expiryDate: null, // Unlimited access
       selectedPackage: data.dealerPackageId || 'pkg-5k',
-      paymentStatus: 'PAID',
+      paymentStatus: 'PENDING',
       role: 'dealer',
-      dealerStatus: 'approved',
+      dealerStatus: 'pending',
       isDealerRequested: true,
       referralCode,
       creditsBalance: 0,
@@ -1544,7 +1564,7 @@ export async function adminCreateDealerDirectly(data: {
         referralCode: referralCode,
         sponsor_id: data.sponsorId || 'USR-ADMIN',
         role: 'dealer',
-        dealerStatus: 'approved',
+        dealerStatus: 'pending',
         isDealerRequested: true,
         created_at: newDealerUser.createdAt,
       }, { merge: true });
@@ -1601,8 +1621,6 @@ export async function adminCreateDealerDirectly(data: {
             ref_code: referralCode,
             sponsor_id: data.sponsorId || 'USR-ADMIN',
             password: cleanPassword,
-            skip_initial_order: true,
-            session_credits: initialCredits,
             company_title: cleanCompany,
             tax_id: data.taxNumber,
             tax_office: data.taxOffice,
@@ -1614,10 +1632,19 @@ export async function adminCreateDealerDirectly(data: {
         if (!response.ok || serverResult.status !== 'success' || serverResult.member?.user_id !== uid) {
           throw new Error(serverResult.message || 'Bayi hesabı sunucuda ve kredi defterinde oluşturulamadı.');
         }
-        const approvedCredits = Number(serverResult.member.session_credits);
-        if (!Number.isInteger(approvedCredits) || approvedCredits !== initialCredits) {
-          throw new Error('Sunucu başlangıç bakiyesini kredi defterine doğru kaydedemedi.');
+        const grantResponse = await fetch(`/api/v1/admin/members/${encodeURIComponent(uid)}/grant`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
+          body: JSON.stringify({ request_id: crypto.randomUUID(), credits: initialCredits, reason: grantReason }),
+        });
+        const grantResult = await grantResponse.json().catch(() => ({}));
+        const approvedCredits = Number(grantResult.member?.session_credits);
+        if (!grantResponse.ok || grantResult.status !== 'success' || !Number.isInteger(approvedCredits) || approvedCredits !== initialCredits) {
+          throw new Error(grantResult.message || 'Yönetici hibesi sunucuda kaydedilemedi.');
         }
+        newDealerUser.isAllowed = true;
+        newDealerUser.isApproved = true;
+        newDealerUser.dealerStatus = 'approved';
         newDealerUser.creditsBalance = approvedCredits;
         if (newDealerUser.dealerDetails) newDealerUser.dealerDetails.creditsBalance = approvedCredits;
         saveToLocalMembersDirectory(newDealerUser);

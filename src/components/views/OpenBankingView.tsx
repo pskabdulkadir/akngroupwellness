@@ -221,7 +221,7 @@ export const OpenBankingView: React.FC<OpenBankingViewProps> = ({
             <span>Banka Ekstreleri &amp; Yevmiye Mutabakatı</span>
           </h2>
           <p className="text-xs text-slate-500">
-            Gerçek hesap bakiyesi ve ekstreler, banka sağlayıcısı sunucu tarafında bağlandıktan sonra gösterilir.
+            Gerçek banka bağlantısı yok; CSV ile içe aktarılan kayıtlar kullanıcı tarafından sağlanır ve banka tarafından doğrulanmış sayılmaz.
           </p>
         </div>
 
@@ -232,7 +232,7 @@ export const OpenBankingView: React.FC<OpenBankingViewProps> = ({
 
       {bankAccounts.length === 0 && (
         <div role="status" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs leading-relaxed text-amber-900">
-          Henüz doğrulanmış banka ekstresi yok. İçe aktarılan hareketler banka bakiyesini ve dönemsel net nakit akışını oluşturur; bu tutarlar muhasebe net kârı değildir.
+          Henüz banka sağlayıcısından doğrulanmış ekstre yok. CSV içe aktarımları kullanıcı tarafından sağlanan kayıtlardır; net nakit akışı yalnızca ön göstergedir ve muhasebe kârı değildir.
         </div>
       )}
 
@@ -255,12 +255,12 @@ export const OpenBankingView: React.FC<OpenBankingViewProps> = ({
         {fileHeaders.length > 0 && <button type="button" onClick={createPreview} className="min-h-11 rounded-lg bg-slate-800 px-4 py-2 text-xs font-semibold text-white">Önizleme oluştur</button>}
         {previewRows.length > 0 && <>
           <div className="overflow-x-auto rounded-lg border border-slate-200"><table className="w-full min-w-[560px] text-left text-xs"><thead className="bg-slate-50 text-slate-500"><tr><th className="px-3 py-2">Tarih</th><th className="px-3 py-2">Açıklama</th><th className="px-3 py-2">Yön</th><th className="px-3 py-2 text-right">Tutar</th></tr></thead><tbody className="divide-y divide-slate-100">{previewRows.slice(0, 5).map((row, index) => <tr key={`${row.date}-${index}`}><td className="px-3 py-2">{row.date}</td><td className="max-w-[260px] truncate px-3 py-2">{row.description}</td><td className="px-3 py-2">{row.flow === 'GIRIS_INFLOW' ? 'Giriş' : 'Çıkış'}</td><td className="px-3 py-2 text-right">{row.amount.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} {row.currency}</td></tr>)}</tbody></table></div>
-          <div className="flex flex-col gap-3 rounded-xl bg-slate-50 p-3 text-xs sm:flex-row sm:items-center sm:justify-between"><span>{previewRows.length} hareket · Giriş {previewTotals.income.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} {currency} · Çıkış {previewTotals.expense.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} {currency} · Net nakit akışı {(previewTotals.income - previewTotals.expense).toLocaleString('tr-TR', { minimumFractionDigits: 2 })} {currency}</span><button type="button" onClick={() => void importStatement()} disabled={isImporting} className="min-h-11 rounded-lg bg-emerald-700 px-4 py-2 font-semibold text-white disabled:opacity-50">{isImporting ? 'Kaydediliyor…' : 'Doğrulanmış ekstreyi kaydet'}</button></div>
+          <div className="flex flex-col gap-3 rounded-xl bg-slate-50 p-3 text-xs sm:flex-row sm:items-center sm:justify-between"><span>{previewRows.length} hareket · Giriş {previewTotals.income.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} {currency} · Çıkış {previewTotals.expense.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} {currency} · Net nakit akışı {(previewTotals.income - previewTotals.expense).toLocaleString('tr-TR', { minimumFractionDigits: 2 })} {currency}</span><button type="button" onClick={() => void importStatement()} disabled={isImporting} className="min-h-11 rounded-lg bg-emerald-700 px-4 py-2 font-semibold text-white disabled:opacity-50">{isImporting ? 'Kaydediliyor…' : 'İçe aktarılan CSV’yi kaydet'}</button></div>
         </>}
         {importMessage && <p role="status" className={`rounded-lg px-3 py-2 text-xs ${importMessage.type === 'success' ? 'bg-emerald-50 text-emerald-800' : 'bg-rose-50 text-rose-800'}`}>{importMessage.text}</p>}
       </section>
 
-      {cashFlowTotals.length > 0 && <section className="grid grid-cols-1 gap-3 sm:grid-cols-3" aria-label="Banka ekstresi nakit akışı">{cashFlowTotals.map(({ currency: unit, incoming, outgoing }) => <div key={unit} className="rounded-xl border border-slate-200 bg-white p-4"><div className="text-xs text-slate-500">Ekstre net nakit akışı · {unit}</div><div className="mt-1 text-lg font-bold text-slate-900">{(incoming - outgoing).toLocaleString('tr-TR', { minimumFractionDigits: 2 })} {unit}</div><div className="mt-1 text-[11px] text-slate-500">Giriş {incoming.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} · Çıkış {outgoing.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}</div></div>)}</section>}
+      {cashFlowTotals.length > 0 && <section className="grid grid-cols-1 gap-3 sm:grid-cols-3" aria-label="Banka ekstresi nakit akışı">{cashFlowTotals.map(({ currency: unit, incoming, outgoing }) => <div key={unit} className="rounded-xl border border-slate-200 bg-white p-4"><div className="text-xs text-slate-500">İçe aktarılan ekstre net akışı · {unit}</div><div className="mt-1 text-lg font-bold text-slate-900">{(incoming - outgoing).toLocaleString('tr-TR', { minimumFractionDigits: 2 })} {unit}</div><div className="mt-1 text-[11px] text-slate-500">Giriş {incoming.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} · Çıkış {outgoing.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}</div></div>)}</section>}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         {bankAccounts.map((acc) => (

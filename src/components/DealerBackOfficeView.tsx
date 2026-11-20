@@ -62,6 +62,7 @@ import {
   redirectToDealerRegistrationPortal,
 } from '../utils/monolineSyncBridge';
 import { getMemberWalletToken } from '../utils/authManager';
+import { wasRecordedAfterUnknownCommit } from '../utils/persistenceVerification';
 import {
   getActivationPriceForRegion,
   getMemberRegionalPendingUsd,
@@ -290,7 +291,7 @@ export const DealerBackOfficeView: React.FC<DealerBackOfficeViewProps> = ({
   const [newSubDealerPkg, setNewSubDealerPkg] = useState<Exclude<PackageId, 'CUSTOM'>>(
     'PKG_MINI_DENEME'
   );
-  const [newSubDealerPassword, setNewSubDealerPassword] = useState<string>('123456');
+  const [newSubDealerPassword, setNewSubDealerPassword] = useState<string>('');
   const [showNewSubDealerPassword, setShowNewSubDealerPassword] = useState<boolean>(false);
   const [newSubDealerLeg, setNewSubDealerLeg] = useState<'LEFT' | 'RIGHT' | 'AUTO'>('AUTO');
   const [showNetworkAddModal, setShowNetworkAddModal] = useState<boolean>(false);
@@ -1309,6 +1310,7 @@ export const DealerBackOfficeView: React.FC<DealerBackOfficeViewProps> = ({
           : `${pkg.name} · ${pkg.sessionCreditsLabel} · ${walletBuyOrderType}`,
         contracts: ['DISTANCE_SALES', 'PRE_INFORMATION', 'MLM_TERMS', 'KVKK'],
         version: 'v2.2',
+        authorizationToken: getMemberWalletToken() || '',
       });
       if (approvals.length !== 4) throw new Error('Sözleşme onayları sunucuya kaydedilemedi.');
       const token = getMemberWalletToken();
@@ -1328,6 +1330,9 @@ export const DealerBackOfficeView: React.FC<DealerBackOfficeViewProps> = ({
       });
       const data = await res.json();
       if (!res.ok) {
+        if (await wasRecordedAfterUnknownCommit(res.status, data, token)) {
+          throw new Error('Cüzdan işlemi sunucuda kaydedildi ancak yanıt doğrulanamadı. Bakiyenizi yenileyin; işlem tekrar gönderilmedi.');
+        }
         throw new Error(data.message || 'Cüzdan ile kredi/paket satın alınamadı.');
       }
       setWalletOpsFeedback({
@@ -1844,13 +1849,13 @@ export const DealerBackOfficeView: React.FC<DealerBackOfficeViewProps> = ({
       email: newSubDealerEmail.trim() || undefined,
       sponsor_id: member.user_id,
       initial_package_id: newSubDealerPkg,
-      password: newSubDealerPassword.trim() || '123456',
+      password: newSubDealerPassword.trim(),
       assigned_leg: newSubDealerLeg,
     });
     setNewSubDealerName('');
     setNewSubDealerPhone('');
     setNewSubDealerEmail('');
-    setNewSubDealerPassword('123456');
+    setNewSubDealerPassword('');
     setNewSubDealerLeg('AUTO');
     setShowNetworkAddModal(false);
   };
@@ -3906,7 +3911,7 @@ Paket Alarak Aktifliği Yenile →
                     <button
                       type="button"
                       onClick={() => {
-                        const rand = 'Aura' + Math.floor(100000 + Math.random() * 900000) + '!';
+                        const rand = `${crypto.randomUUID().replace(/-/g, '').slice(0, 12)}!`;
                         setNewSubDealerPassword(rand);
                       }}
                       className="text-[10px] text-emerald-400 hover:text-emerald-300 underline cursor-pointer"
@@ -3920,7 +3925,7 @@ Paket Alarak Aktifliği Yenile →
                       required
                       value={newSubDealerPassword}
                       onChange={(e) => setNewSubDealerPassword(e.target.value)}
-                      placeholder="Şifre belirleyin (Varsayılan: 123456)"
+                      placeholder="En az 12 karakterli güçlü bir şifre belirleyin"
                       className="w-full pl-3 pr-8 py-2 rounded-lg bg-slate-900/90 border border-white/20 text-white font-mono text-xs"
                     />
                     <button

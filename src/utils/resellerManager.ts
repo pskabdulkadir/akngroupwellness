@@ -16,6 +16,7 @@ import {
 } from '../lib/db';
 import { UserMember, MemberOrder } from './authManager';
 import { DEFAULT_DEALER_PACKAGES, type DealerPackage } from '../config/dealerPackages';
+import { isUnknownCommitResponse, verifyRecordedRequest } from './persistenceVerification';
 
 export interface BankInfo {
   bankName: string;
@@ -589,6 +590,18 @@ async function postCreditCommand(
       body: JSON.stringify(body),
     });
     const data = await res.json().catch(() => ({}));
+    if (isUnknownCommitResponse(res.status, data)) {
+      const verdict = await verifyRecordedRequest(data.request_id, bearerToken);
+      if (verdict === 'RECORDED') {
+        return {
+          status: 409,
+          data: { status: 'error', code: 'ALREADY_RECORDED', message: 'İşlem sunucuda zaten kaydedildi. Bakiyeyi yenileyip kontrol edin.' },
+        };
+      }
+      if (verdict === 'UNKNOWN') {
+        return { status: res.status, data: { ...data, message: 'İşlem durumu doğrulanamadı. Bakiyeyi yenileyip kontrol edin, tekrar göndermeyin.' } };
+      }
+    }
     return { status: res.status, data };
   } catch {
     return null;

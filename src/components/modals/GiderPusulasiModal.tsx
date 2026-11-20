@@ -1,6 +1,6 @@
 import React from 'react';
 import { CommissionPayout, CompanyProfile, COMPANY_PROFILE } from '../../types/accounting';
-import { X, Printer, ShieldCheck, FileText } from 'lucide-react';
+import { X, FileText } from 'lucide-react';
 
 interface GiderPusulasiModalProps {
   commission: CommissionPayout | null;
@@ -13,10 +13,6 @@ export const GiderPusulasiModal: React.FC<GiderPusulasiModalProps> = ({ commissi
 
   const profile = companyProfile || COMPANY_PROFILE;
 
-  const handlePrint = () => {
-    window.print();
-  };
-
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
       <div className="bg-white rounded-xl shadow-2xl border border-slate-200 w-full max-w-3xl max-h-[92vh] flex flex-col overflow-hidden">
@@ -28,7 +24,7 @@ export const GiderPusulasiModal: React.FC<GiderPusulasiModalProps> = ({ commissi
             </div>
             <div>
               <h3 className="text-sm font-bold text-slate-900 font-mono">
-                {commission.documentNumber} · GİDER PUSULASI
+                {commission.documentNumber} · GİDER PUSULASI TASLAĞI
               </h3>
               <p className="text-xs text-slate-500 font-mono">
                 İlişkili Fatura: {commission.invoiceNumber}
@@ -36,23 +32,9 @@ export const GiderPusulasiModal: React.FC<GiderPusulasiModalProps> = ({ commissi
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <a
-              href={`/api/v1/accounting/vouchers/${commission.documentNumber}/xml`}
-              target="_blank"
-              rel="noopener noreferrer"
-              download={`${commission.documentNumber}.xml`}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-emerald-800 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 rounded-md shadow-xs transition-colors"
-            >
-              <FileText className="w-3.5 h-3.5" />
-              GİB XML İndir
-            </a>
-            <button
-              onClick={handlePrint}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-200 hover:bg-slate-100 rounded-md shadow-xs transition-colors"
-            >
-              <Printer className="w-3.5 h-3.5" />
-              Yazdır / PDF
-            </button>
+            <span className="rounded-md border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-[11px] font-semibold text-amber-800">
+              Resmi belge değildir
+            </span>
             <button
               onClick={onClose}
               className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-200 rounded-md transition-colors"
@@ -64,14 +46,17 @@ export const GiderPusulasiModal: React.FC<GiderPusulasiModalProps> = ({ commissi
 
         {/* Modal Body: Resmi 213 Sayılı VUK Madde 234 Uyarınca Gider Pusulası */}
         <div className="p-6 md:p-8 overflow-y-auto flex-1 bg-slate-100/50">
-          <div className="bg-white border-2 border-slate-400 p-8 max-w-2xl mx-auto rounded-sm print:border-none print:p-0 text-slate-900 text-xs">
+          <div role="status" className="mx-auto mb-4 max-w-2xl rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs leading-relaxed text-amber-900">
+            Tutarlar ön hesaplamadır. Stopaj, kimlik/vergi bilgileri, müşavir onayı ve banka ödeme kanıtı doğrulanmadan bu çıktı resmi gider pusulası veya ödeme belgesi değildir.
+          </div>
+          <div className="bg-white border-2 border-slate-400 p-8 max-w-2xl mx-auto rounded-sm text-slate-900 text-xs">
             {/* Üst Başlık */}
             <div className="text-center border-b-2 border-slate-800 pb-3 mb-6">
               <h2 className="text-lg font-bold tracking-widest uppercase text-slate-900">
                 G İ D E R   P U S U L A S I
               </h2>
               <p className="text-[10px] text-slate-600 mt-1">
-                213 Sayılı Vergi Usul Kanunu Madde 234 ve 193 Sayılı Gelir Vergisi Kanunu Madde 94 Uyarınca Tanzim Edilmiştir
+                Ön çalışma — resmi belge olarak düzenlenmemiştir
               </p>
             </div>
 
@@ -102,7 +87,7 @@ export const GiderPusulasiModal: React.FC<GiderPusulasiModalProps> = ({ commissi
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-600">Ödeme Şekli:</span>
-                  <span className="font-mono">Banka EFT / Havale</span>
+                  <span className="font-mono">Ödeme doğrulanmadı</span>
                 </div>
               </div>
             </div>
@@ -120,14 +105,13 @@ export const GiderPusulasiModal: React.FC<GiderPusulasiModalProps> = ({ commissi
                 <div>
                   <span className="text-slate-500 text-[10px]">T.C. Kimlik No:</span>
                   <p className="font-mono font-bold text-slate-800">
-                    {/* Masked TCKN */}
-                    {commission.distributorId === 'dist-01' ? '28491029481' : '48192049182'}
+                    Müşavir doğrulaması bekleniyor
                   </p>
                 </div>
               </div>
               <div className="pt-1">
                 <span className="text-slate-500 text-[10px]">IBAN / Hesap No:</span>
-                <p className="font-mono text-slate-700">TR33 0006 2000 0000 0123 4567 89 (Garanti BBVA)</p>
+                <p className="font-mono text-slate-700">Banka ödeme kanıtı eşleştirilmedi</p>
               </div>
             </div>
 
@@ -176,7 +160,7 @@ export const GiderPusulasiModal: React.FC<GiderPusulasiModalProps> = ({ commissi
                   </span>
                 </div>
                 <div className="flex justify-between text-red-700 font-medium">
-                  <span>Gelir Vergisi Stopajı (%20):</span>
+                  <span>Ön stopaj tahmini (onay bekliyor):</span>
                   <span className="font-mono">
                     -{commission.withholdingAmountTRY.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺
                   </span>
@@ -207,7 +191,7 @@ export const GiderPusulasiModal: React.FC<GiderPusulasiModalProps> = ({ commissi
                     Şirket Kaşesi &amp; İmza
                   </div>
                 </div>
-                <p className="text-[10px] text-slate-500">VERGİSYNC TEKNOLOJİ YAZILIM A.Ş.</p>
+                <p className="text-[10px] text-slate-500">Mali müşavir onayı bekleniyor</p>
               </div>
 
               <div className="text-center space-y-8">
@@ -222,7 +206,7 @@ export const GiderPusulasiModal: React.FC<GiderPusulasiModalProps> = ({ commissi
             </div>
 
             <div className="mt-8 pt-3 border-t border-slate-200 text-center text-[9px] text-slate-400">
-              Bu gider pusulası Gelir İdaresi Başkanlığı e-Belge ve Muhtasar Beyanname tevkifat standartlarına uygun olarak elektronik ortamda oluşturulmuştur.
+              Bu önizleme elektronik belge olarak düzenlenmemiştir; resmi e-belge veya beyanname yerine kullanılamaz.
             </div>
           </div>
         </div>
@@ -230,7 +214,7 @@ export const GiderPusulasiModal: React.FC<GiderPusulasiModalProps> = ({ commissi
         {/* Footer */}
         <div className="px-6 py-3 border-t border-slate-200 bg-slate-50 flex items-center justify-between no-print">
           <div className="flex items-center gap-2 text-xs text-slate-500 font-mono">
-            <span>Stopaj Oranı: %20</span>
+            <span>Stopaj: müşavir incelemesi bekliyor</span>
             <span>·</span>
             <span>Muhtasar Kodu: 012 / GVK 94</span>
           </div>

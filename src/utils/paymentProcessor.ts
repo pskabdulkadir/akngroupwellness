@@ -238,6 +238,7 @@ export async function recordUserContractApprovals(params: {
   contracts?: ContractType[];
   order_amount?: number;
   product_summary?: string;
+  authorizationToken: string;
 }): Promise<UserContractApprovalRecord[]> {
   const version = params.version || 'v2.2';
   const contracts: ContractType[] = params.contracts || [
@@ -250,9 +251,10 @@ export async function recordUserContractApprovals(params: {
   try {
     const res = await fetch('/api/v1/compliance/contract-approvals', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${params.authorizationToken}` },
       body: JSON.stringify({
         user_id: params.user_id,
+        consent_id: crypto.randomUUID(),
         user_name: params.user_name,
         order_id: params.order_id,
         order_amount: params.order_amount,
