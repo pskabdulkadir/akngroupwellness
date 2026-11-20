@@ -289,6 +289,7 @@ let webhookLogs: WebhookLogRecord[] = [];
 let cronLogs: CronJobExecutionRecord[] = [];
 let poolDistributions: PoolDistributionRecord[] = [];
 let processedOrderIds: Set<string> = new Set();
+const processedEventIdempotencyKeys = new Set<string>();
 let idempotentBlockedCount = 0;
 let systemCareerFundBalance = 0;
 let systemCareerFundCumulative = 0;
@@ -5042,9 +5043,6 @@ async function fetchLiveRatesFromInternet() {
   }
   return cachedLiveRates;
 }
-
-const processedEventIdempotencyKeys = new Set<string>();
-
 
 async function cleanupExpiredPendingRegistrations(): Promise<void> {
   if (!getIsPostgresAvailable()) return;
