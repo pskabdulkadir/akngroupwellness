@@ -12,6 +12,7 @@ import {
   refundResellerCreditsAtomic,
   adjustResellerCreditsAtomic,
   applyResellerCreditAdjustment,
+  logDatabaseError,
   query as pgQuery,
   readApplicationState,
 } from './server/db.js';
@@ -425,6 +426,8 @@ function buildPersistentState() {
 
 let statePersistPromise: Promise<void> = Promise.resolve();
 let persistenceFailure: string | null = null;
+let persistenceRecoveryInFlight: Promise<void> | null = null;
+let nextPersistenceRecoveryAt = 0;
 let vercelMutationQueue: Promise<void> = Promise.resolve();
 function uniqueRowsBy<T>(rows: T[], keyFor: (row: T) => string): T[] {
   return Array.from(new Map(rows.map((row) => [keyFor(row), row])).values());
@@ -5281,6 +5284,25 @@ async function hydrateStateFromPostgres(): Promise<void> {
   }
 }
 
+async function retryPersistenceRecovery(): Promise<void> {
+  if (!persistenceFailure || persistenceRecoveryInFlight || Date.now() < nextPersistenceRecoveryAt) return;
+  nextPersistenceRecoveryAt = Date.now() + 60_000;
+  persistenceRecoveryInFlight = Promise.resolve()
+    .then(() => persistApplicationState())
+    .then(() => {
+      persistenceFailure = null;
+      console.info('[PostgreSQL State Persistence Recovered] Full application state is writable again.');
+    })
+    .catch((error: any) => {
+      persistenceFailure = error?.message || 'PostgreSQL state write failed';
+      logDatabaseError('persistence-recovery', error);
+    })
+    .finally(() => {
+      persistenceRecoveryInFlight = null;
+    });
+  await persistenceRecoveryInFlight;
+}
+
 async function startServer(options: { listen?: boolean } = {}) {
   const isVercel = Boolean(process.env.VERCEL);
   const postgresReady = await initPostgresDatabase({ applySchema: !isVercel });
@@ -5353,10 +5375,11 @@ async function startServer(options: { listen?: boolean } = {}) {
   });
   app.use((req, res, next) => {
     if (persistenceFailure && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {
+      res.setHeader('Retry-After', '60');
       res.status(503).json({
         status: 'error',
         code: 'DATABASE_PERSISTENCE_FAILED',
-        message: 'Veritabanına yazma durumu doğrulanamıyor; işlem reddedildi.',
+        message: 'Veritabanı yazma durumu doğrulanamıyor. Tekrar göndermeden önce işlem geçmişini kontrol edin.',
       });
       return;
     }
@@ -5376,13 +5399,14 @@ async function startServer(options: { listen?: boolean } = {}) {
         })
         .catch((err: any) => {
           persistenceFailure = err?.message || 'PostgreSQL state write failed';
-          console.error('[PostgreSQL State Persistence Error]:', persistenceFailure);
+          logDatabaseError('application-state-persistence', err);
           if (!res.headersSent) {
+            res.setHeader('Retry-After', '60');
             res.status(503);
             sendJson({
               status: 'error',
               code: 'DATABASE_PERSISTENCE_FAILED',
-              message: 'Veriler PostgreSQL’e kaydedilemedi; işlem tamamlanmış sayılmadı.',
+              message: 'Veritabanı yazma durumu doğrulanamadı. Tekrar göndermeden önce işlem geçmişini kontrol edin.',
             });
           }
         });
@@ -5482,7 +5506,7 @@ async function startServer(options: { listen?: boolean } = {}) {
           members.push(member);
         }
       } catch (pgErr: any) {
-        console.error('[PostgreSQL-18 member lookup error]:', pgErr.message);
+        logDatabaseError('member-lookup', pgErr);
         res.status(503).json({
           status: 'error',
           code: 'MEMBER_LOOKUP_UNAVAILABLE',
@@ -5716,9 +5740,20 @@ async function startServer(options: { listen?: boolean } = {}) {
     next();
   });
 
-  app.get('/api/health', (_req, res) => {
+  app.get('/api/health', async (_req, res) => {
+    let databaseAvailable = false;
+    try {
+      await pgQuery('SELECT 1');
+      databaseAvailable = true;
+    } catch (error) {
+      logDatabaseError('health-check', error);
+    }
+    const healthy = databaseAvailable && !persistenceFailure;
     res.json({
-      status: 'ok',
+      status: healthy ? 'ok' : 'degraded',
+      database: databaseAvailable ? 'available' : 'unavailable',
+      persistence: persistenceFailure ? 'blocked' : 'normal',
+      pool: { total: pool.totalCount, idle: pool.idleCount, waiting: pool.waitingCount },
       uptime: process.uptime(),
       timestamp: Date.now(),
       service: 'AuraBio Quantum Resonance & Monoline MLM Engine',
@@ -7339,7 +7374,7 @@ async function startServer(options: { listen?: boolean } = {}) {
         });
       } catch (dbErr: any) {
         applyPersistentState(rollbackStateBeforeOrder);
-        console.error('[PostgreSQL-18] Paid order settlement failed:', dbErr.message);
+        logDatabaseError('paid-order-settlement', dbErr);
         if (claimedPayment) claimedPayment.consumed = false;
         return res.status(503).json({
           status: 'error',
@@ -7373,7 +7408,7 @@ async function startServer(options: { listen?: boolean } = {}) {
       const statusCode = isIdemp ? 200 : Number.isInteger(err?.statusCode) ? err.statusCode : 500;
       const detail = err?.message || 'Hata';
       if (statusCode >= 500) {
-        console.error(`[order-commission] ${String(req.body?.order_id || 'BİLİNMİYOR')} işlenemedi:`, err);
+        logDatabaseError('order-commission', err);
       }
 
       webhookLogs.unshift({
@@ -8411,7 +8446,7 @@ async function startServer(options: { listen?: boolean } = {}) {
             }
           });
         } catch (dbErr: any) {
-          console.error('[PostgreSQL-18 Registration Write Error]:', dbErr.message);
+          logDatabaseError('member-registration-write', dbErr);
           const error: any = new Error('Bayi kaydı PostgreSQL’e yazılamadı; işlem tamamlanmadı.');
           error.statusCode = 503;
           throw error;
@@ -12462,7 +12497,7 @@ async function startServer(options: { listen?: boolean } = {}) {
       });
       res.json({ status: 'success', inserted_count: result.insertedCount, duplicate_count: rowsWithIds.length - result.insertedCount });
     } catch (error: any) {
-      console.error('[Accounting bank statement import]:', error?.message);
+      logDatabaseError('accounting-bank-statement-import', error);
       res.status(503).json({ status: 'error', message: 'Banka ekstresi PostgreSQL’e kaydedilemedi.' });
     }
   });
@@ -12569,7 +12604,7 @@ async function startServer(options: { listen?: boolean } = {}) {
         timestamp: new Date().toISOString(),
       });
     } catch (err: any) {
-      console.error('[PostgreSQL-18 Live Ledger Read Error]:', err?.message);
+      logDatabaseError('live-ledger-read', err);
       res.status(503).json({ status: 'error', code: 'LEDGER_READ_FAILED', message: 'Muhasebe verileri PostgreSQL’den okunamadı.' });
     }
   });
@@ -13045,12 +13080,28 @@ async function startServer(options: { listen?: boolean } = {}) {
   }
 
   if (!isVercel) {
+    let maintenanceRunInFlight = false;
     setInterval(() => {
-      checkAndExpireAccountsCron('ACTIVITY_EXPIRY_CRON');
-      releaseMaturedCommissions();
-      processMaturedExpenseVouchers()
-        .then(() => persistApplicationState())
-        .catch((e) => console.warn('[Cron/PostgreSQL] Kalıcı kayıt hatası:', e?.message));
+      if (persistenceFailure) {
+        void retryPersistenceRecovery();
+        return;
+      }
+      if (maintenanceRunInFlight) return;
+      maintenanceRunInFlight = true;
+      void (async () => {
+        try {
+          const deactivated = checkAndExpireAccountsCron('ACTIVITY_EXPIRY_CRON');
+          const released = releaseMaturedCommissions();
+          const vouchers = await processMaturedExpenseVouchers();
+          if (!deactivated.length && !released.releasedLogsCount && !vouchers.generatedCount) return;
+          await persistApplicationState();
+        } catch (error: any) {
+          persistenceFailure = error?.message || 'PostgreSQL state write failed';
+          logDatabaseError('maintenance-persistence', error);
+        } finally {
+          maintenanceRunInFlight = false;
+        }
+      })();
     }, 30000);
   }
 

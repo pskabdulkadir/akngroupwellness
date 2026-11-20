@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { AlertTriangle, ArrowLeft, BarChart3, Camera, ChevronDown, ChevronUp, Database, RefreshCw, RotateCcw, X } from 'lucide-react';
 import { AdminConsoleView } from './AdminConsoleView';
 import { CareerMatrixView } from './CareerMatrixView';
@@ -194,13 +194,17 @@ export const MonolineMlmPortalModal: React.FC<MonolineMlmPortalModalProps> = ({
     };
   }, [authenticatedUser, isAdminAuthenticated, resolveLoggedDealerId]);
 
-  const fetchSystemState = async (runLiveSync = false) => {
+  const stateFetchInFlightRef = useRef(false);
+
+  const fetchSystemState = async (runLiveSync = false): Promise<boolean> => {
+    if (stateFetchInFlightRef.current) return false;
+    stateFetchInFlightRef.current = true;
     try {
       if (runLiveSync) {
         const syncedState = await syncFrekansWithMonolineEngine();
         if (syncedState) {
           applyServerState(syncedState);
-          return;
+          return true;
         }
       }
       const token = getAdminToken() || getMemberWalletToken();
@@ -212,12 +216,15 @@ export const MonolineMlmPortalModal: React.FC<MonolineMlmPortalModalProps> = ({
       if (!res.ok) throw new Error('Sunucu durum bilgisi alınamadı.');
       const data: SystemStateResponse = await res.json();
       applyServerState(data);
+      return true;
     } catch (err: any) {
       setFeedbackBanner({
         type: 'error',
         message: err?.message || 'Veri yüklenirken hata oluştu.',
       });
+      return false;
     } finally {
+      stateFetchInFlightRef.current = false;
       setLoading(false);
     }
   };
@@ -239,13 +246,22 @@ export const MonolineMlmPortalModal: React.FC<MonolineMlmPortalModalProps> = ({
     };
   }, []);
 
-  // Periodic real-time polling for live D3 Sales Volume Chart when portal is open
   useEffect(() => {
     if (!isOpen || !isLivePolling) return;
-    const intervalId = window.setInterval(() => {
-      fetchSystemState(false);
-    }, 3000);
-    return () => window.clearInterval(intervalId);
+    let delayMs = 3000;
+    let timeoutId: number;
+    let stopped = false;
+    const poll = async () => {
+      const succeeded = await fetchSystemState(false);
+      if (stopped) return;
+      delayMs = succeeded ? 3000 : Math.min(delayMs * 2, 60_000);
+      timeoutId = window.setTimeout(() => void poll(), delayMs);
+    };
+    timeoutId = window.setTimeout(() => void poll(), delayMs);
+    return () => {
+      stopped = true;
+      window.clearTimeout(timeoutId);
+    };
   }, [isOpen, isLivePolling]);
 
   if (!isOpen) return null;
@@ -1309,7 +1325,7 @@ export const MonolineMlmPortalModal: React.FC<MonolineMlmPortalModalProps> = ({
                     selectedMemberId={selectedMemberId}
                     onSelectMember={(id) => setSelectedMemberId(id)}
                     onQuickTriggerOrder={handleQuickTriggerOrder}
-                    onRefreshLiveState={() => fetchSystemState(true)}
+                    onRefreshLiveState={async () => { await fetchSystemState(true); }}
                     isSubmitting={isSubmitting}
                     isLivePolling={isLivePolling}
                     onToggleLivePolling={() => setIsLivePolling((prev) => !prev)}
@@ -1423,7 +1439,7 @@ export const MonolineMlmPortalModal: React.FC<MonolineMlmPortalModalProps> = ({
                   activationVouchers={state.activation_vouchers}
                   fraudAlerts={state.fraud_alerts}
                   systemFundBalance={state.system_metrics.system_career_fund_balance}
-                  onRefreshState={() => fetchSystemState(true)}
+                  onRefreshState={async () => { await fetchSystemState(true); }}
                 />
 
                 <LedgerTransactionsView
@@ -1482,7 +1498,7 @@ export const MonolineMlmPortalModal: React.FC<MonolineMlmPortalModalProps> = ({
                 activationVouchers={state.activation_vouchers}
                 notificationOutbox={state.notification_outbox}
                 v2Config={state.v2_architecture_config}
-                onRefreshState={() => fetchSystemState(true)}
+                onRefreshState={async () => { await fetchSystemState(true); }}
                 onRecordWalletOrder={async (payload: any, tx?: any, buyerMember?: any) => {
                   await recordMonolinePackageOrderToFrekans(payload, tx, buyerMember);
                 }}
@@ -1517,7 +1533,7 @@ export const MonolineMlmPortalModal: React.FC<MonolineMlmPortalModalProps> = ({
                 p2pTransfers={state.p2p_transfers}
                 activationVouchers={state.activation_vouchers}
                 v2Config={state.v2_architecture_config}
-                onRefreshState={() => fetchSystemState(true)}
+                onRefreshState={async () => { await fetchSystemState(true); }}
                 onOpenWebhookTab={() => setActiveTab('webhook')}
                 webhookLogs={state.webhook_logs}
                 commissionLogs={state.commission_logs}
@@ -1591,7 +1607,7 @@ export const MonolineMlmPortalModal: React.FC<MonolineMlmPortalModalProps> = ({
                     mode="dealer"
                     currentDealerId={selectedMemberId || undefined}
                     embedded={true}
-                    onMemberUpdated={() => fetchSystemState(true)}
+                    onMemberUpdated={async () => { await fetchSystemState(true); }}
                   />
                 )}
               </div>
@@ -1619,7 +1635,7 @@ export const MonolineMlmPortalModal: React.FC<MonolineMlmPortalModalProps> = ({
                   activationVouchers={state.activation_vouchers}
                   fraudAlerts={state.fraud_alerts}
                   systemFundBalance={state.system_metrics.system_career_fund_balance}
-                  onRefreshState={() => fetchSystemState(true)}
+                  onRefreshState={async () => { await fetchSystemState(true); }}
                 />
                 <CareerMatrixView
                   members={state.members}
@@ -1653,7 +1669,7 @@ export const MonolineMlmPortalModal: React.FC<MonolineMlmPortalModalProps> = ({
         <DataBackupRestoreModal
           isOpen={showDataBackupModal}
           onClose={() => setShowDataBackupModal(false)}
-          onRestoreSuccess={() => fetchSystemState(true)}
+          onRestoreSuccess={async () => { await fetchSystemState(true); }}
         />
       )}
 

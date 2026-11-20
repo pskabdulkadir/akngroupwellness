@@ -292,6 +292,16 @@ export function downloadTechnicalReportWord(): void {
       </tr>
     </table>
 
+    <h2>7. VERİTABANI, KREDİ DEFTERİ VE İŞLEM GÜVENLİĞİ</h2>
+    <ul>
+      <li>Bayi paket kredileri 1 USD = 1 Kredi kuralıyla sunucu kataloğundan belirlenir; paket alımında sabit ek kredi bonusu yoktur.</li>
+      <li>Yönetici kredi düzeltmeleri PostgreSQL transaction’ı içinde kullanıcı kilidi, reseller_credits bakiyesi, idempotency ve credit_ledger kaydıyla işlenir.</li>
+      <li>PostgreSQL bağlantısı pg.Pool üzerinden DATABASE_URL ve SSL ayarlarıyla kurulur; varsayılan havuz sınırı 10 bağlantı, bağlantı zaman aşımı 10 saniyedir.</li>
+      <li>Veritabanı yazımı doğrulanamazsa sistem yeni yazma isteklerini geçici olarak durdurur ve kurtarma kontrolünü dakikada bir dener. 503 yanıtında yeniden göndermeden önce sipariş ve kredi defteri kontrol edilmelidir.</li>
+      <li>Portalın durum okuma isteği DB hatasında 3 saniyeden başlayıp en fazla 60 saniyeye kadar bekler; aynı anda ikinci bir polling isteği başlatılmaz. Harici istemcilerin tekrar deneme davranışı ayrıca kontrol edilmelidir.</li>
+      <li>PgBouncer kullanımı ve transaction/session pooling modu canlı DATABASE_URL ile doğrulanmalıdır; bağlantı URL’i uygulama kodundan görülemez.</li>
+    </ul>
+
     <div class="footer-note">
       Bu resmi iş sunum raporu ve katalog AKN GLOBAL GROUP LTD bünyesindeki AuraBio Frekans Kuantum Biyo-Rezonans ve Monoline 7 Nefis MLM Sistemi (v6.0 Enterprise) tarafından oluşturulmuştur.<br>
       © ${new Date().getFullYear()} AKN GLOBAL GROUP LTD • AuraBio Frekans. Tüm Hakları Saklıdır.
@@ -513,6 +523,31 @@ export function downloadTechnicalReportPDF(): void {
   doc.setFont('helvetica', 'normal');
   doc.text(clean(`BANKA: ${BANK_INFO.bankName}  |  IBAN: ${BANK_INFO.iban}`), margin + 4, y + 12);
   doc.text(clean(`ILETISIM & WHATSAPP: ${ADMIN_PHONE}  |  E-POSTA: ${ADMIN_EMAILS[0]}`), margin + 4, y + 17.5);
+
+  y += 3;
+  checkPage(38);
+  doc.setTextColor(15, 23, 42);
+  doc.setFontSize(10.5);
+  doc.setFont('helvetica', 'bold');
+  doc.text(clean('6. VERITABANI, KREDI DEFTERI VE ISLEM GUVENLIGI'), margin, y);
+  y += 5;
+  const persistenceItems = [
+    'Paket kredileri sunucu katalogundaki 1 USD = 1 Kredi kuralina gore belirlenir; paket alimina sabit bonus eklenmez.',
+    'Yonetici kredi duzeltmeleri PostgreSQL transaction, kullanici satir kilidi, reseller_credits, idempotency ve credit_ledger ile islenir.',
+    'pg.Pool DATABASE_URL ve SSL ayarlariyla calisir; varsayilan havuz siniri 10, baglanti zaman asimi 10 saniyedir.',
+    'Yazma dogrulanamazsa mutasyonlar gecici olarak durur ve kurtarma kontrolu dakikada bir calisir. 503 sonrasi tekrar gondermeden once siparis ve kredi defteri kontrol edilmelidir.',
+    'Portal durum okumasi DB hatasinda 3 saniyeden en fazla 60 saniyeye geri cekilir; ayni anda ikinci polling istegi baslatilmaz.',
+    'PgBouncer kullanimi ve transaction/session pooling modu canli DATABASE_URL ile dogrulanmalidir.',
+  ];
+  persistenceItems.forEach((item) => {
+    checkPage(12);
+    doc.setFontSize(7.7);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(51, 65, 85);
+    const lines = doc.splitTextToSize(clean(`• ${item}`), pageWidth - 2 * margin);
+    doc.text(lines, margin, y);
+    y += lines.length * 4 + 1.5;
+  });
 
   doc.save(`AuraBio_Frekans_Is_Sunumu_ve_Katalog_v6_${new Date().toISOString().slice(0, 10)}.pdf`);
 }

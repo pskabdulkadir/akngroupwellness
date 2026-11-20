@@ -33,6 +33,31 @@ export const pool = new Pool({
   connectionTimeoutMillis: 10000,
 });
 
+const DB_ERROR_LOG_INTERVAL_MS = 60_000;
+const dbErrorLogWindows = new Map<string, { lastLoggedAt: number; suppressed: number }>();
+
+export function logDatabaseError(context: string, error: any): void {
+  const code = typeof error?.code === 'string' ? error.code : 'UNKNOWN';
+  const key = `${context}:${code}`;
+  const now = Date.now();
+  const window = dbErrorLogWindows.get(key) || { lastLoggedAt: 0, suppressed: 0 };
+  if (now - window.lastLoggedAt < DB_ERROR_LOG_INTERVAL_MS) {
+    window.suppressed += 1;
+    dbErrorLogWindows.set(key, window);
+    return;
+  }
+
+  console.error(`[PostgreSQL ${context}]`, {
+    code,
+    message: error?.message || String(error),
+    pool: { total: pool.totalCount, idle: pool.idleCount, waiting: pool.waitingCount },
+    suppressedSinceLastLog: window.suppressed,
+  });
+  dbErrorLogWindows.set(key, { lastLoggedAt: now, suppressed: 0 });
+}
+
+pool.on('error', (error) => logDatabaseError('idle-client-error', error));
+
 let isPostgresAvailable = false;
 export function getIsPostgresAvailable(): boolean {
   return isPostgresAvailable;
@@ -57,7 +82,7 @@ export async function initPostgresDatabase(options: { applySchema?: boolean } = 
       break;
     } catch (err) {
       lastError = err;
-      candidate?.release();
+      candidate?.release(err instanceof Error ? err : undefined);
       if (attempt < 3) await new Promise((resolve) => setTimeout(resolve, attempt * 1000));
     }
   }
@@ -147,7 +172,7 @@ export async function query<T extends QueryResultRow = any>(text: string, params
   try {
     return await pool.query<T>(text, params);
   } catch (err) {
-    console.error('[PostgreSQL Query Error]:', err);
+    logDatabaseError('query', err);
     throw err;
   }
 }
@@ -162,18 +187,30 @@ export async function withTransaction<T>(
     throw new Error('PostgreSQL bağlantısı yok; kalıcı veri gerektiren işlem reddedildi.');
   }
 
-  const client = await pool.connect();
+  let client: PoolClient;
+  try {
+    client = await pool.connect();
+  } catch (error) {
+    logDatabaseError('connect', error);
+    throw error;
+  }
+  let releaseError: Error | undefined;
   try {
     await client.query('BEGIN');
     const result = await callback(client);
     await client.query('COMMIT');
     return result;
   } catch (error) {
-    await client.query('ROLLBACK');
-    console.error('[PostgreSQL Transaction Rolled Back]:', error);
+    try {
+      await client.query('ROLLBACK');
+    } catch (rollbackError) {
+      releaseError = rollbackError instanceof Error ? rollbackError : new Error(String(rollbackError));
+      logDatabaseError('rollback', rollbackError);
+    }
+    logDatabaseError('transaction', error);
     throw error;
   } finally {
-    client.release();
+    client.release(releaseError);
   }
 }
 
