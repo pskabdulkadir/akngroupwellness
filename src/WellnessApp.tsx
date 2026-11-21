@@ -160,6 +160,7 @@ export default function WellnessApp({
     Boolean(currentUser?.role === 'dealer' && currentUser.paymentStatus === 'PENDING')
   );
   const [isResellerDashboardOpen, setIsResellerDashboardOpen] = useState<boolean>(() => initialNav.activeModal === 'reseller_dashboard' || initialNav.activeModal === 'reseller' || initialNav.activeModal === 'bayi' || initialNav.activeModal === 'dealer' || initialNav.activeModal === 'member_dashboard' || initialNav.activeModal === 'profile');
+  const [resellerDashboardInitialTab, setResellerDashboardInitialTab] = useState<'overview' | 'packages'>('overview');
   const [isAdminOpen, setIsAdminOpen] = useState<boolean>(() => initialNav.activeModal === 'admin');
   useEffect(() => {
     if (!isAdminOpen) {
@@ -731,7 +732,7 @@ export default function WellnessApp({
 
     const handleOpenResellerDashboard = () => {
       setIsMonolineModalOpen(false);
-      setIsResellerDashboardOpen(true);
+      openResellerDashboard();
     };
 
     window.addEventListener('aurabio_session_updated', handleSessionUpdated);
@@ -768,14 +769,17 @@ export default function WellnessApp({
     }
   };
 
+  const openResellerDashboard = (initialTab: 'overview' | 'packages' = 'overview') => {
+    setResellerDashboardInitialTab(initialTab);
+    setIsResellerDashboardOpen(true);
+  };
+
   const handleScanStart = async (): Promise<string | null> => {
     const requestId = `SCAN-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
     const res = await deductScanCreditFromDealer(currentUser?.uid, { scanCost: 1, requestId });
     if (!res.success) {
       if (res.insufficientCredits && (currentUser?.role === 'dealer' || currentUser?.dealerDetails)) {
-        setTimeout(() => {
-          setIsResellerDashboardOpen(true);
-        }, 1500);
+        openResellerDashboard('packages');
       }
       return res.message || 'Seans kredisi düşülemedi. Lütfen tekrar deneyin.';
     }
@@ -1227,6 +1231,7 @@ export default function WellnessApp({
           isOpen={isResellerDashboardOpen}
           onClose={() => setIsResellerDashboardOpen(false)}
           currentUser={currentUser}
+          initialTab={resellerDashboardInitialTab}
           onOpenAuthModal={() => {
             setIsResellerDashboardOpen(false);
             setAuthModalInitialMode('dealer');
@@ -1305,7 +1310,7 @@ export default function WellnessApp({
           onRefresh={handleRefreshMemberStatus}
           onLogout={handleLogout}
           onOpenPaymentModal={() => setIsPaymentModalOpen(true)}
-          onOpenDealerDashboard={() => setIsResellerDashboardOpen(true)}
+          onOpenDealerDashboard={() => openResellerDashboard()}
           onDismiss={() => {
             // Allow exploring
             setCurrentUser(prev => prev ? { ...prev, isAllowed: true } : null);
@@ -1351,7 +1356,7 @@ export default function WellnessApp({
           }}
           onOpenResellerModal={() => {
             setIsBusinessPresentationOpen(false);
-            setIsResellerDashboardOpen(true);
+            openResellerDashboard();
           }}
           onOpenDealerBusinessCard={async () => {
             setIsBusinessPresentationOpen(false);

@@ -88,6 +88,7 @@ export const CameraView: React.FC<CameraViewProps> = ({
   const [selectedDeviceId, setSelectedDeviceId] = useState<string>('');
   const [isDeviceMenuOpen, setIsDeviceMenuOpen] = useState<boolean>(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
+  const [cameraErrorType, setCameraErrorType] = useState<'camera' | 'scan'>('camera');
   const [isCameraInitializing, setIsCameraInitializing] = useState<boolean>(true);
   const [isScanning, setIsScanning] = useState<boolean>(false);
   const [scanProgress, setScanProgress] = useState<number>(0);
@@ -224,6 +225,7 @@ export const CameraView: React.FC<CameraViewProps> = ({
   const startCamera = useCallback(async (facing: 'user' | 'environment', deviceId?: string) => {
     try {
       setCameraError(null);
+      setCameraErrorType('camera');
       setIsCameraInitializing(true);
 
       if (streamRef.current) {
@@ -307,6 +309,7 @@ export const CameraView: React.FC<CameraViewProps> = ({
         err?.name === 'PermissionDeniedError' ||
         String(err?.message || '').toLowerCase().includes('permission');
 
+      setCameraErrorType('camera');
       if (isPermissionDenied) {
         setCameraError(
           'Kamera erişim izni verilmedi veya engellendi. Gerçek seans ve biyo-rezonans ölçümü için lütfen tarayıcı ayarlarından (adres çubuğundaki kilit simgesi) kamera iznini onaylayın.'
@@ -497,6 +500,7 @@ export const CameraView: React.FC<CameraViewProps> = ({
     if (isScanningRef.current) return;
     setHumanWarningMessage(null);
     setCameraError(null);
+    setCameraErrorType('scan');
     setIsScanning(true);
 
     const startError = await onScanStartRef.current?.();
@@ -777,26 +781,37 @@ export const CameraView: React.FC<CameraViewProps> = ({
               <Camera className="w-8 h-8" />
             </div>
             <div className="space-y-1.5">
-              <h3 className="text-xl font-black text-white">Canlı Kamera Erişimi Gerekli</h3>
+              <h3 className="text-xl font-black text-white">{cameraErrorType === 'camera' ? 'Canlı Kamera Erişimi Gerekli' : 'Tarama Başlatılamadı'}</h3>
               <p className="text-xs sm:text-sm text-slate-300 max-w-md leading-relaxed">{cameraError}</p>
             </div>
 
-            <div className="w-full flex flex-col gap-2.5 pt-2">
-              <button
-                onClick={() => startCamera(facingMode, selectedDeviceId || undefined)}
-                className="w-full px-5 py-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-xl shadow-emerald-950 active:scale-95 transition-all cursor-pointer ring-2 ring-emerald-400/50"
-              >
-                <RefreshCw className="w-4 h-4 text-white animate-spin" />
-                <span>Canlı Kamerayı Başlat / İzni Tekrar Dene</span>
-              </button>
-            </div>
+            {cameraErrorType === 'camera' ? (
+              <>
+                <div className="w-full flex flex-col gap-2.5 pt-2">
+                  <button
+                    onClick={() => startCamera(facingMode, selectedDeviceId || undefined)}
+                    className="w-full px-5 py-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-xl shadow-emerald-950 active:scale-95 transition-all cursor-pointer ring-2 ring-emerald-400/50"
+                  >
+                    <RefreshCw className="w-4 h-4 text-white animate-spin" />
+                    <span>Canlı Kamerayı Başlat / İzni Tekrar Dene</span>
+                  </button>
+                </div>
 
-            <div className="text-[11px] text-slate-400 border-t border-slate-800/80 pt-3 text-left w-full space-y-1 bg-slate-900/60 p-3 rounded-xl border border-slate-800">
-              <div className="font-bold text-slate-200">💡 Tarayıcı Kamera İzni Nasıl Onaylanır?</div>
-              <div>1. Tarayıcınızın adres çubuğundaki kilit (🔒) veya kamera simgesine tıklayın.</div>
-              <div>2. <strong>Kamera</strong> iznini <strong>"İzin Ver"</strong> (Allow) konumuna getirin.</div>
-              <div>3. Sayfayı yenileyin veya yukarıdaki <strong>"Canlı Kamerayı Başlat"</strong> butonuna basın.</div>
-            </div>
+                <div className="text-[11px] text-slate-400 border-t border-slate-800/80 pt-3 text-left w-full space-y-1 bg-slate-900/60 p-3 rounded-xl border border-slate-800">
+                  <div className="font-bold text-slate-200">Tarayıcı kamera izni nasıl açılır?</div>
+                  <div>1. Adres çubuğundaki kilit veya kamera simgesine tıklayın.</div>
+                  <div>2. Kamera iznini "İzin Ver" olarak değiştirin.</div>
+                  <div>3. Sayfayı yenileyip kamerayı yeniden başlatın.</div>
+                </div>
+              </>
+            ) : (
+              <button
+                onClick={() => setCameraError(null)}
+                className="w-full px-5 py-3.5 rounded-2xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-sm"
+              >
+                Kapat
+              </button>
+            )}
           </div>
         )}
 

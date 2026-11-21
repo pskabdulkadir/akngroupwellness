@@ -853,9 +853,24 @@ async function syncMemberUserCredits(resellerId: string, newBalance: number, all
  */
 export function subscribeToResellersList(onList: (list: Reseller[]) => void): Unsubscribe {
   let active = true;
+  let refreshing = false;
+  let refreshQueued = false;
   const refresh = async () => {
-    const list = await getAllResellers();
-    if (active) onList(list);
+    if (refreshing) {
+      refreshQueued = true;
+      return;
+    }
+    refreshing = true;
+    try {
+      const list = await getAllResellers();
+      if (active) onList(list);
+    } finally {
+      refreshing = false;
+      if (active && refreshQueued) {
+        refreshQueued = false;
+        void refresh();
+      }
+    }
   };
   void refresh();
   const timer = window.setInterval(() => void refresh(), 15000);
@@ -963,7 +978,9 @@ export function saveLocalResellers(resellers: Reseller[]): void {
   if (typeof window === 'undefined') return;
   try {
     const cleaned = resellers.filter(r => r && r.uid && !LEGACY_MOCK_RESELLER_IDS.has(r.uid));
-    localStorage.setItem(STORAGE_RESELLERS_KEY, JSON.stringify(cleaned));
+    const serialized = JSON.stringify(cleaned);
+    if (localStorage.getItem(STORAGE_RESELLERS_KEY) === serialized) return;
+    localStorage.setItem(STORAGE_RESELLERS_KEY, serialized);
     window.dispatchEvent(new CustomEvent('aurabio_resellers_updated'));
   } catch (e) {
     console.warn('Error saving local resellers:', e);
@@ -1233,7 +1250,7 @@ export async function getAllResellers(): Promise<Reseller[]> {
           totalSalesAmount: local?.totalSalesAmount || 0,
           totalReferredUsers: local?.totalReferredUsers || 0,
           createdAt: row.created_at || profile.createdAt || local?.createdAt || new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
+          updatedAt: profile.updatedAt || local?.updatedAt || row.created_at || new Date().toISOString(),
         } as Reseller];
       });
       saveLocalResellers(serverResellers);

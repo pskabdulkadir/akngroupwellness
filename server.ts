@@ -7592,7 +7592,8 @@ async function startServer(options: { listen?: boolean } = {}) {
   app.post('/api/v1/members/:userId/deduct-scan-credit', requireAdminOrOwnMember, async (req, res) => {
     try {
       const { amount, credits_to_deduct, requestId, request_id } = req.body || {};
-      const targetId = String(req.params.userId || '').trim();
+      const rawTargetId = String(req.params.userId || '').trim();
+      const targetId = rawTargetId.toUpperCase() === 'ADMIN-AKN-01' ? 'USR-ADMIN' : rawTargetId;
       if (!targetId) {
         return res.status(400).json({ status: 'error', message: 'Geçersiz bayi kimliği.' });
       }
@@ -7624,7 +7625,8 @@ async function startServer(options: { listen?: boolean } = {}) {
   app.post('/api/v1/members/:userId/refund-scan-credit', requireAdminOrOwnMember, async (req, res) => {
     try {
       const { requestId, request_id } = req.body || {};
-      const targetId = String(req.params.userId || '').trim();
+      const rawTargetId = String(req.params.userId || '').trim();
+      const targetId = rawTargetId.toUpperCase() === 'ADMIN-AKN-01' ? 'USR-ADMIN' : rawTargetId;
       const reqId = String(requestId || request_id || '').trim();
       if (!targetId || !reqId) {
         return res.status(400).json({ status: 'error', message: 'Geçersiz iade isteği.' });
