@@ -7686,7 +7686,8 @@ async function startServer(options: { listen?: boolean } = {}) {
 
   app.get('/api/v1/members/:userId/credits', requireAdminOrOwnMember, async (req, res) => {
     try {
-      const targetId = String(req.params.userId || '').trim();
+      const rawId = String(req.params.userId || '').trim();
+      const targetId = rawId.toUpperCase() === 'ADMIN-AKN-01' ? 'USR-ADMIN' : rawId;
       const result = await pgQuery('SELECT scan_credits FROM users WHERE user_id = $1', [targetId]);
       if (!result || result.rows.length === 0) {
         return res.status(404).json({ status: 'error', message: 'Bayi kredi hesabı bulunamadı.' });
