@@ -67,6 +67,8 @@ import {
   getActivationPriceForRegion,
   getMemberRegionalPendingUsd,
   getMemberRegionalUsdBalance,
+  getPackagePriceForRegion,
+  MEMBER_COUNTRY_OPTIONS,
   resolveMemberRegion,
 } from '../utils/walletRegion';
 import { recordUserContractApprovals } from '../utils/paymentProcessor';
@@ -153,6 +155,7 @@ interface DealerBackOfficeViewProps {
   onRegisterReferralMember?: (formData: {
     full_name: string;
     city: string;
+    country_code?: string;
     sponsor_id: string;
     initial_package_id: Exclude<PackageId, 'CUSTOM'>;
     email?: string;
@@ -286,6 +289,7 @@ export const DealerBackOfficeView: React.FC<DealerBackOfficeViewProps> = ({
   );
   const [newSubDealerName, setNewSubDealerName] = useState<string>('');
   const [newSubDealerCity, setNewSubDealerCity] = useState<string>('İstanbul');
+  const [newSubDealerCountryCode, setNewSubDealerCountryCode] = useState<string>('TR');
   const [newSubDealerPhone, setNewSubDealerPhone] = useState<string>('');
   const [newSubDealerEmail, setNewSubDealerEmail] = useState<string>('');
   const [newSubDealerPkg, setNewSubDealerPkg] = useState<Exclude<PackageId, 'CUSTOM'>>(
@@ -1845,6 +1849,7 @@ export const DealerBackOfficeView: React.FC<DealerBackOfficeViewProps> = ({
     await onRegisterReferralMember({
       full_name: newSubDealerName.trim(),
       city: newSubDealerCity.trim() || 'Türkiye',
+      country_code: newSubDealerCountryCode,
       phone: newSubDealerPhone.trim() || undefined,
       email: newSubDealerEmail.trim() || undefined,
       sponsor_id: member.user_id,
@@ -3981,6 +3986,21 @@ Paket Alarak Aktifliği Yenile →
                 </div>
 
                 <div>
+                  <label className="block text-slate-300 font-semibold mb-1">Ülke</label>
+                  <select
+                    value={newSubDealerCountryCode}
+                    onChange={(e) => setNewSubDealerCountryCode(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg bg-slate-900/90 border border-white/20 text-white"
+                  >
+                    {MEMBER_COUNTRY_OPTIONS.map((country) => (
+                      <option key={country.code} value={country.code}>
+                        {country.label} ({country.code})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
                   <label className="block text-slate-300 font-semibold mb-1">
                     Başlangıç Bayilik Paketi
                   </label>
@@ -3991,11 +4011,14 @@ Paket Alarak Aktifliği Yenile →
                     }
                     className="w-full px-3 py-2 rounded-lg bg-slate-900/90 border border-white/20 text-white font-semibold"
                   >
-                    {FREKANS_PACKAGES.map((pkg) => (
-                      <option key={pkg.id} value={pkg.id}>
-                        {pkg.name} — {pkg.defaultPrice.toLocaleString('tr-TR')} $ ({pkg.sessionCredits} Kredi)
-                      </option>
-                    ))}
+                    {FREKANS_PACKAGES.map((pkg) => {
+                      const region = resolveMemberRegion(newSubDealerCountryCode);
+                      return (
+                        <option key={pkg.id} value={pkg.id}>
+                          {pkg.name} — {getPackagePriceForRegion(pkg.defaultPrice, region).toLocaleString('tr-TR')} $ ({pkg.sessionCredits} Kredi)
+                        </option>
+                      );
+                    })}
                   </select>
                 </div>
 

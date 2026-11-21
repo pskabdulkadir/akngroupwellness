@@ -7,7 +7,12 @@ import {
   RANK_UP_REWARDS_BY_CAREER,
   evaluateMemberOrganizationMetrics,
 } from '../types/monoline';
-import { getPackagePriceForRegion, resolveMemberRegion } from './walletRegion';
+import {
+  getActivationPriceForRegion,
+  getPackageCreditsForRegion,
+  getPackagePriceForRegion,
+  resolveMemberRegion,
+} from './walletRegion';
 import { DEFAULT_DEALER_PACKAGES } from '../config/dealerPackages';
 import { DEFAULT_MEMBERSHIP_PACKAGES } from './authManager';
 
@@ -86,18 +91,49 @@ test('14 paket katalogda doğru fiyat ve seans kredileriyle tanımlı', () => {
   assert.equal(FREKANS_PACKAGES.at(-1)?.defaultPrice, 6031);
 });
 
-test('paket fiyatı ve kredisi tüm bölgelerde 1:1 kalır', () => {
+test('bölge çözümü TR dışındaki tüm ülkeleri yurtdışı sayar', () => {
   assert.equal(resolveMemberRegion(' tr '), 'DOMESTIC');
   assert.equal(resolveMemberRegion('US'), 'INTERNATIONAL');
+  assert.equal(resolveMemberRegion('DE'), 'INTERNATIONAL');
   assert.equal(resolveMemberRegion(undefined), 'DOMESTIC');
+});
 
+test('paket fiyatı yurtiçinde 1x, yurtdışında tam olarak 3x uygulanır', () => {
   for (const pkg of FREKANS_PACKAGES) {
     assert.equal(getPackagePriceForRegion(pkg.defaultPrice, 'DOMESTIC'), pkg.defaultPrice);
-    const internationalPrice = getPackagePriceForRegion(pkg.defaultPrice, 'INTERNATIONAL');
-    assert.equal(internationalPrice, pkg.defaultPrice);
-    assert.equal(internationalPrice, pkg.sessionCredits);
-    assert.equal(pkg.sessionCredits, FREKANS_PACKAGES.find((candidate) => candidate.id === pkg.id)?.sessionCredits);
+    assert.equal(getPackagePriceForRegion(pkg.defaultPrice, 'INTERNATIONAL'), pkg.defaultPrice * 3);
   }
+});
+
+test('paket kredisi her bölgede katalogdaki baz değerde kalır; yalnızca fiyat yurtdışında 3x olur', () => {
+  const regions = ['DOMESTIC', 'INTERNATIONAL'] as const;
+  FREKANS_PACKAGES.forEach((pkg, index) => {
+    assert.equal(pkg.sessionCredits, EXPECTED_PACKAGE_PRICES[index]);
+    for (const region of regions) {
+      assert.equal(getPackageCreditsForRegion(pkg.sessionCredits, region), EXPECTED_PACKAGE_PRICES[index]);
+    }
+    assert.equal(getPackagePriceForRegion(pkg.defaultPrice, 'DOMESTIC'), pkg.defaultPrice);
+    assert.equal(getPackagePriceForRegion(pkg.defaultPrice, 'INTERNATIONAL'), pkg.defaultPrice * 3);
+  });
+});
+
+test('aktiflik ücreti yurtiçi 100 $, yurtdışı 300 $ ve bir kez çarpılır', () => {
+  assert.equal(getActivationPriceForRegion('DOMESTIC'), 100);
+  assert.equal(getActivationPriceForRegion('INTERNATIONAL'), 300);
+});
+
+test('yurtdışı kart ve cüzdan siparişinde fiyat 3x, kredi baz değerde; komisyon aynı 3x tutarından hesaplanır', () => {
+  const basePrice = 1005;
+  const baseCredits = 1005;
+  const internationalOrder = getPackagePriceForRegion(basePrice, 'INTERNATIONAL');
+  const cardCredits = getPackageCreditsForRegion(baseCredits, 'INTERNATIONAL');
+  const walletCredits = getPackageCreditsForRegion(baseCredits, 'INTERNATIONAL');
+  const sponsorShare = Math.round(internationalOrder * 0.2 * 100) / 100;
+  assert.equal(internationalOrder, 3015);
+  assert.equal(cardCredits, baseCredits);
+  assert.equal(walletCredits, baseCredits);
+  assert.equal(sponsorShare, 603);
+  assert.notEqual(internationalOrder, basePrice * 9);
 });
 
 test('kariyer ödülleri 2–7. seviyelerde tekil tutarlara sahip', () => {

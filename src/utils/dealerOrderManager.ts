@@ -126,22 +126,8 @@ export function subscribeToDealerPackageOrders(
   };
 }
 
-const DEALER_ORDER_MAX_ATTEMPTS = 3;
-
-async function postDealerOrderWithRetry(url: string, init: RequestInit): Promise<Response> {
-  for (let attempt = 1; ; attempt++) {
-    try {
-      const response = await fetch(url, init);
-      if (response.status < 500 || attempt === DEALER_ORDER_MAX_ATTEMPTS) return response;
-    } catch (error) {
-      if (attempt === DEALER_ORDER_MAX_ATTEMPTS) throw error;
-    }
-    await new Promise((resolve) => setTimeout(resolve, 500 * attempt));
-  }
-}
-
 /**
- * Reseller creates a package purchase order through the supported server payment flows.
+ * Reseller completes a package purchase with a verified 3D Secure card payment.
  */
 export async function requestDealerPackagePurchase(
   resellerId: string,
@@ -149,10 +135,8 @@ export async function requestDealerPackagePurchase(
   resellerEmail: string,
   resellerPhone: string | undefined,
   pkg: DealerPackage,
-  paymentReference?: string,
-  paymentMethod: 'bank_transfer' | 'credit_card_3d' | 'usdt_trc20' = 'bank_transfer',
-  paymentConfirmation?: { order_id: string; merchant_oid: string; transaction_id: string },
-  requestedOrderId?: string
+  paymentReference: string,
+  paymentConfirmation: { order_id: string; merchant_oid: string; transaction_id: string }
 ): Promise<{
   success: boolean;
   message: string;
@@ -160,15 +144,8 @@ export async function requestDealerPackagePurchase(
   activityExtended?: boolean;
 }> {
   try {
-    const orderId = paymentConfirmation?.order_id || requestedOrderId || `DORD-${crypto.randomUUID()}`;
+    const orderId = paymentConfirmation.order_id;
     const nowIso = new Date().toISOString();
-    const isInstantPayment = paymentMethod === 'credit_card_3d';
-    if (isInstantPayment && !paymentConfirmation) {
-      return { success: false, message: 'Doğrulanmış Sanal POS ödemesi olmadan sipariş oluşturulamaz.' };
-    }
-    if (!isInstantPayment && paymentMethod !== 'bank_transfer') {
-      return { success: false, message: 'Bu ödeme yöntemi için sunucu onaylı sipariş akışı bulunmuyor.' };
-    }
 
     const newOrder: DealerPackageOrder = {
       id: orderId,
@@ -181,70 +158,41 @@ export async function requestDealerPackagePurchase(
       scanCredits: pkg.scanCredits,
       price: pkg.price,
       priceText: pkg.priceText || `${pkg.price.toLocaleString('tr-TR')} $`,
-      status: isInstantPayment ? 'approved' : 'pending',
-      paymentMethod,
-      paymentReference: paymentReference || (isInstantPayment ? '3D-SECURE-KREDI-KARTI' : ''),
+      status: 'approved',
+      paymentMethod: 'credit_card_3d',
+      paymentReference,
       createdAt: nowIso,
-      ...(isInstantPayment ? { approvedAt: nowIso } : {}),
+      approvedAt: nowIso,
     };
 
-    let activityExtended = false;
-    if (!isInstantPayment && paymentMethod === 'bank_transfer') {
-      const [{ getAdminToken }, { getMemberWalletToken }] = await Promise.all([
-        import('./adminSession'),
-        import('./authManager'),
-      ]);
-      const token = getAdminToken() || getMemberWalletToken();
-      if (!token) return { success: false, message: 'Bayi oturumu sunucuda doğrulanamadı.' };
-      const response = await postDealerOrderWithRetry(`/api/v1/members/${encodeURIComponent(resellerId)}/dealer-package-orders`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          order_id: orderId,
-          package_id: pkg.id,
-          payment_reference: paymentReference || '',
-        }),
-      });
-      const result = await response.json().catch(() => ({}));
-      if (!response.ok || result.status !== 'success' || !result.order) {
-        return { success: false, message: result.message || 'Havale siparişi sunucuya kaydedilemedi.' };
-      }
-      newOrder.scanCredits = Number(result.order.scan_credits) || pkg.scanCredits;
-      newOrder.price = Number(result.order.amount) || pkg.price;
-      newOrder.packageName = result.order.package_name || pkg.name;
-      newOrder.status = String(result.order.status || 'PENDING').toLowerCase() as DealerPackageOrder['status'];
+    const whRes = await fetch('/api/v1/integrations/order-commission', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        user_id: resellerId,
+        reseller_name: resellerName,
+        reseller_email: resellerEmail,
+        order_id: orderId,
+        order_amount: pkg.price,
+        package_id: pkg.id,
+        payment_method: 'CREDIT_CARD_3D',
+        merchant_oid: paymentConfirmation.merchant_oid,
+        transaction_id: paymentConfirmation.transaction_id,
+        timestamp: nowIso,
+      }),
+    });
+    const whData = await whRes.json().catch(() => ({}));
+    if (!whRes.ok || !whData?.transaction) {
+      return {
+        success: false,
+        message: whData?.message || 'Ödeme doğrulandı ancak sipariş sunucuda tamamlanamadı. İşlem numarasıyla destek ekibine başvurun.',
+      };
     }
-
-    if (isInstantPayment && paymentConfirmation) {
-      const whRes = await fetch('/api/v1/integrations/order-commission', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          user_id: resellerId,
-          reseller_name: resellerName,
-          reseller_email: resellerEmail,
-          order_id: orderId,
-          order_amount: pkg.price,
-          package_id: pkg.id,
-          payment_method: 'CREDIT_CARD_3D',
-          merchant_oid: paymentConfirmation.merchant_oid,
-          transaction_id: paymentConfirmation.transaction_id,
-          timestamp: newOrder.createdAt,
-        }),
-      });
-      const whData = await whRes.json().catch(() => ({}));
-      if (!whRes.ok || !whData?.transaction) {
-        return {
-          success: false,
-          message: whData?.message || 'Ödeme doğrulandı ancak sipariş sunucuda tamamlanamadı. İşlem numarasıyla destek ekibine başvurun.',
-        };
-      }
-      activityExtended = Boolean(whData.transaction.activity_extended);
-      newOrder.activityExtended = activityExtended;
-      const { syncFrekansWithMonolineEngine } = await import('./monolineSyncBridge');
-      await syncFrekansWithMonolineEngine();
-      window.dispatchEvent(new CustomEvent('monoline_webhook_triggered'));
-    }
+    const activityExtended = Boolean(whData.transaction.activity_extended);
+    newOrder.activityExtended = activityExtended;
+    const { syncFrekansWithMonolineEngine } = await import('./monolineSyncBridge');
+    await syncFrekansWithMonolineEngine();
+    window.dispatchEvent(new CustomEvent('monoline_webhook_triggered'));
 
     const currentOrders = getLocalDealerOrders();
     saveLocalDealerOrders([newOrder, ...currentOrders.filter((o) => o.id !== orderId)]);
@@ -263,9 +211,7 @@ export async function requestDealerPackagePurchase(
     return {
       success: true,
       activityExtended,
-      message: isInstantPayment
-        ? `Ödemeniz onaylandı (${orderId})! +${pkg.scanCredits} Seans Kredisi bayi hesabınıza anında yüklendi.${activityStatusSuffix}`
-        : `Havale siparişiniz (${orderId}) oluşturuldu. Krediler yönetici onayından sonra yüklenecektir.`,
+      message: `Ödemeniz onaylandı (${orderId})! +${pkg.scanCredits} Seans Kredisi bayi hesabınıza anında yüklendi.${activityStatusSuffix}`,
       order: newOrder,
     };
   } catch (err: any) {
@@ -274,86 +220,6 @@ export async function requestDealerPackagePurchase(
       success: false,
       message: err?.message || 'Sipariş oluşturulurken bir hata oluştu.'
     };
-  }
-}
-
-/**
- * Admin approves dealer package order -> ACTUALLY ADDS CREDITS TO DEALER / RESELLER
- */
-export async function adminApproveDealerPackageOrder(
-  orderId: string,
-  adminNote?: string
-): Promise<{ success: boolean; message: string; newTotalCredits?: number }> {
-  try {
-    const allOrders = await getAllDealerPackageOrders();
-    const orderIndex = allOrders.findIndex((item) => item.id === orderId);
-    if (orderIndex < 0) return { success: false, message: 'Sipariş bulunamadı.' };
-
-    const order = allOrders[orderIndex];
-    const { getAdminToken } = await import('./adminSession');
-    const token = getAdminToken();
-    if (!token) return { success: false, message: 'Yönetici oturumu sona erdi. Yeniden giriş yapın.' };
-
-    const response = await fetch(`/api/v1/admin/dealer-package-orders/${encodeURIComponent(orderId)}/approve`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ admin_note: adminNote }),
-    });
-    const result = await response.json().catch(() => ({}));
-    if (!response.ok || result.status !== 'success' || typeof result.remainingCredits !== 'number') {
-      return { success: false, message: result.message || 'Sipariş sunucuda onaylanamadı.' };
-    }
-
-    order.status = 'approved';
-    order.approvedAt = result.order?.approved_at || new Date().toISOString();
-    if (adminNote) order.adminNote = adminNote;
-    allOrders[orderIndex] = order;
-    saveLocalDealerOrders(allOrders);
-
-    const { getLocalResellers, getActiveResellerSession, setActiveResellerSession, saveLocalResellers } = await import('./resellerManager');
-    const resellers = getLocalResellers();
-    const reseller = resellers.find((item) => item.uid === order.resellerId);
-    if (reseller) {
-      const updated = { ...reseller, creditsBalance: undefined, dealerPackageId: order.packageId, status: 'active' as const };
-      saveLocalResellers(resellers.map((item) => item.uid === reseller.uid ? updated : item));
-      if (getActiveResellerSession()?.uid === reseller.uid) setActiveResellerSession(updated);
-    }
-
-    const { getActiveMemberSession, getLocalMembersDirectory, saveToLocalMembersDirectory } = await import('./authManager');
-    const user = getLocalMembersDirectory().find((item) => item.uid === order.resellerId);
-    if (user) {
-      const updated = {
-        ...user,
-        creditsBalance: undefined,
-        dealerPackageId: order.packageId,
-        role: 'dealer' as const,
-        dealerStatus: 'approved' as const,
-        isAllowed: true,
-        dealerDetails: user.dealerDetails ? { ...user.dealerDetails, creditsBalance: undefined } : user.dealerDetails,
-      };
-      saveToLocalMembersDirectory(updated);
-      if (getActiveMemberSession()?.uid === updated.uid) {
-        localStorage.setItem('aurabio_active_session_v1', JSON.stringify(updated));
-        window.dispatchEvent(new CustomEvent('aurabio_session_updated', { detail: updated }));
-      }
-    }
-
-    window.dispatchEvent(new CustomEvent('aurabio_reseller_session_updated'));
-    window.dispatchEvent(new CustomEvent('aurabio_dealer_orders_updated'));
-    window.dispatchEvent(new CustomEvent('aurabio_resellers_updated'));
-    window.dispatchEvent(new CustomEvent('aurabio_invoices_updated'));
-
-    return {
-      success: true,
-      message: `Sipariş onaylandı. Yeni kredi bakiyesi: ${result.remainingCredits}`,
-      newTotalCredits: result.remainingCredits,
-    };
-  } catch (err: any) {
-    console.error('Admin approve dealer order error:', err);
-    return { success: false, message: err?.message || 'Sipariş onaylanırken hata oluştu.' };
   }
 }
 

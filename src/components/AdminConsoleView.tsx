@@ -72,7 +72,13 @@ import {
   evaluateMemberOrganizationMetrics,
 } from '../types/monoline';
 import { getAdminToken } from '../utils/adminSession';
-import { getMemberRegionalPendingUsd, getMemberRegionalUsdBalance } from '../utils/walletRegion';
+import {
+  getMemberRegionalPendingUsd,
+  getMemberRegionalUsdBalance,
+  getPackagePriceForRegion,
+  MEMBER_COUNTRY_OPTIONS,
+  resolveMemberRegion,
+} from '../utils/walletRegion';
 import { BUSINESS_RULES } from '../config/businessRules';
 import type { BankAccount } from '../types/accounting';
 import { CommissionEngineSettingsView } from './CommissionEngineSettingsView';
@@ -162,6 +168,7 @@ interface AdminConsoleViewProps {
     sponsor_id: string;
     initial_package_id: Exclude<PackageId, 'CUSTOM'>;
     initial_order_amount?: number;
+    country_code?: string;
     manual_career_override?: number | null;
     assigned_leg?: 'LEFT' | 'RIGHT' | 'AUTO';
     password?: string;
@@ -529,6 +536,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
   const [newDealerEmail, setNewDealerEmail] = useState('');
   const [newDealerPhone, setNewDealerPhone] = useState('');
   const [newDealerCity, setNewDealerCity] = useState('İstanbul');
+  const [newDealerCountryCode, setNewDealerCountryCode] = useState('TR');
   const [newDealerRefCode, setNewDealerRefCode] = useState('');
   const [newDealerSponsorId, setNewDealerSponsorId] = useState<string>('');
   const [newDealerPkgId, setNewDealerPkgId] =
@@ -1183,6 +1191,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
       phone: newDealerPhone.trim() || undefined,
       ref_code: newDealerRefCode.trim().toUpperCase() || undefined,
       city: newDealerCity.trim() || 'Türkiye',
+      country_code: newDealerCountryCode,
       sponsor_id: newDealerSponsorId,
       initial_package_id: newDealerPkgId,
       manual_career_override:
@@ -4809,6 +4818,21 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                 </div>
 
                 <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Ülke</label>
+                  <select
+                    value={newDealerCountryCode}
+                    onChange={(e) => setNewDealerCountryCode(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-slate-900"
+                  >
+                    {MEMBER_COUNTRY_OPTIONS.map((country) => (
+                      <option key={country.code} value={country.code}>
+                        {country.label} ({country.code})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
                   <label className="block font-semibold text-slate-700 mb-1">
                     E-Posta (Opsiyonel)
                   </label>
@@ -4906,12 +4930,15 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                     }
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-slate-900"
                   >
-                    {FREKANS_PACKAGES.map((pkg) => (
-                      <option key={pkg.id} value={pkg.id}>
-                        {pkg.code} — {pkg.defaultPrice.toLocaleString('tr-TR')} $ (
-                        {pkg.sessionCredits} Kredi)
-                      </option>
-                    ))}
+                    {FREKANS_PACKAGES.map((pkg) => {
+                      const region = resolveMemberRegion(newDealerCountryCode);
+                      return (
+                        <option key={pkg.id} value={pkg.id}>
+                          {pkg.code} — {getPackagePriceForRegion(pkg.defaultPrice, region).toLocaleString('tr-TR')} $ (
+                          {pkg.sessionCredits} Kredi)
+                        </option>
+                      );
+                    })}
                   </select>
                 </div>
 

@@ -1470,12 +1470,14 @@ export async function adminCreateDealerDirectly(data: {
   customReferralCode?: string;
   commissionRate?: number;
   dealerPackageId?: string;
+  countryCode?: string;
   notes?: string;
   sponsorId?: string;
   assignedLeg?: 'LEFT' | 'RIGHT' | 'AUTO';
 }): Promise<{ success: boolean; message: string; user?: UserMember; referralCode?: string }> {
   try {
     const cleanEmail = data.email.trim().toLowerCase();
+    const cleanCountryCode = (data.countryCode || 'TR').trim().toUpperCase();
     const cleanFullName = data.fullName.trim();
     const cleanPhone = data.phone.trim();
     const cleanCompany = data.companyName.trim();
@@ -1559,7 +1561,7 @@ export async function adminCreateDealerDirectly(data: {
         fullName: cleanFullName,
         phone: cleanPhone,
         city: data.taxOffice || 'Türkiye',
-        country_code: 'TR',
+        country_code: cleanCountryCode,
         ref_code: referralCode,
         referralCode: referralCode,
         sponsor_id: data.sponsorId || 'USR-ADMIN',
@@ -1618,6 +1620,7 @@ export async function adminCreateDealerDirectly(data: {
             full_name: cleanFullName,
             email: cleanEmail,
             phone: cleanPhone,
+            country_code: cleanCountryCode,
             ref_code: referralCode,
             sponsor_id: data.sponsorId || 'USR-ADMIN',
             password: cleanPassword,

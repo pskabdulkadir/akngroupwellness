@@ -28,13 +28,12 @@ import {
 } from 'lucide-react';
 import { 
   UserMember, 
-  BANK_INFO, 
+
   DEFAULT_MEMBERSHIP_PACKAGES, 
   MembershipPackage, 
   CartItem,
   getMembershipPackages,
   subscribeToMembershipPackages,
-  getWhatsAppCartOrderUrl,
   activateDemoSession,
   updateMemberCart,
   recordMemberOrder,
@@ -413,8 +412,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
           packageItems
         );
         paymentReference = posCharge.transaction_id;
-        if (isPendingDealerRegistration) {
-          const settlementResponse = await fetch('/api/v1/integrations/order-commission', {
+        const settlementResponse = await fetch('/api/v1/integrations/order-commission', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -422,32 +420,37 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
               order_id: orderId,
               order_amount: totalCartPrice,
               package_id: cartItems[0].packageId,
+              package_items: packageItems,
               timestamp: new Date().toISOString(),
               order_type: 'STANDARD_ORDER',
               payment_method: 'CARD_3D',
               merchant_oid: posCharge.merchant_oid,
               transaction_id: posCharge.transaction_id,
             }),
-          });
-          const settlement = await settlementResponse.json().catch(() => ({}));
-          const grantedCredits = Number(settlement.transaction?.session_credits_added);
-          const totalCredits = Number(settlement.totalCredits);
-          if (
-            !settlementResponse.ok ||
-            settlement.status !== 'success' ||
-            settlement.transaction?.order_id !== orderId ||
-            settlement.transaction?.buyer_user_id !== user.uid ||
-            !Number.isFinite(grantedCredits) ||
-            grantedCredits <= 0 ||
-            !Number.isInteger(totalCredits) ||
-            totalCredits < grantedCredits ||
-            typeof settlement.member_token !== 'string' ||
-            !settlement.member_token
-          ) {
-            throw new Error(
-              `Ödeme alındı ancak bayi kaydı etkinleştirilemedi. İşlem numarası: ${posCharge.transaction_id}. ${settlement.message || ''}`
-            );
-          }
+        });
+        const settlement = await settlementResponse.json().catch(() => ({}));
+        const grantedCredits = Number(settlement.transaction?.session_credits_added);
+        const totalCredits = Number(settlement.totalCredits);
+        const invalidDealerSettlement = isPendingDealerRegistration && (
+          !Number.isInteger(totalCredits) ||
+          totalCredits < grantedCredits ||
+          typeof settlement.member_token !== 'string' ||
+          !settlement.member_token
+        );
+        if (
+          !settlementResponse.ok ||
+          settlement.status !== 'success' ||
+          settlement.transaction?.order_id !== orderId ||
+          settlement.transaction?.buyer_user_id !== user.uid ||
+          !Number.isFinite(grantedCredits) ||
+          grantedCredits <= 0 ||
+          invalidDealerSettlement
+        ) {
+          throw new Error(
+            `Ödeme alındı ancak sipariş tamamlanamadı. İşlem numarası: ${posCharge.transaction_id}. ${settlement.message || ''}`
+          );
+        }
+        if (isPendingDealerRegistration) {
           saveMemberWalletToken(settlement.member_token);
           orderUser = await completePaidDealerRegistration(
             {
@@ -562,54 +565,6 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
     setActiveLegalTab(tab);
     setIsLegalModalOpen(true);
   };
-
-  const handleWhatsAppReceiptClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
-    if (!legalAccepted) {
-      e.preventDefault();
-      setLegalErrorNotice(true);
-      const element = document.getElementById('legal-terms-section');
-      if (element) {
-        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
-      return;
-    }
-
-    // Record order transaction
-    try {
-      const activeItems = cartItems.map(item => {
-        const pkg = packages.find(p => p.id === item.packageId);
-        return {
-          packageId: item.packageId,
-          name: pkg?.name || item.packageId,
-          quantity: item.quantity,
-          price: pkg?.price || 0
-        };
-      });
-
-      const firstPkg = packages.find(p => p.id === cartItems[0]?.packageId) || packages[1];
-
-      recordMemberOrder({
-        id: 'ORD-' + Math.floor(100000 + Math.random() * 900000).toString(),
-        userId: user.uid,
-        userEmail: user.email,
-        userName: user.fullName || 'Değerli Üyemiz',
-        userPhone: user.phone,
-        packageId: firstPkg.id,
-        packageName: activeItems.length > 1 ? `${activeItems.length} Adet Paket (Sepet)` : firstPkg.name,
-        durationText: totalCartDaysText,
-        amount: totalCartPrice,
-        paymentStatus: 'PENDING',
-        date: new Date().toISOString(),
-        paymentMethod: 'WhatsApp Danışman Sipariş Bildirimi',
-        referenceNumber: 'REF-' + Date.now().toString(36).toUpperCase(),
-        items: activeItems
-      });
-    } catch (recErr) {
-      console.debug('Record order notice:', recErr);
-    }
-  };
-
-  const whatsappUrl = getWhatsAppCartOrderUrl(user, cartItems.length > 0 ? cartItems : [{ packageId: '3-months', quantity: 1 }]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/95 backdrop-blur-xl animate-fade-in overflow-y-auto">
@@ -787,7 +742,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
 
                       <div className="py-2 border-y border-slate-800/80 flex items-baseline justify-between">
                         <div className="text-2xl font-black tracking-tight text-amber-300 font-mono">
-                          {pkg.priceText}
+                          {formatRegionalPrice(pkg.id) ?? '—'}
                         </div>
                         <div className="text-xs text-slate-400">
                           {pkg.unitCostText}
@@ -912,7 +867,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
 
                       <div className="py-2 border-y border-slate-800/80 flex items-baseline justify-between">
                         <div className="text-2xl font-black tracking-tight text-emerald-400 font-mono">
-                          {pkg.priceText}
+                          {formatRegionalPrice(pkg.id) ?? '—'}
                         </div>
                         {pkg.unitCostText && (
                           <div className="text-xs text-slate-400">

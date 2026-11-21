@@ -1694,6 +1694,7 @@ export interface OrderCommissionPayload {
   order_id: string;
   order_amount: number;
   package_id: string;
+  package_items?: Array<{ package_id: string; quantity: number }>;
   timestamp?: string;
   enforce_career_depth_lock?: boolean;
   order_type?: 'ACTIVITY_RENEWAL' | 'STANDARD_ORDER' | 'ACTIVATION' | 'DEALER_REGISTRATION';

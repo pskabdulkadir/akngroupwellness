@@ -90,9 +90,10 @@ import {
   DealerPackageOrder, 
   getAllDealerPackageOrders, 
   subscribeToDealerPackageOrders, 
-  adminApproveDealerPackageOrder, 
+
   adminRejectDealerPackageOrder 
 } from '../utils/dealerOrderManager';
+import { MEMBER_COUNTRY_OPTIONS } from '../utils/walletRegion';
 import { 
   Reseller, 
   CommissionTransaction, 
@@ -346,6 +347,7 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
   const [manReferralCode, setManReferralCode] = useState<string>('');
   const [manCommissionRate, setManCommissionRate] = useState<number>(20);
   const [manDealerPackageId, setManDealerPackageId] = useState<string>('silver-dealer');
+  const [manCountryCode, setManCountryCode] = useState<string>('TR');
   const [manNotes, setManNotes] = useState<string>('');
   const [manIsProcessing, setManIsProcessing] = useState<boolean>(false);
 
@@ -920,6 +922,7 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
     setManReferralCode(`AURA-BAYI-${Math.floor(1000 + Math.random() * 9000)}`);
     setManCommissionRate(20);
     setManDealerPackageId('silver-dealer');
+    setManCountryCode('TR');
     setManNotes('');
     setShowManualDealerModal(true);
   };
@@ -951,6 +954,7 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
         customReferralCode: manReferralCode.trim().toUpperCase(),
         commissionRate: Number(manCommissionRate) || 20,
         dealerPackageId: manDealerPackageId,
+        countryCode: manCountryCode,
         notes: manNotes.trim(),
         sponsorId: 'USR-ADMIN',
       });
@@ -1270,27 +1274,7 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
     }
   };
 
-  // Dealer Package Order Approval & Rejection Handlers
-  const handleApproveDealerOrder = async (order: DealerPackageOrder) => {
-    setOrderProcessingId(order.id);
-    try {
-      const res = await adminApproveDealerPackageOrder(order.id, 'Yönetici tarafından onaylandı ve krediler hesaba yüklendi.');
-      if (res.success) {
-        setActionSuccessMsg(res.message);
-        await loadResellersAndCommissions();
-        setTimeout(() => setActionSuccessMsg(null), 5000);
-      } else {
-        setActionSuccessMsg(res.message);
-        setTimeout(() => setActionSuccessMsg(null), 5000);
-      }
-    } catch (err: any) {
-      setActionSuccessMsg(err?.message || 'Sipariş onaylanırken hata oluştu.');
-      setTimeout(() => setActionSuccessMsg(null), 5000);
-    } finally {
-      setOrderProcessingId(null);
-    }
-  };
-
+  // Dealer Package Order Rejection Handler
   const handleRejectDealerOrder = async (order: DealerPackageOrder) => {
     setOrderProcessingId(order.id);
     try {
@@ -3614,7 +3598,7 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
                     <div className="p-4 rounded-2xl bg-teal-950/30 border border-teal-500/30 text-xs text-slate-300 flex items-start gap-2.5">
                       <ShieldCheck className="w-4 h-4 text-teal-400 shrink-0 mt-0.5" />
                       <p className="text-[11px] text-slate-300">
-                        Bayiler tarafından talep edilen paketlerin ücretleri şirket banka hesabına havale/EFT yapıldıktan sonra buradan <strong>"Onayla & Kredileri Yükle"</strong> butonuna basıldığında seans hakları bayinin ve üyenin hesabına otomatik olarak tanımlanır.
+                        Bayi paket satışları yalnızca 3D Secure kart ile tamamlanır ve krediler ödeme doğrulamasıyla anında yüklenir. Bu listedeki bekleyen kayıtlar eski havale siparişleridir; yalnızca reddedilebilir.
                       </p>
                     </div>
 
@@ -3698,21 +3682,6 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
                                     <td className="py-3.5 px-4 text-center">
                                       {order.status === 'pending' ? (
                                         <div className="flex items-center justify-center gap-1.5">
-                                          <button
-                                            onClick={() => handleApproveDealerOrder(order)}
-                                            disabled={isProcessing}
-                                            className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-[10px] shadow-md flex items-center gap-1 cursor-pointer"
-                                            title="Ödemeyi Onayla ve Krediyi Bayiye Yükle"
-                                          >
-                                            {isProcessing ? (
-                                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                            ) : (
-                                              <>
-                                                <Check className="w-3.5 h-3.5" />
-                                                <span>Onayla & Kredi Yükle</span>
-                                              </>
-                                            )}
-                                          </button>
                                           <button
                                             onClick={() => handleRejectDealerOrder(order)}
                                             disabled={isProcessing}
@@ -6849,6 +6818,21 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
                         className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-slate-100 font-bold text-xs outline-none focus:border-teal-500"
                       />
                       <span className="text-[10px] text-slate-500">Satış ortaklığı payı (Standart: %20)</span>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-slate-300">Ülke</label>
+                      <select
+                        value={manCountryCode}
+                        onChange={(e) => setManCountryCode(e.target.value)}
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-slate-100 font-bold text-xs outline-none focus:border-teal-500"
+                      >
+                        {MEMBER_COUNTRY_OPTIONS.map((country) => (
+                          <option key={country.code} value={country.code}>
+                            {country.label} ({country.code})
+                          </option>
+                        ))}
+                      </select>
                     </div>
                   </div>
 

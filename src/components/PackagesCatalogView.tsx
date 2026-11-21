@@ -392,7 +392,7 @@ export const PackagesCatalogView: React.FC<PackagesCatalogViewProps> = ({
                       >
                         {FREKANS_PACKAGES.map((p) => (
                           <option key={p.id} value={p.id}>
-                            {p.name} — {formatUsd(p.defaultPrice)} (
+                            {p.name} — {formatUsd(getPackagePriceForRegion(p.defaultPrice, resolveMemberRegion(activeBuyer?.country_code)))} (
                             {p.sessionCreditsLabel})
                           </option>
                         ))}
@@ -822,11 +822,15 @@ export const PackagesCatalogView: React.FC<PackagesCatalogViewProps> = ({
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredPackages.map((pkg) => {
           const isSelected = pkg.id === selectedPkgId;
+          const packagePrice = getPackagePriceForRegion(
+            pkg.defaultPrice,
+            resolveMemberRegion(activeBuyer?.country_code)
+          );
           const sponsorCommission =
-            Math.round(pkg.defaultPrice * (distributionParams.direct_sponsor_percent / 100) * 100) /
+            Math.round(packagePrice * (distributionParams.direct_sponsor_percent / 100) * 100) /
             100;
           const monolineCommission =
-            Math.round(pkg.defaultPrice * (distributionParams.monoline_total_percent / 100) * 100) /
+            Math.round(packagePrice * (distributionParams.monoline_total_percent / 100) * 100) /
             100;
 
           return (
@@ -875,7 +879,7 @@ export const PackagesCatalogView: React.FC<PackagesCatalogViewProps> = ({
                         {pkg.sessionCreditsLabel}
                       </span>
                       <span className="text-xs font-mono tabular-nums text-slate-200">
-                        {pkg.perSessionCostLabel}
+                        {formatUsd(packagePrice / pkg.sessionCredits, 2)} / Seans
                       </span>
                     </div>
                   </div>
@@ -921,7 +925,7 @@ export const PackagesCatalogView: React.FC<PackagesCatalogViewProps> = ({
                           pkg.isFlagship ? 'text-amber-400' : 'text-slate-900'
                         }`}
                       >
-                        {formatUsd(pkg.defaultPrice)}
+                        {formatUsd(packagePrice)}
                       </div>
                     </div>
 
@@ -938,7 +942,7 @@ export const PackagesCatalogView: React.FC<PackagesCatalogViewProps> = ({
                           pkg.isFlagship ? 'text-emerald-400' : 'text-emerald-700'
                         }`}
                       >
-                        {pkg.perSessionCostLabel}
+                        {formatUsd(packagePrice / pkg.sessionCredits, 2)} / Seans
                       </div>
                     </div>
                   </div>

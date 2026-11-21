@@ -79,7 +79,7 @@ import {
   getReferredUsersForReseller,
   subscribeToResellersList
 } from '../utils/resellerManager';
-import { UserMember, BANK_INFO, ADMIN_PHONE, getMemberWalletToken } from '../utils/authManager';
+import { UserMember, ADMIN_PHONE, getMemberWalletToken } from '../utils/authManager';
 import { DEFAULT_DEALER_PACKAGES, type DealerPackage } from '../config/dealerPackages';
 import { getMemberRegionalPendingUsd, getMemberRegionalUsdBalance } from '../utils/walletRegion';
 import { redirectToDealerRegistrationPortal, syncFrekansWithMonolineEngine } from '../utils/monolineSyncBridge';
@@ -219,8 +219,6 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
   const [purchaseSuccessMsg, setPurchaseSuccessMsg] = useState<string | null>(null);
   const [selectedPkgForOrder, setSelectedPkgForOrder] = useState<DealerPackage | null>(null);
   const [showOrderModal, setShowOrderModal] = useState<boolean>(false);
-  const [orderPaymentRef, setOrderPaymentRef] = useState<string>('');
-  const [orderPaymentMethod, setOrderPaymentMethod] = useState<'credit_card_3d' | 'bank_transfer'>('credit_card_3d');
   const [posCardHolder, setPosCardHolder] = useState<string>('');
   const [posCardNumber, setPosCardNumber] = useState<string>(SANDBOX_TEST_CARDS.SUCCESS.number);
   const [posCardExpiry, setPosCardExpiry] = useState<string>(SANDBOX_TEST_CARD_EXPIRY);
@@ -488,8 +486,6 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
 
   const handleOpenOrderModal = (pkg: DealerPackage) => {
     setSelectedPkgForOrder(pkg);
-    setOrderPaymentRef('');
-    setOrderPaymentMethod('credit_card_3d');
     setPosCardHolder(activeReseller?.resellerName || 'YETKİLİ BAYİ');
     setChkSalesContract(false);
     setChkKvkk(false);
@@ -526,25 +522,6 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
         authorizationToken: getMemberWalletToken() || '',
       });
       if (approvals.length !== 4) throw new Error('Sözleşme onayları sunucuya kaydedilemedi. Ödeme başlatılmadı.');
-      if (orderPaymentMethod === 'bank_transfer') {
-        const result = await requestDealerPackagePurchase(
-          activeReseller.uid,
-          activeReseller.resellerName,
-          activeReseller.email,
-          activeReseller.phone,
-          { ...selectedPkgForOrder, price: orderPrice, priceText: formatUsd(orderPrice) },
-          orderPaymentRef.trim(),
-          'bank_transfer',
-          undefined,
-          simOrderId
-        );
-        if (!result.success) throw new Error(result.message);
-        setShowOrderModal(false);
-        setPurchaseSuccessMsg(`Havale siparişiniz (${simOrderId}) yönetici onayına gönderildi. Ödeme onaylanınca kredileriniz yüklenecektir.`);
-        setTimeout(() => setPurchaseSuccessMsg(null), 10000);
-        return;
-      }
-
       const posRes = await defaultPaymentProcessor.chargeCreditCard(
         {
           cardHolder: posCardHolder || activeReseller.resellerName,
@@ -564,8 +541,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
         activeReseller.email,
         activeReseller.phone,
         { ...selectedPkgForOrder, price: orderPrice, priceText: formatUsd(orderPrice) },
-        `${posRes.transaction_id} · ${orderPaymentRef.trim() || 'Sandbox Sanal POS'}`,
-        'credit_card_3d',
+        `${posRes.transaction_id} · Sandbox Sanal POS`,
         {
           order_id: posRes.order_id,
           merchant_oid: posRes.merchant_oid,
@@ -3190,9 +3166,9 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                 <div className="p-4 rounded-2xl bg-slate-950/60 border border-amber-500/30 text-xs text-slate-300 flex items-start gap-3">
                   <ShieldCheck className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
                   <div className="space-y-1">
-                    <strong className="text-amber-300 block font-bold">Güvenli Ödeme & Yönetici Onay Kuralı:</strong>
+                    <strong className="text-amber-300 block font-bold">Güvenli Ödeme Kuralı:</strong>
                     <p className="leading-relaxed text-[11px] text-slate-400">
-                      Seçilen seans ve bayilik paketlerinin ücreti şirket banka hesabımıza havale/EFT yapıldıktan sonra sistem yöneticisi tarafından incelenir. Yönetici ödemeyi onayladığı anda seans kredileriniz hesabınıza anında tanımlanır. Ücret ödenmeden veya yönetici onayı alınmadan seans hakkı yüklenmez.
+                      Seçilen seans ve bayilik paketlerinin ücreti yalnızca 3D Secure kart ile ödenir. Kart ödemesi sunucuda doğrulandığında seans kredileriniz hesabınıza anında tanımlanır. Doğrulanmamış ödemede seans hakkı yüklenmez.
                     </p>
                   </div>
                 </div>
@@ -3935,7 +3911,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                   <span>{selectedPkgForOrder.name}</span>
                 </h3>
                 <p className="text-xs text-slate-400">
-                  Kart ödemesi sunucuda doğrulanır. Havale siparişinde krediler yalnızca yönetici onayından sonra yüklenir.
+                  Kart ödemesi sunucuda doğrulandığında krediler ve aktiflik anında yüklenir.
                 </p>
               </div>
 
@@ -3951,20 +3927,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setOrderPaymentMethod('credit_card_3d')}
-                  className={`py-2 rounded-xl border text-xs font-bold ${orderPaymentMethod === 'credit_card_3d' ? 'bg-emerald-600 text-white border-emerald-500' : 'bg-slate-950 text-slate-400 border-slate-800'}`}
-                >3D Secure Kart</button>
-                <button
-                  type="button"
-                  onClick={() => setOrderPaymentMethod('bank_transfer')}
-                  className={`py-2 rounded-xl border text-xs font-bold ${orderPaymentMethod === 'bank_transfer' ? 'bg-teal-600 text-white border-teal-500' : 'bg-slate-950 text-slate-400 border-slate-800'}`}
-                >Banka Havalesi</button>
-              </div>
-
-              {orderPaymentMethod === 'credit_card_3d' && <div className="p-4 rounded-2xl bg-emerald-950/30 border border-emerald-500/40 space-y-3 text-xs">
+              <div className="p-4 rounded-2xl bg-emerald-950/30 border border-emerald-500/40 space-y-3 text-xs">
                 <div className="flex items-center justify-between text-emerald-300 font-bold">
                   <span className="flex items-center gap-1.5">
                     <CreditCard className="w-4 h-4" />
@@ -4052,25 +4015,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                 <p className="text-[11px] text-emerald-200/90">
                   ✓ Ödeme onaylandığı anda <strong>+{selectedPkgForOrder.scanCredits} Seans Kredisi</strong> ve <strong>aktifliğiniz uzar</strong>.
                 </p>
-              </div>}
-
-              {orderPaymentMethod === 'bank_transfer' && (
-                <div className="p-4 rounded-2xl bg-teal-950/30 border border-teal-500/40 space-y-3 text-xs">
-                  <div className="font-bold text-teal-200">Havale Bilgileri</div>
-                  <div className="text-slate-300">{BANK_INFO.bankName} · {BANK_INFO.accountHolder}</div>
-                  <div className="font-mono text-white break-all">{BANK_INFO.iban}</div>
-                  <label className="block text-[11px] text-slate-400">
-                    Havale açıklaması veya dekont referansı (isteğe bağlı)
-                    <input
-                      value={orderPaymentRef}
-                      onChange={(event) => setOrderPaymentRef(event.target.value)}
-                      maxLength={200}
-                      className="mt-1 w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white font-mono"
-                    />
-                  </label>
-                  <p className="text-[11px] text-teal-100/80">Siparişiniz beklemede kalır; banka transferi yönetici tarafından doğrulandıktan sonra krediler yüklenir.</p>
-                </div>
-              )}
+              </div>
 
               {/* Form & Yasal Sözleşme Onay Kutuları (Compliance Checkboxes) */}
               <form onSubmit={handleConfirmOrderSubmit} className="space-y-3.5">
@@ -4194,12 +4139,12 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                     {isSubmittingOrder ? (
                       <>
                         <Loader2 className="w-4 h-4 animate-spin" />
-                        <span>{orderPaymentMethod === 'bank_transfer' ? 'Havale talebi kaydediliyor...' : 'Sanal POS İşleniyor...'}</span>
+                        <span>Sanal POS İşleniyor...</span>
                       </>
                     ) : (
                       <>
                         <Check className="w-4 h-4" />
-                        <span>{orderPaymentMethod === 'bank_transfer' ? 'Havale Talebi Oluştur' : 'Ödemeyi Tamamla &amp; Kredi + Aktifliği Başlat'}</span>
+                        <span>Ödemeyi Tamamla &amp; Kredi + Aktifliği Başlat</span>
                       </>
                     )}
                   </button>

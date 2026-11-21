@@ -189,7 +189,7 @@ export const LegalContractsModal: React.FC<LegalContractsModalProps> = ({
                   3. ÖDEME YÖNTEMLERİ, FİYATLANDIRMA VE VERGİLENDİRME
                 </h4>
                 <p>
-                  Sistem üzerinden sipariş verilen tüm paket fiyatları ABD Doları (USD) cinsinden olup yürürlükteki yasal KDV dahildir. Ödemeler; <strong>Yetkili Sanal POS (Kredi Kartı / Banka Kartı / Taksitli Ödeme)</strong> veya <strong>Havale / EFT / FAST</strong> yöntemleri ile güvenli 256-bit SSL şifreleme altında tahsil edilir.
+                  Sistem üzerinden sipariş verilen tüm paket fiyatları ABD Doları (USD) cinsinden olup yürürlükteki yasal KDV dahildir. Harici tahsilat yalnızca güvenli 256-bit SSL şifreleme altındaki <strong>3D Secure Sanal POS (Kredi Kartı / Banka Kartı)</strong> üzerinden yapılır.
                 </p>
 
                 <h4 className="font-bold text-slate-100 text-sm border-b border-slate-800 pb-1.5 pt-2">
@@ -217,7 +217,7 @@ export const LegalContractsModal: React.FC<LegalContractsModalProps> = ({
             <div className="space-y-4 p-4 sm:p-5 rounded-2xl bg-slate-950/80 border border-slate-800">
               <div className="p-3.5 rounded-xl bg-indigo-950/40 border border-indigo-500/30 text-indigo-300 font-semibold text-xs flex items-center gap-2">
                 <Scale className="w-4 h-4 text-indigo-400 shrink-0" />
-                <span>Mesafeli Satış Sözleşmesi (Kredi Kartı, Sanal POS & Banka İşlemleri Tam Uyumlu)</span>
+                <span>Mesafeli Satış Sözleşmesi (3D Secure Kart Ödemesi)</span>
               </div>
 
               <div className="space-y-3.5">
@@ -228,7 +228,7 @@ export const LegalContractsModal: React.FC<LegalContractsModalProps> = ({
                   <p><strong>SATICI / HİZMET SAĞLAYICI:</strong> AKN Global Group Ltd (AuraBio Frekans Sistemleri)</p>
                   <p><strong>YETKİLİ TEMSİLCİ:</strong> Abdulkadir Kan (Psikolog & Biyo-Rezonans Uzmanı)</p>
                   <p><strong>İLETİŞİM / DESTEK:</strong> {ADMIN_PHONE} — {ADMIN_EMAILS[0]}</p>
-                  <p><strong>ALICI (MÜŞTERİ / BAYİ):</strong> AuraBio Frekans platformu üzerinden kayıt formunu dolduran, paketi seçen ve Sanal POS / Havale ile ödemeyi gerçekleştiren gerçek veya tüzel kişidir.</p>
+                  <p><strong>ALICI (MÜŞTERİ / BAYİ):</strong> AuraBio Frekans platformu üzerinden kayıt formunu dolduran, paketi seçen ve 3D Secure Sanal POS üzerinden ödemeyi gerçekleştiren gerçek veya tüzel kişidir.</p>
                 </div>
 
                 <h4 className="font-bold text-slate-100 text-sm border-b border-slate-800 pb-1 pt-2">
@@ -242,7 +242,7 @@ export const LegalContractsModal: React.FC<LegalContractsModalProps> = ({
                   MADDE 3 - SÖZLEŞME KONUSU ÜRÜN, BEDEL VE ÖDEME KOŞULLARI
                 </h4>
                 <p>
-                  Satın alınan ürün/hizmet; seçilen seans kredisi miktarına veya süreli lisans paketine göre belirlenen dijital erişim yetkisidir. ALICI, sipariş ekranında teyit ettiği bedeli Kredi Kartı (Tek çekim veya anlaşmalı banka taksitleri) veya Satıcı'nın resmi QNB Finansbank IBAN hesabına Havale/EFT/FAST yoluyla ödemeyi kabul ve taahhüt eder.
+                  Satın alınan ürün/hizmet; seçilen seans kredisi miktarına veya süreli lisans paketine göre belirlenen dijital erişim yetkisidir. ALICI, sipariş ekranında teyit ettiği bedeli 3D Secure Sanal POS üzerinden kredi veya banka kartıyla ödemeyi kabul ve taahhüt eder.
                 </p>
 
                 <h4 className="font-bold text-slate-100 text-sm border-b border-slate-800 pb-1 pt-2">

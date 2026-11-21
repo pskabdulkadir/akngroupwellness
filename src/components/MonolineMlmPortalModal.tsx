@@ -319,6 +319,7 @@ export const MonolineMlmPortalModal: React.FC<MonolineMlmPortalModalProps> = ({
   const handleRegisterMember = async (formData: {
     full_name: string;
     city: string;
+    country_code?: string;
     sponsor_id: string;
     initial_package_id: Exclude<PackageId, 'CUSTOM'>;
     email?: string;

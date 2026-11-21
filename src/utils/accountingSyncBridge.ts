@@ -14,7 +14,7 @@ export interface SyncTransactionPayload {
   amountUsd?: number;
   packageId?: string;
   packageName?: string;
-  isExport?: boolean; // Yurt dışı ($3x$ USD)
+  isExport?: boolean; // Yurt dışı satış (tutar, bölge fiyatına göre belirlenmiş USD)
   isDealerCommission?: boolean;
   dealerIsCompany?: boolean;
   withholdingTaxTry?: number; // %20 Stopaj

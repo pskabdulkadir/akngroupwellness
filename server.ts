@@ -39,6 +39,7 @@ import {
   getMemberRegionalUsdBalance,
   getRegionPendingKey,
   getActivationPriceForRegion,
+  getPackageCreditsForRegion,
   getPackagePriceForRegion,
   getRegionWalletKey,
   resolveMemberRegion,
@@ -1903,15 +1904,31 @@ function processOrderCommission(
       ? payload.enforce_career_depth_lock
       : enforceCareerDepthLock;
 
-  const normalizedPkg = normalizePackageId(payload.package_id);
+  const packageItems = Array.isArray(payload.package_items) && payload.package_items.length > 0
+    ? payload.package_items.map((item) => ({
+        packageId: normalizePackageId(item.package_id)!,
+        quantity: item.quantity,
+      }))
+    : [];
+  const normalizedPkg = packageItems.length
+    ? packageItems.reduce((highest, item) =>
+        PACKAGES[item.packageId].defaultPrice > PACKAGES[highest].defaultPrice
+          ? item.packageId
+          : highest,
+      packageItems[0].packageId)
+    : normalizePackageId(payload.package_id);
   const skipCreditAddition = Boolean((payload as any).skip_credit_addition);
   let creditsAdded = 0;
 
   if (isActivationOrder) {
     creditsAdded = 0;
   } else if (normalizedPkg) {
-    const pkgDef = PACKAGES[normalizedPkg];
-    creditsAdded = pkgDef.sessionCredits;
+    creditsAdded = packageItems.length
+      ? packageItems.reduce(
+          (total, item) => total + getPackageCreditsForRegion(PACKAGES[item.packageId].sessionCredits, buyerRegion) * item.quantity,
+          0
+        )
+      : getPackageCreditsForRegion(PACKAGES[normalizedPkg].sessionCredits, buyerRegion);
     if (!skipCreditAddition) {
       buyer.session_credits += creditsAdded;
     }
@@ -1919,7 +1936,7 @@ function processOrderCommission(
     const currentPrice = buyer.highest_package_id
       ? PACKAGES[buyer.highest_package_id].defaultPrice
       : 0;
-    if (pkgDef.defaultPrice >= currentPrice) {
+    if (PACKAGES[normalizedPkg].defaultPrice >= currentPrice) {
       buyer.highest_package_id = normalizedPkg;
     }
   } else {
@@ -5124,7 +5141,7 @@ async function hydrateStateFromPostgres(): Promise<void> {
             email: row.email || '',
             phone: row.phone || '',
             city: row.city || 'İstanbul',
-            country_code: 'TR',
+            country_code: row.member_data?.country_code || 'TR',
             joined_at: row.created_at ? new Date(row.created_at).toISOString() : new Date().toISOString(),
             sponsor_id: row.sponsor_id || (row.user_id === 'USR-ADMIN' ? null : 'USR-ADMIN'),
             sponsor_db_id: null,
@@ -5545,7 +5562,7 @@ async function startServer(options: { listen?: boolean } = {}) {
             email: data.email || '',
             phone: data.phone || '',
             city: data.city || 'Türkiye',
-            country_code: 'TR',
+            country_code: data.member_data?.country_code || 'TR',
             joined_at: data.created_at ? new Date(data.created_at).toISOString() : new Date().toISOString(),
             sponsor_id: data.sponsor_id || 'USR-ADMIN',
             sponsor_db_id: null,
@@ -7242,6 +7259,7 @@ async function startServer(options: { listen?: boolean } = {}) {
         order_id,
         order_amount,
         package_id,
+        package_items,
         timestamp,
         enforce_career_depth_lock,
         order_type,
@@ -7322,12 +7340,15 @@ async function startServer(options: { listen?: boolean } = {}) {
           });
         }
       } else {
-        const normalizedPackageId = normalizePackageId(String(package_id || ''));
-        if (!normalizedPackageId || Math.round(getPackageOrderAmount(String(user_id), normalizedPackageId) * 100) !== Math.round(Number(order_amount) * 100)) {
+        const normalizedItems = Array.isArray(package_items)
+          ? package_items
+          : [{ package_id, quantity: 1 }];
+        const expectedTotal = getPackageItemsTotal(String(user_id), normalizedItems);
+        if (expectedTotal === null || Math.round(expectedTotal * 100) !== Math.round(Number(order_amount) * 100)) {
           return res.status(400).json({
             status: 'error',
             code: 'PACKAGE_AMOUNT_MISMATCH',
-            message: 'Sipariş tutarı seçilen paketin sunucu fiyatıyla eşleşmiyor.',
+            message: 'Sipariş tutarı sepetteki paketlerin bölgesel sunucu fiyatıyla eşleşmiyor.',
           });
         }
       }
@@ -7411,6 +7432,7 @@ async function startServer(options: { listen?: boolean } = {}) {
               order_id: normalizedOrderId,
               order_amount: Number(order_amount),
               package_id: String(package_id || 'PKG_MINI_DENEME'),
+              package_items: Array.isArray(package_items) ? package_items : undefined,
               timestamp: timestamp || new Date().toISOString(),
               enforce_career_depth_lock,
               order_type: order_type || 'STANDARD_ORDER',
@@ -7669,167 +7691,6 @@ async function startServer(options: { listen?: boolean } = {}) {
       };
     });
     return res.json({ status: 'success', orders });
-  });
-
-  app.post('/api/v1/members/:userId/dealer-package-orders', requireAdminOrOwnMember, async (req, res) => {
-    try {
-      const resellerId = String(req.params.userId || '').trim();
-      const orderId = String(req.body?.order_id || '').trim();
-      const pkg = DEFAULT_DEALER_PACKAGES.find((item) => item.id === String(req.body?.package_id || '').trim());
-      const normalizedPackageId = pkg ? normalizePackageId(pkg.id) : null;
-      if (!orderId || !pkg || !normalizedPackageId) {
-        return res.status(400).json({ status: 'error', message: 'Geçersiz bayi paketi siparişi.' });
-      }
-      const expectedAmount = getPackageOrderAmount(resellerId, normalizedPackageId);
-      const pendingContracts = new Set(['DISTANCE_SALES', 'PRE_INFORMATION', 'MLM_TERMS', 'KVKK']);
-      userContractApprovals.forEach((approval) => {
-        if (
-          approval.order_id === orderId &&
-          approval.user_id === resellerId &&
-          Math.round(Number(approval.order_amount) * 100) === Math.round(expectedAmount * 100) &&
-          Boolean(approval.product_summary)
-        ) {
-          pendingContracts.delete(approval.contract_type);
-        }
-      });
-      if (pendingContracts.size) {
-        return res.status(400).json({ status: 'error', message: 'Havale siparişi için zorunlu sözleşme onayları bulunamadı.' });
-      }
-      const outcome = await runInAtomicTransaction(async () => {
-        const existing = dealerPackageOrders.find((o) => o.order_id === orderId);
-        if (existing) {
-          if (existing.reseller_id !== resellerId || existing.package_id !== pkg.id) {
-            return { httpStatus: 409, body: { status: 'error', message: 'Bu sipariş numarası başka bir sipariş için kullanılmış.' } };
-          }
-          return { httpStatus: 200, body: { status: 'success', order: existing } };
-        }
-        const member = await pgQuery('SELECT user_id FROM users WHERE user_id = $1', [resellerId]);
-        if (!member?.rows.length) {
-          return { httpStatus: 404, body: { status: 'error', message: 'Bayi hesabı bulunamadı.' } };
-        }
-        const rollbackState = captureRollbackState();
-        try {
-          const order: DealerPackageOrderRecord = {
-            order_id: orderId,
-            reseller_id: resellerId,
-            package_id: pkg.id,
-            package_name: pkg.name,
-            scan_credits: pkg.scanCredits,
-            amount: expectedAmount,
-            payment_method: 'BANK_TRANSFER',
-            payment_reference: String(req.body?.payment_reference || '').trim().slice(0, 200),
-            status: 'PENDING',
-            created_at: new Date().toISOString(),
-            approved_at: null,
-            admin_note: null,
-          };
-          dealerPackageOrders.unshift(order);
-          await persistApplicationState();
-          return { httpStatus: 201, body: { status: 'success', order } };
-        } catch (error) {
-          applyPersistentState(rollbackState);
-          throw error;
-        }
-      });
-      return res.status(outcome.httpStatus).json(outcome.body);
-    } catch (err: any) {
-      return res.status(500).json({ status: 'error', message: err?.message || 'Havale siparişi kaydedilemedi.' });
-    }
-  });
-
-  app.post('/api/v1/admin/dealer-package-orders/:orderId/approve', requireAdminJwt, async (req, res) => {
-    try {
-      const orderId = String(req.params.orderId || '').trim();
-      const adminNote = typeof req.body?.admin_note === 'string' ? req.body.admin_note.trim().slice(0, 500) : null;
-      const outcome = await runInAtomicTransaction(async () => {
-        const order = dealerPackageOrders.find((item) => item.order_id === orderId);
-        if (!order) {
-          return { httpStatus: 404, body: { status: 'error', message: 'Sipariş sunucuda bulunamadı.' } };
-        }
-        if (order.status === 'APPROVED') {
-          const balance = await pgQuery('SELECT scan_credits FROM users WHERE user_id = $1', [order.reseller_id]);
-          return {
-            httpStatus: 200,
-            body: {
-              status: 'success',
-              order,
-              remainingCredits: Number(balance?.rows[0]?.scan_credits) || 0,
-              idempotentReplay: true,
-            },
-          };
-        }
-        if (order.status !== 'PENDING' || order.payment_method !== 'BANK_TRANSFER') {
-          return { httpStatus: 409, body: { status: 'error', message: 'Yalnızca bekleyen havale siparişleri onaylanabilir.' } };
-        }
-        const packageDef = DEFAULT_DEALER_PACKAGES.find((item) => item.id === order.package_id);
-        const member = members.find((item) => item.user_id === order.reseller_id);
-        if (
-          !packageDef ||
-          !member ||
-          !orderId ||
-          !Number.isFinite(Number(order.amount)) ||
-          Number(order.amount) <= 0 ||
-          Number(order.scan_credits) !== packageDef.scanCredits
-        ) {
-          return { httpStatus: 404, body: { status: 'error', message: 'Sipariş, paket veya bayi sunucuda bulunamadı.' } };
-        }
-
-        const rollbackState = captureRollbackState();
-        try {
-          const transaction = processOrderCommission({
-            user_id: member.user_id,
-            order_id: order.order_id,
-            order_amount: order.amount,
-            package_id: packageDef.id,
-            timestamp: new Date().toISOString(),
-            order_type: 'STANDARD_ORDER',
-            payment_method: 'BANK_TRANSFER',
-            skip_credit_addition: true,
-          } as any);
-          const credit = await withTransaction(async (client) => {
-            const result = await applyResellerCreditAdjustment(
-              client,
-              member.user_id,
-              { delta: packageDef.scanCredits },
-              `DEALER_ORDER:${order.order_id}`
-            );
-            if (!result.success) throw new Error(result.message);
-
-            order.scan_credits = packageDef.scanCredits;
-            order.status = 'APPROVED';
-            order.approved_at = new Date().toISOString();
-            order.admin_note = adminNote;
-            member.session_credits = result.remainingCredits;
-            creditsOwnedByServer.add(member.user_id);
-            transaction.session_credits_added = packageDef.scanCredits;
-            await persistApplicationState(client);
-            return result;
-          });
-
-          return {
-            httpStatus: 200,
-            body: {
-              status: 'success',
-              message: `Sipariş onaylandı! ${packageDef.scanCredits} seans kredisi bayi hesabına yüklendi.`,
-              order,
-              remainingCredits: credit.remainingCredits,
-              transaction,
-              state: buildStateResponse(true),
-            },
-          };
-        } catch (err) {
-          applyPersistentState(rollbackState);
-          throw err;
-        }
-      });
-
-      return res.status(outcome.httpStatus).json(outcome.body);
-    } catch (err: any) {
-      return res.status(500).json({
-        status: 'error',
-        message: err?.message || 'Sipariş onaylanırken sunucu hatası oluştu.',
-      });
-    }
   });
 
   app.post('/api/v1/admin/dealer-package-orders/:orderId/reject', requireAdminJwt, async (req, res) => {
@@ -10360,7 +10221,10 @@ async function startServer(options: { listen?: boolean } = {}) {
             processOrderCommission({
               user_id: targetMember.user_id,
               order_id: orderId,
-              order_amount: pkgDef.defaultPrice,
+              order_amount: getPackagePriceForRegion(
+                pkgDef.defaultPrice,
+                resolveMemberRegion(targetMember.country_code)
+              ),
               package_id: pkgId,
               timestamp: new Date().toISOString(),
             })
@@ -10995,7 +10859,9 @@ async function startServer(options: { listen?: boolean } = {}) {
 
     const normalizedPkg = normalizePackageId(package_id) || 'PKG_BRONZ_BASLANGIC';
     const pkgDef = PACKAGES[normalizedPkg];
-    const cost = getPackagePriceForRegion(pkgDef.defaultPrice, resolveMemberRegion(creator.country_code));
+    const creatorRegion = resolveMemberRegion(creator.country_code);
+    const cost = getPackagePriceForRegion(pkgDef.defaultPrice, creatorRegion);
+    const voucherCredits = pkgDef.sessionCredits;
     const creatorUsd = getMemberRegionalUsdBalance(creator);
 
     if (creatorUsd < cost) {
@@ -11020,7 +10886,7 @@ async function startServer(options: { listen?: boolean } = {}) {
       package_id: normalizedPkg,
       package_name: `${pkgDef.name} (${cost.toLocaleString('tr-TR')} $)`,
       amount: cost,
-      session_credits: pkgDef.sessionCredits,
+      session_credits: voucherCredits,
       status: 'ACTIVE_UNUSED',
       created_at: new Date().toISOString(),
     };
@@ -11046,7 +10912,7 @@ async function startServer(options: { listen?: boolean } = {}) {
 
     res.json({
       status: 'success',
-      message: `🎟️ "${voucherCode}" Aktivasyon Kupon Kodu (${pkgDef.name} · ${cost.toLocaleString('tr-TR')} $ · +${pkgDef.sessionCredits} Kredi) başarıyla üretildi! Alt ekibinizdeki herhangi bir üyeye bu kodu vererek kartsız/havalesiz anında paket tanımlayabilirsiniz.`,
+      message: `🎟️ "${voucherCode}" Aktivasyon Kupon Kodu (${pkgDef.name} · ${cost.toLocaleString('tr-TR')} $ · +${voucherCredits} Kredi) başarıyla üretildi! Alt ekibinizdeki herhangi bir üyeye bu kodu vererek kartsız/havalesiz anında paket tanımlayabilirsiniz.`,
       voucher: newVoucher,
       state: buildStateResponse(Boolean(adminUid), memberUid),
     });

@@ -1,5 +1,10 @@
 import { collection, doc, getDocs, setDoc, db } from '../lib/db';
-import { getMemberRegionalPendingUsd, getMemberRegionalUsdBalance } from './walletRegion';
+import {
+  getMemberRegionalPendingUsd,
+  getMemberRegionalUsdBalance,
+  getPackagePriceForRegion,
+  resolveMemberRegion,
+} from './walletRegion';
 import {
   CommissionTransaction as MonolineCommissionTx,
   MonolineMember,
@@ -528,7 +533,10 @@ export async function syncFrekansWithMonolineEngine(options?: {
               user_id: canonicalUid,
               user_name: u.fullName || 'Bayi',
               user_email: cleanEmail,
-              order_amount: pkgDef.defaultPrice,
+              order_amount: getPackagePriceForRegion(
+                pkgDef.defaultPrice,
+                resolveMemberRegion(u.country_code)
+              ),
               package_id: monolinePkg,
               timestamp: u.createdAt || new Date().toISOString(),
             });

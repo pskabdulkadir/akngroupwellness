@@ -10,6 +10,7 @@ import {
   type OrderInput,
 } from '../services/commissionService';
 import { INITIAL_CAREER_TIERS, type MonolineMember } from '../types/monoline';
+import { getPackagePriceForRegion } from './walletRegion';
 
 const now = new Date().toISOString();
 const future = new Date(Date.now() + 30 * 86400000).toISOString();
@@ -244,7 +245,7 @@ test('Motor 2: Küresel Monoline üst sıradaki 7 üyeyi sıralı tarar, eksik v
   assert.ok(loggedTypes.every((t) => t === 'MONOLINE_INCENTIVE'));
 });
 
-test('processOrderCommissions: Tüm motorları tek atomik işlemde çalıştırır (%20 Sponsor + %25 Motor1 + %5 Motor2 + %5 Fon)', () => {
+test('yurtdışı kart/cüzdan siparişinin 3x tutarı komisyonlara yalnızca bir kez yansır', () => {
   const buyer = createTestMember({ id: 10, userId: 'USER-10', globalLineId: 10, sponsorId: 'USER-9', careerLevel: 1 });
   const sponsor = createTestMember({ id: 9, userId: 'USER-9', globalLineId: 9, sponsorId: null, careerLevel: 7 });
 
@@ -257,26 +258,22 @@ test('processOrderCommissions: Tüm motorları tek atomik işlemde çalıştır�
   };
 
   const order: OrderInput = {
-    order_id: 'ORD-FULL-001',
+    order_id: 'ORD-INTL-001',
     user_id: 'USER-10',
-    order_amount: 1000,
+    order_amount: getPackagePriceForRegion(1000, 'INTERNATIONAL'),
   };
 
   const result = processOrderCommissions(order, buyer, ctx);
 
-  // 1. Direkt Sponsor: %20 -> 200 USD
-  assert.equal(result.directSponsorPaid, 200);
+  assert.equal(result.directSponsorPaid, 600);
 
-  // 2. Motor 1 (Unilevel %25): 7 derinlik toplamı = 250 USD
   const m1Total = roundCurrency(result.unilevelResult.totalDistributed + result.unilevelResult.totalUnclaimedToPool);
-  assert.equal(m1Total, 250);
+  assert.equal(m1Total, 750);
 
-  // 3. Motor 2 (Monoline Teşvik %5): 7 sıra toplamı = 50 USD
   const m2Total = roundCurrency(result.monolineIncentiveResult.totalDistributed + result.monolineIncentiveResult.totalUnclaimedToPool);
-  assert.equal(m2Total, 50);
+  assert.equal(m2Total, 150);
 
-  // 4. Sistem Fonu Base: %5 -> 50 USD (+ aktarılan boş upline'lar)
-  assert.ok(result.systemFundAdded >= 50);
+  assert.ok(result.systemFundAdded >= 150);
 });
 
 test('Motor 1: Dinamik Sıkıştırma (dynamicCompression: true) pasif sponsoru atlayarak aktif lidere öder', () => {

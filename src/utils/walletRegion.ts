@@ -21,13 +21,22 @@ export const convertTryToUsd = (amountTry: number, tryPerUsd: number): number =>
   return Math.round((amountTry / tryPerUsd) * 100) / 100;
 };
 
-export const getPackagePriceForRegion = (packagePriceUsd: number, _region: MemberRegion): number =>
-  packagePriceUsd;
+export const INTERNATIONAL_PRICE_MULTIPLIER = 3;
+
+export const getPackagePriceForRegion = (packagePriceUsd: number, region: MemberRegion): number =>
+  region === 'INTERNATIONAL'
+    ? Math.round(packagePriceUsd * INTERNATIONAL_PRICE_MULTIPLIER * 100) / 100
+    : packagePriceUsd;
+
+export const getPackageCreditsForRegion = (baseCredits: number, _region: MemberRegion): number =>
+  baseCredits;
 
 export const ACTIVATION_DOMESTIC_PRICE_USD = 100;
 
 export const getActivationPriceForRegion = (region: MemberRegion): number =>
-  region === 'INTERNATIONAL' ? ACTIVATION_DOMESTIC_PRICE_USD * 3 : ACTIVATION_DOMESTIC_PRICE_USD;
+  region === 'INTERNATIONAL'
+    ? ACTIVATION_DOMESTIC_PRICE_USD * INTERNATIONAL_PRICE_MULTIPLIER
+    : ACTIVATION_DOMESTIC_PRICE_USD;
 
 type RegionalWalletSource = {
   country_code?: string | null;
