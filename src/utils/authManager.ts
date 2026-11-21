@@ -13,7 +13,7 @@ import {
 } from '../lib/db';
 import { formatUsd } from './currency';
 import { getPackagePriceForRegion, resolveMemberRegion } from './walletRegion';
-import { loginAdmin, loginAdminWithMessage, loginAccountingWithMessage, clearAccountingToken } from './adminSession';
+import { loginAdmin, loginAdminWithMessage, loginAccountingWithMessage, clearAccountingToken, clearAdminToken } from './adminSession';
 import { DEFAULT_DEALER_PACKAGES } from '../config/dealerPackages';
 
 // ADMIN CREDENTIALS & CONSTANTS
@@ -2164,6 +2164,8 @@ export async function loginMember(
       };
     }
 
+    clearAdminToken();
+
     // 2. Load the profile associated with the verified server identity
     let userData: UserMember | null = null;
     try {
@@ -2322,6 +2324,7 @@ export function saveMemberWalletToken(token: string): void {
 export function logoutMemberSession(): void {
   if (typeof window === 'undefined') return;
   clearAccountingToken();
+  clearAdminToken();
   sessionStorage.removeItem(MEMBER_WALLET_TOKEN_KEY);
   localStorage.removeItem(STORAGE_SESSION_KEY);
   localStorage.removeItem('aurabio_active_reseller_session_v1');

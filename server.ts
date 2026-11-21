@@ -5778,7 +5778,7 @@ async function startServer(options: { listen?: boolean } = {}) {
       const result = await pgQuery('SELECT setting_value FROM system_settings WHERE setting_key = $1', ['ACCOUNTING_CREDENTIALS']);
       const credentials = result?.rows[0]?.setting_value;
       if (!credentials || email !== String(credentials.email || '').toLowerCase()) {
-        res.status(404).json({ status: 'error', code: 'ACCOUNTING_ACCOUNT_NOT_FOUND' });
+        res.json({ status: 'not_accounting', code: 'ACCOUNTING_ACCOUNT_NOT_FOUND' });
         return;
       }
       if (!verifyMemberPassword(password, credentials.salt, credentials.hash)) {

@@ -409,7 +409,9 @@ export function getDealerPackages(): DealerPackage[] {
 export function saveDealerPackages(pkgs: DealerPackage[]): void {
   if (typeof window === 'undefined') return;
   try {
-    localStorage.setItem(STORAGE_DEALER_PACKAGES_KEY, JSON.stringify(normalizeDealerPackages(pkgs)));
+    const serialized = JSON.stringify(normalizeDealerPackages(pkgs));
+    if (localStorage.getItem(STORAGE_DEALER_PACKAGES_KEY) === serialized) return;
+    localStorage.setItem(STORAGE_DEALER_PACKAGES_KEY, serialized);
     window.dispatchEvent(new CustomEvent('aurabio_dealer_packages_updated'));
   } catch (e) {
     console.warn('Error saving local dealer packages:', e);
@@ -684,13 +686,21 @@ export async function refundScanCreditToDealer(
   const dealerId = resolveScanDealerId(userId);
   if (!dealerId || !requestId) return authFailure(requestId);
 
-  const { getMemberWalletToken } = await import('./authManager');
+  const [{ getMemberWalletToken }, { getAdminToken }] = await Promise.all([
+    import('./authManager'),
+    import('./adminSession'),
+  ]);
+  const token = getAdminToken() || getMemberWalletToken();
+  if (!token) return authFailure(requestId);
   const response = await postCreditCommand(
     `/api/v1/members/${encodeURIComponent(dealerId)}/refund-scan-credit`,
     { requestId },
-    getMemberWalletToken()
+    token
   );
-  if (!response || response.status === 401 || response.status === 403) {
+  if (!response) {
+    return { success: false, remainingCredits: 0, message: 'Kredi servisine ulaşılamadı. Lütfen bağlantınızı kontrol edin.', requestId };
+  }
+  if (response.status === 401 || response.status === 403) {
     return authFailure(requestId);
   }
 
@@ -714,13 +724,21 @@ async function performAtomicScanDeduct(
   scanCost: number,
   requestId: string
 ): Promise<DeductScanResult> {
-  const { getMemberWalletToken } = await import('./authManager');
+  const [{ getMemberWalletToken }, { getAdminToken }] = await Promise.all([
+    import('./authManager'),
+    import('./adminSession'),
+  ]);
+  const token = getAdminToken() || getMemberWalletToken();
+  if (!token) return authFailure(requestId);
   const response = await postCreditCommand(
     `/api/v1/members/${encodeURIComponent(dealerId)}/deduct-scan-credit`,
     { amount: scanCost, requestId },
-    getMemberWalletToken()
+    token
   );
-  if (!response || response.status === 401 || response.status === 403) {
+  if (!response) {
+    return { success: false, remainingCredits: 0, message: 'Kredi servisine ulaşılamadı. Lütfen bağlantınızı kontrol edin.', requestId };
+  }
+  if (response.status === 401 || response.status === 403) {
     return authFailure(requestId);
   }
 

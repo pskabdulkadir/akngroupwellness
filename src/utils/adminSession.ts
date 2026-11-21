@@ -36,7 +36,10 @@ export async function loginAccountingWithMessage(
       body: JSON.stringify({ email: email.trim().toLowerCase(), password }),
     });
     const data = await res.json().catch(() => ({}));
-    if (res.status === 404) return { isAccounting: false, success: false };
+    if (data?.code === 'ACCOUNTING_ACCOUNT_NOT_FOUND') return { isAccounting: false, success: false };
+    if (res.status === 404) {
+      return { isAccounting: true, success: false, message: 'Muhasebe giriş servisi bulunamadı. Lütfen daha sonra tekrar deneyin.' };
+    }
     if (!res.ok || typeof data?.token !== 'string') {
       return { isAccounting: true, success: false, message: data?.message || 'Muhasebe e-postası veya şifresi hatalı.' };
     }

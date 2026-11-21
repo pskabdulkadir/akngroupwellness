@@ -439,7 +439,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
     }
 
     const unsubDp = subscribeToDealerPackages((packages) => {
-      setDealerPackages(packages);
+      setDealerPackages((previous) => JSON.stringify(previous) === JSON.stringify(packages) ? previous : packages);
     });
 
     const liveResellerFilter = getActiveResellerSession()?.uid || currentUser?.uid || '';

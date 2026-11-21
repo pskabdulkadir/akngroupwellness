@@ -772,7 +772,7 @@ export default function WellnessApp({
     const requestId = `SCAN-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
     const res = await deductScanCreditFromDealer(currentUser?.uid, { scanCost: 1, requestId });
     if (!res.success) {
-      if (res.remainingCredits <= 0 && (currentUser?.role === 'dealer' || currentUser?.dealerDetails)) {
+      if (res.insufficientCredits && (currentUser?.role === 'dealer' || currentUser?.dealerDetails)) {
         setTimeout(() => {
           setIsResellerDashboardOpen(true);
         }, 1500);
@@ -791,7 +791,7 @@ export default function WellnessApp({
     if (!requestId) return;
     activeScanRequestIdRef.current = null;
     refundScanCreditToDealer(currentUser?.uid, requestId).then((res) => {
-      if (res) {
+      if (res.success) {
         setCurrentUser((prev) => prev ? { ...prev, creditsBalance: res.remainingCredits } : prev);
       }
     }).catch(console.error);
