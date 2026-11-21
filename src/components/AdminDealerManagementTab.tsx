@@ -35,6 +35,7 @@ type DealerRecord = {
 };
 
 type DealerEditForm = Pick<DealerRecord, 'full_name' | 'phone' | 'city' | 'role' | 'is_active' | 'is_locked' | 'assigned_leg'> & {
+  activity_expires_at: string;
   sponsor_id: string;
   monoline_position: string;
 };
@@ -54,6 +55,11 @@ type WalletAdjustment = {
 const PAGE_SIZE = 25;
 const money = (value: number | string) => `${(Number(value) || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $`;
 const date = (value?: string | null) => value ? new Date(value).toLocaleDateString('tr-TR') : '—';
+const dateTimeLocal = (value?: string | null) => {
+  if (!value) return '';
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? '' : new Date(parsed.getTime() - parsed.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+};
 
 export const AdminDealerManagementTab: React.FC = () => {
   const [dealers, setDealers] = useState<DealerRecord[]>([]);
@@ -129,6 +135,7 @@ export const AdminDealerManagementTab: React.FC = () => {
         role: dealer.role || 'member',
         is_active: dealer.is_active,
         is_locked: dealer.is_locked,
+        activity_expires_at: dateTimeLocal(dealer.activity_expires_at),
         sponsor_id: dealer.sponsor_id || '',
         assigned_leg: dealer.assigned_leg || 'AUTO',
         monoline_position: String(dealer.monoline_position || 1),
@@ -158,6 +165,7 @@ export const AdminDealerManagementTab: React.FC = () => {
           role: form.role,
           is_active: form.is_active,
           is_locked: form.is_locked,
+          activity_expires_at: new Date(form.activity_expires_at).toISOString(),
           sponsor_id: form.sponsor_id || null,
           assigned_leg: form.assigned_leg,
           monoline_position: Number(form.monoline_position),
@@ -284,6 +292,7 @@ export const AdminDealerManagementTab: React.FC = () => {
                   <label className="text-xs text-slate-400">Sponsor kullanıcı ID<input value={form.sponsor_id} onChange={(event) => setForm({ ...form, sponsor_id: event.target.value })} placeholder="Boş bırak: sponsorsuz" className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white" /></label>
                   <label className="text-xs text-slate-400">Monoline sırası<input type="number" min="1" step="1" required value={form.monoline_position} onChange={(event) => setForm({ ...form, monoline_position: event.target.value })} className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white" /></label>
                   <label className="text-xs text-slate-400">Monoline kolu<select value={form.assigned_leg} onChange={(event) => setForm({ ...form, assigned_leg: event.target.value as DealerEditForm['assigned_leg'] })} className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"><option value="AUTO">Otomatik</option><option value="LEFT">Sol</option><option value="RIGHT">Sağ</option></select></label>
+                  <label className="text-xs text-slate-400">Aktiflik bitiş tarihi ve saati<input required type="datetime-local" value={form.activity_expires_at} onChange={(event) => setForm({ ...form, activity_expires_at: event.target.value })} className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white [color-scheme:dark]" /></label>
                   <label className="flex items-center gap-2 rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-sm"><input type="checkbox" checked={form.is_active} onChange={(event) => setForm({ ...form, is_active: event.target.checked })} /> Aktif hesap</label>
                   <label className="flex items-center gap-2 rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-sm"><input type="checkbox" checked={form.is_locked} onChange={(event) => setForm({ ...form, is_locked: event.target.checked })} /> Hesap kilitli</label>
                 </div>
@@ -324,7 +333,7 @@ export const AdminDealerManagementTab: React.FC = () => {
                   <p className="mt-2 text-slate-400">Kariyer seviyesi <span className="float-right text-slate-200">{selected.career_level} · en yüksek {selected.max_career_level}</span></p>
                   <p className="mt-2 text-slate-400">Aktif doğrudan ekip <span className="float-right text-slate-200">{selected.active_direct_referrals_30d}</span></p>
                   <p className="mt-2 text-slate-400">Seans kredisi <span className="float-right text-slate-200">{selected.scan_credits}</span></p>
-                  <p className="mt-2 text-slate-400">Aktiflik bitişi <span className="float-right text-slate-200">{date(selected.activity_expires_at)}</span></p>
+                  <p className="mt-2 text-slate-400">Aktiflik bitişi <span className="float-right text-slate-200">{selected.activity_expires_at ? new Date(selected.activity_expires_at).toLocaleString('tr-TR') : '—'}</span></p>
                   <p className="mt-2 text-slate-400">Kayıt tarihi <span className="float-right text-slate-200">{date(selected.created_at)}</span></p>
                   <p className="mt-2 text-slate-400">E-posta değişimi <span className="float-right text-slate-500">Kimlik doğrulama nedeniyle kapalı</span></p>
                   {selected.upline?.map((ancestor) => <p key={ancestor.user_id} className="mt-2 text-slate-400">Üst sıra {ancestor.depth} <span className="float-right text-slate-200">{ancestor.full_name} · {ancestor.user_id}</span></p>)}

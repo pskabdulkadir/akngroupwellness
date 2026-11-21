@@ -6151,7 +6151,7 @@ async function startServer(options: { listen?: boolean } = {}) {
 
   app.put('/api/v1/admin/dealers/:id', requireAdminJwt, async (req, res) => {
     const allowedFields = new Set([
-      'full_name', 'phone', 'city', 'role', 'is_active', 'is_locked',
+      'full_name', 'phone', 'city', 'role', 'is_active', 'is_locked', 'activity_expires_at',
       'sponsor_id', 'assigned_leg', 'monoline_position',
     ]);
     const input = req.body && typeof req.body === 'object' && !Array.isArray(req.body) ? req.body : {};
@@ -6192,6 +6192,13 @@ async function startServer(options: { listen?: boolean } = {}) {
         updates[field] = input[field];
       }
     }
+    if (input.activity_expires_at !== undefined) {
+      if (typeof input.activity_expires_at !== 'string' || !Number.isFinite(Date.parse(input.activity_expires_at))) {
+        res.status(400).json({ status: 'error', message: 'Aktiflik bitiş tarihi geçerli olmalıdır.' });
+        return;
+      }
+      updates.activity_expires_at = new Date(input.activity_expires_at).toISOString();
+    }
     if (input.sponsor_id !== undefined) {
       if (input.sponsor_id !== null && typeof input.sponsor_id !== 'string') {
         res.status(400).json({ status: 'error', message: 'Sponsor kullanıcı kimliği geçersiz.' });
@@ -6214,9 +6221,14 @@ async function startServer(options: { listen?: boolean } = {}) {
 
     try {
       await withTransaction(async (client) => {
-        const targetResult = await client.query('SELECT user_id, monoline_position FROM users WHERE user_id = $1 FOR UPDATE', [req.params.id]);
+        const targetResult = await client.query('SELECT user_id, monoline_position, is_active, activity_expires_at FROM users WHERE user_id = $1 FOR UPDATE', [req.params.id]);
         const target = targetResult.rows[0];
         if (!target) throw Object.assign(new Error('Bayi veya üye bulunamadı.'), { statusCode: 404 });
+        const nextActive = typeof updates.is_active === 'boolean' ? updates.is_active : target.is_active;
+        const nextExpiry = updates.activity_expires_at || target.activity_expires_at;
+        if (nextActive && (!nextExpiry || new Date(nextExpiry).getTime() <= Date.now())) {
+          throw Object.assign(new Error('Aktif hesap için bitiş tarihi gelecekte olmalıdır.'), { statusCode: 400 });
+        }
 
         if (updates.sponsor_id) {
           if (updates.sponsor_id === req.params.id) throw Object.assign(new Error('Kullanıcı kendisinin sponsoru olamaz.'), { statusCode: 400 });
@@ -6235,7 +6247,8 @@ async function startServer(options: { listen?: boolean } = {}) {
 
         const sqlColumns: Record<string, string> = {
           full_name: 'full_name', phone: 'phone', city: 'city',
-          is_active: 'is_active', is_locked: 'is_locked', sponsor_id: 'sponsor_id', assigned_leg: 'assigned_leg',
+          is_active: 'is_active', is_locked: 'is_locked', activity_expires_at: 'activity_expires_at',
+          sponsor_id: 'sponsor_id', assigned_leg: 'assigned_leg',
         };
         const columns = Object.keys(updates).filter((field) => field !== 'role');
         if (columns.length) {
