@@ -43,6 +43,7 @@ import {
   Sparkles,
   Calculator,
 } from 'lucide-react';
+import { wipeAllLocalApplicationData } from '../lib/db';
 import {
   ActivityLogRecord,
   ActivationVoucherRecord,
@@ -1423,15 +1424,26 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
     reader.readAsText(file);
   };
 
-  const handleExecuteResetSystem = () => {
+  const handleExecuteResetSystem = async () => {
     if (onResetSystem) {
       onResetSystem();
-    } else {
-      fetch('/api/v1/reset', { method: 'POST' }).then(() => {
-        if (onRefreshState) onRefreshState();
-      });
+      setShowResetWarningModal(false);
+      return;
     }
-    setShowResetWarningModal(false);
+
+    try {
+      const response = await fetch('/api/v1/reset', { method: 'POST' });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || data.status !== 'success' || !data.state) {
+        throw new Error(data.message || 'Sıfırlama tamamlanamadı.');
+      }
+      wipeAllLocalApplicationData();
+      await onRefreshState?.();
+      setDataNotice({ type: 'success', message: data.message || 'Fabrika sıfırlaması tamamlandı.' });
+      setShowResetWarningModal(false);
+    } catch (err: any) {
+      setDataNotice({ type: 'error', message: err?.message || 'Sistem sıfırlanırken hata oluştu.' });
+    }
   };
 
   const totalCareerBonusesPaid = sortedMembers.reduce(

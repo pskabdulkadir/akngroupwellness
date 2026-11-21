@@ -18,7 +18,7 @@ import {
 } from '../utils/monolineSyncBridge';
 import { getActiveResellerSession } from '../utils/resellerManager';
 import { getAdminToken } from '../utils/adminSession';
-import { getActiveMemberSession, getMemberWalletToken, updateMemberProfile, type UserMember } from '../utils/authManager';
+import { getActiveMemberSession, getMemberWalletToken, removeUserFromLocalCaches, updateMemberProfile, type UserMember } from '../utils/authManager';
 import { wipeAllLocalApplicationData } from '../lib/db';
 import {
   CareerTier,
@@ -685,8 +685,11 @@ export const MonolineMlmPortalModal: React.FC<MonolineMlmPortalModalProps> = ({
 
         },
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || 'Üye silinemedi.');
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.status !== 'success') throw new Error(data.message || 'Üye silinemedi.');
+      removeUserFromLocalCaches(userId);
+      window.dispatchEvent(new CustomEvent('aurabio_members_updated'));
+      window.dispatchEvent(new CustomEvent('aurabio_resellers_updated'));
       if (data.state) {
         applyServerState(data.state);
       }
@@ -923,7 +926,7 @@ export const MonolineMlmPortalModal: React.FC<MonolineMlmPortalModalProps> = ({
     try {
       const res = await fetch('/api/v1/reset', { method: 'POST' });
       const data = await res.json();
-      if (!res.ok || !data.state) throw new Error(data.message || 'Sıfırlama tamamlanamadı.');
+      if (!res.ok || data.status !== 'success' || !data.state) throw new Error(data.message || 'Sıfırlama tamamlanamadı.');
       wipeAllLocalApplicationData();
       applyServerState(data.state);
       showNotice('success', data.message || 'Fabrika sıfırlaması tamamlandı.');

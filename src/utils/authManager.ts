@@ -735,6 +735,39 @@ function removeFromLocalMembersDirectory(uid: string): void {
   }
 }
 
+export function removeUserFromLocalCaches(uid: string): void {
+  if (typeof window === 'undefined' || !uid) return;
+  const filterStoredItems = (key: string, matches: (item: any) => boolean) => {
+    try {
+      const stored = JSON.parse(localStorage.getItem(key) || '[]');
+      if (Array.isArray(stored)) localStorage.setItem(key, JSON.stringify(stored.filter((item) => !matches(item))));
+    } catch {
+      localStorage.removeItem(key);
+    }
+  };
+
+  removeFromLocalMembersDirectory(uid);
+  filterStoredItems('aurabio_resellers_directory_v1', (item) => item?.uid === uid);
+  filterStoredItems('aurabio_commissions_directory_v1', (item) => item?.resellerId === uid || item?.userId === uid);
+  filterStoredItems('aurabio_credit_logs_directory_v1', (item) => item?.resellerId === uid);
+  filterStoredItems('aurabio_member_orders_history_v1', (item) => item?.userId === uid);
+  filterStoredItems('aurabio_dealer_package_orders_v1', (item) => item?.resellerId === uid);
+
+  try {
+    const activeMember = JSON.parse(localStorage.getItem(STORAGE_SESSION_KEY) || 'null');
+    if (activeMember?.uid === uid) {
+      localStorage.removeItem(STORAGE_SESSION_KEY);
+      sessionStorage.removeItem(MEMBER_WALLET_TOKEN_KEY);
+    }
+    const activeReseller = JSON.parse(localStorage.getItem('aurabio_active_reseller_session_v1') || 'null');
+    if (activeReseller?.uid === uid) localStorage.removeItem('aurabio_active_reseller_session_v1');
+  } catch {
+    localStorage.removeItem(STORAGE_SESSION_KEY);
+    localStorage.removeItem('aurabio_active_reseller_session_v1');
+    sessionStorage.removeItem(MEMBER_WALLET_TOKEN_KEY);
+  }
+}
+
 /**
  * Helper to check local demo blacklist
  */
@@ -2679,7 +2712,9 @@ export async function adminGetAllMembers(): Promise<UserMember[]> {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await response.json().catch(() => ({}));
-        if (!response.ok || data.status !== 'success') break;
+        if (!response.ok || data.status !== 'success') {
+          throw new Error(data.message || 'Üye listesi sunucudan doğrulanamadı.');
+        }
         total = Number(data.total) || 0;
         for (const row of data.dealers || []) {
           const profile = row.profile && typeof row.profile === 'object' ? row.profile : {};
@@ -2698,13 +2733,45 @@ export async function adminGetAllMembers(): Promise<UserMember[]> {
             createdAt: row.created_at || profile.createdAt,
           };
           members.push(user);
-          saveToLocalMembersDirectory(user);
         }
         page += 1;
       } while ((page - 1) * 100 < total);
+      if (typeof window !== 'undefined') {
+        const isProtectedAccount = (member: UserMember) =>
+          member.uid === 'USR-ADMIN' || member.uid === 'ADMIN-AKN-01' || member.uid === 'ACCOUNTING-01' ||
+          member.role === 'admin' || member.role === 'accounting';
+        const cachedMembers = getLocalMembersDirectory();
+        const protectedCachedMembers = cachedMembers.filter(isProtectedAccount);
+        const serverIds = new Set([...members, ...protectedCachedMembers].map((member) => member.uid));
+        const staleIds = cachedMembers.map((member) => member.uid).filter((uid) => uid && !serverIds.has(uid));
+        try {
+          const activeMember = JSON.parse(localStorage.getItem(STORAGE_SESSION_KEY) || 'null');
+          if (activeMember?.uid && !serverIds.has(activeMember.uid)) {
+            localStorage.removeItem(STORAGE_SESSION_KEY);
+            sessionStorage.removeItem(MEMBER_WALLET_TOKEN_KEY);
+          }
+          const activeReseller = JSON.parse(localStorage.getItem('aurabio_active_reseller_session_v1') || 'null');
+          if (activeReseller?.uid && !serverIds.has(activeReseller.uid)) {
+            localStorage.removeItem('aurabio_active_reseller_session_v1');
+          }
+        } catch {
+          localStorage.removeItem(STORAGE_SESSION_KEY);
+          localStorage.removeItem('aurabio_active_reseller_session_v1');
+          sessionStorage.removeItem(MEMBER_WALLET_TOKEN_KEY);
+        }
+        const hydratedMembers = [...members, ...protectedCachedMembers.filter((member) => !members.some((serverMember) => serverMember.uid === member.uid))];
+        localStorage.setItem(STORAGE_MEMBERS_DIRECTORY_KEY, JSON.stringify(hydratedMembers));
+        staleIds.forEach(removeUserFromLocalCaches);
+        await Promise.all(staleIds.flatMap((uid) => [
+          deleteDoc(doc(db, 'users', uid)),
+          deleteDoc(doc(db, 'resellers', uid)),
+        ]));
+        window.dispatchEvent(new CustomEvent('aurabio_members_updated'));
+      }
       return members.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
     } catch (err) {
       console.debug('Admin get all members server notice:', err);
+      throw err;
     }
   }
 
@@ -2801,36 +2868,20 @@ export async function adminSetMemberAccess(
 /**
  * Admin: Delete member record completely
  */
-export async function adminDeleteMember(uid: string): Promise<boolean> {
+export async function adminDeleteMember(uid: string): Promise<{ success: boolean; message?: string }> {
   try {
-    removeFromLocalMembersDirectory(uid);
-
-    // If the currently active session in browser was this user, clear it
-    if (typeof window !== 'undefined') {
-      try {
-        const raw = localStorage.getItem(STORAGE_SESSION_KEY);
-        if (raw) {
-          const activeUser = JSON.parse(raw);
-          if (activeUser && activeUser.uid === uid) {
-            localStorage.removeItem(STORAGE_SESSION_KEY);
-          }
-        }
-      } catch {
-        // non-blocking
-      }
+    const response = await fetch(`/api/v1/admin/members/${encodeURIComponent(uid)}`, { method: 'DELETE' });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || data.status !== 'success') {
+      throw new Error(data.message || 'Üye sunucu veritabanından silinemedi.');
     }
 
     try {
-      const docRef = doc(db, 'users', uid);
-      await deleteDoc(docRef);
-    } catch (fsErr) {
-      console.warn('Admin delete member Firestore notice:', fsErr);
-    }
-
-    try {
-      await fetch(`/api/v1/admin/members/${uid}`, { method: 'DELETE' });
-    } catch (srvErr) {
-      console.debug('Server delete member notice:', srvErr);
+      removeUserFromLocalCaches(uid);
+      await deleteDoc(doc(db, 'users', uid));
+      await deleteDoc(doc(db, 'resellers', uid));
+    } catch (localErr) {
+      console.warn('Admin delete member local cache notice:', localErr);
     }
 
     if (typeof window !== 'undefined') {
@@ -2839,9 +2890,9 @@ export async function adminDeleteMember(uid: string): Promise<boolean> {
       window.dispatchEvent(new CustomEvent('monoline_webhook_triggered'));
     }
 
-    return true;
-  } catch (err) {
+    return { success: true };
+  } catch (err: any) {
     console.error('Admin delete member error:', err);
-    return false;
+    return { success: false, message: err?.message || 'Üye silinirken bir hata oluştu.' };
   }
 }

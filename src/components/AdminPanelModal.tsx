@@ -86,13 +86,6 @@ import {
   adminRejectDemoRenewal,
   DeviceSessionDoc 
 } from '../utils/deviceDemoManager';
-import { 
-  DealerPackageOrder, 
-  getAllDealerPackageOrders, 
-  subscribeToDealerPackageOrders, 
-
-  adminRejectDealerPackageOrder 
-} from '../utils/dealerOrderManager';
 import { MEMBER_COUNTRY_OPTIONS } from '../utils/walletRegion';
 import { 
   Reseller, 
@@ -432,10 +425,9 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
   // Reseller Management State
   const [resellers, setResellers] = useState<Reseller[]>([]);
   const [commissions, setCommissions] = useState<CommissionTransaction[]>([]);
-  const [dealerOrders, setDealerOrders] = useState<DealerPackageOrder[]>([]);
   const [creditLogs, setCreditLogs] = useState<CreditTransaction[]>([]);
   const [resellerSearch, setResellerSearch] = useState<string>('');
-  const [resellerSubView, setResellerSubView] = useState<'list' | 'credits' | 'commissions' | 'orders'>('list');
+  const [resellerSubView, setResellerSubView] = useState<'list' | 'credits' | 'commissions'>('list');
   const [editingReseller, setEditingReseller] = useState<Reseller | null>(null);
   const [isCreatingReseller, setIsCreatingReseller] = useState<boolean>(false);
   const [resellerToDelete, setResellerToDelete] = useState<Reseller | null>(null);
@@ -500,11 +492,6 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
     }
   };
 
-  // Dealer Orders Management State
-  const [orderSearch, setOrderSearch] = useState<string>('');
-  const [orderStatusFilter, setOrderStatusFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
-  const [orderProcessingId, setOrderProcessingId] = useState<string | null>(null);
-
   // Reseller Form State
   const [resFormUid, setResFormUid] = useState<string>('');
   const [resFormName, setResFormName] = useState<string>('');
@@ -534,9 +521,6 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
     });
     const unsubDp = subscribeToDealerPackages((list) => {
       setDealerPackages(list);
-    });
-    const unsubOrders = subscribeToDealerPackageOrders((list) => {
-      setDealerOrders(list);
     });
     const unsubInvoices = subscribeToDigitalInvoices((list) => {
       setInvoices(list);
@@ -576,7 +560,6 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
     return () => {
       unsub();
       unsubDp();
-      unsubOrders();
       unsubInvoices();
       unsubResellers();
       unsubCreditLogs();
@@ -794,7 +777,7 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
       grandTotal: vatCalc.grossAmount,
       grandTotalInWords: numberToTurkishWords(vatCalc.grossAmount),
       currency: 'TRY',
-      paymentMethod: 'HAVALE_EFT',
+      paymentMethod: 'KREDI_KARTI',
       invoiceType: 'SATIS',
       notes: '509 Sıra No\'lu VUK Genel Tebliği uyarınca e-Arşiv Fatura olarak elektronik ortamda tanzim edilmiştir.',
       createdAt: now.toISOString(),
@@ -1274,26 +1257,6 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
     }
   };
 
-  // Dealer Package Order Rejection Handler
-  const handleRejectDealerOrder = async (order: DealerPackageOrder) => {
-    setOrderProcessingId(order.id);
-    try {
-      const res = await adminRejectDealerPackageOrder(order.id, 'Ödeme teyidi alınamadı veya yönetici tarafından reddedildi.');
-      if (res.success) {
-        setActionSuccessMsg(res.message);
-        setTimeout(() => setActionSuccessMsg(null), 4000);
-      } else {
-        setActionSuccessMsg(res.message);
-        setTimeout(() => setActionSuccessMsg(null), 4000);
-      }
-    } catch (err: any) {
-      setActionSuccessMsg(err?.message || 'Sipariş reddedilirken hata oluştu.');
-      setTimeout(() => setActionSuccessMsg(null), 4000);
-    } finally {
-      setOrderProcessingId(null);
-    }
-  };
-
   const handleSetAccess = async (uid: string, isAllowed: boolean, durationDays?: number | null) => {
     const ok = await adminSetMemberAccess(uid, isAllowed, durationDays);
     if (ok) {
@@ -1368,15 +1331,15 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
     try {
       const targetName = memberToDelete.fullName;
       const targetUid = memberToDelete.uid;
-      const ok = await adminDeleteMember(targetUid);
-      if (ok) {
+      const result = await adminDeleteMember(targetUid);
+      if (result.success) {
         setMembers((prev) => prev.filter((m) => m.uid !== targetUid));
         setActionSuccessMsg(`"${targetName}" adlı üye veritabanından kalıcı olarak silindi.`);
         setMemberToDelete(null);
         if (onMemberUpdated) onMemberUpdated();
         setTimeout(() => setActionSuccessMsg(null), 4000);
       } else {
-        alert('Üye silinirken bir hata oluştu. Lütfen tekrar deneyin.');
+        alert(result.message || 'Üye silinirken bir hata oluştu. Lütfen tekrar deneyin.');
       }
     } finally {
       setIsDeleting(false);
@@ -1488,7 +1451,7 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
     try {
       const res = await fetch('/api/v1/reset', { method: 'POST' });
       const data = await res.json();
-      if (!res.ok || !data.state) throw new Error(data.message || 'Sıfırlama tamamlanamadı.');
+      if (!res.ok || data.status !== 'success' || !data.state) throw new Error(data.message || 'Sıfırlama tamamlanamadı.');
       wipeAllLocalApplicationData();
 
       await loadMembers();
@@ -2788,22 +2751,6 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
                       )}
                     </button>
 
-                    <button
-                      onClick={() => setResellerSubView('orders')}
-                      className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                        resellerSubView === 'orders'
-                          ? 'bg-emerald-600 text-white shadow-md'
-                          : 'bg-slate-950 text-slate-400 hover:text-slate-200 border border-slate-800'
-                      }`}
-                    >
-                      <Package className="w-3.5 h-3.5" />
-                      <span>Bayi Paket & Kredi Satın Alma Talepleri ({dealerOrders.length})</span>
-                      {dealerOrders.filter(o => o.status === 'pending').length > 0 && (
-                        <span className="px-1.5 py-0.2 bg-amber-500 text-slate-950 rounded-full text-[10px] font-bold animate-pulse">
-                          {dealerOrders.filter(o => o.status === 'pending').length} Onay Bekliyor
-                        </span>
-                      )}
-                    </button>
                   </div>
                 </div>
 
@@ -3543,202 +3490,6 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
                                   </td>
                                 </tr>
                               ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* RESELLERS SUBVIEW: PACKAGE & CREDIT ORDERS (YÖNETİCİ ONAYI BEKLEYEN BAYİ PAKET SİPARİŞLERİ) */}
-                {resellerSubView === 'orders' && (
-                  <div className="space-y-4">
-                    {/* Search & Filter */}
-                    <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3 rounded-2xl bg-slate-950/80 border border-slate-800">
-                      <div className="relative flex-1 w-full">
-                        <input
-                          type="text"
-                          value={orderSearch}
-                          onChange={(e) => setOrderSearch(e.target.value)}
-                          placeholder="Sipariş No (DORD-...), Bayi Adı veya E-Posta Ara..."
-                          className="w-full pl-9 pr-4 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-slate-100 placeholder:text-slate-500 outline-none"
-                        />
-                        <Search className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" />
-                      </div>
-
-                      <div className="flex items-center gap-2 overflow-x-auto w-full sm:w-auto">
-                        <button
-                          onClick={() => setOrderStatusFilter('all')}
-                          className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                            orderStatusFilter === 'all' ? 'bg-slate-700 text-white' : 'bg-slate-900 text-slate-400 hover:text-slate-200'
-                          }`}
-                        >
-                          Tümü ({dealerOrders.length})
-                        </button>
-                        <button
-                          onClick={() => setOrderStatusFilter('pending')}
-                          className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                            orderStatusFilter === 'pending' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' : 'bg-slate-900 text-slate-400 hover:text-slate-200'
-                          }`}
-                        >
-                          Onay Bekleyenler ({dealerOrders.filter(o => o.status === 'pending').length})
-                        </button>
-                        <button
-                          onClick={() => setOrderStatusFilter('approved')}
-                          className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                            orderStatusFilter === 'approved' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-slate-900 text-slate-400 hover:text-slate-200'
-                          }`}
-                        >
-                          Onaylananlar ({dealerOrders.filter(o => o.status === 'approved').length})
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Notice */}
-                    <div className="p-4 rounded-2xl bg-teal-950/30 border border-teal-500/30 text-xs text-slate-300 flex items-start gap-2.5">
-                      <ShieldCheck className="w-4 h-4 text-teal-400 shrink-0 mt-0.5" />
-                      <p className="text-[11px] text-slate-300">
-                        Bayi paket satışları yalnızca 3D Secure kart ile tamamlanır ve krediler ödeme doğrulamasıyla anında yüklenir. Bu listedeki bekleyen kayıtlar eski havale siparişleridir; yalnızca reddedilebilir.
-                      </p>
-                    </div>
-
-                    {/* Table */}
-                    <div className="rounded-2xl border border-slate-800 bg-slate-950/80 overflow-hidden">
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-left text-xs border-collapse">
-                          <thead>
-                            <tr className="border-b border-slate-800 bg-slate-900/90 text-slate-400 font-bold uppercase tracking-wider text-[10px]">
-                              <th className="py-3 px-4">Sipariş No</th>
-                              <th className="py-3 px-4">Bayi Bilgisi</th>
-                              <th className="py-3 px-4">Satın Alınan Paket</th>
-                              <th className="py-3 px-4">Kredi Miktarı</th>
-                              <th className="py-3 px-4 text-right">Tutar</th>
-                              <th className="py-3 px-4">Açıklama / Dekont</th>
-                              <th className="py-3 px-4 text-center">Durum</th>
-                              <th className="py-3 px-4 text-right">Tarih</th>
-                              <th className="py-3 px-4 text-center">Yönetici İşlemi</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-slate-850">
-                            {dealerOrders
-                              .filter(o => {
-                                if (orderStatusFilter !== 'all' && o.status !== orderStatusFilter) return false;
-                                if (!orderSearch.trim()) return true;
-                                const q = orderSearch.toLowerCase();
-                                return (
-                                  (o.id || '').toLowerCase().includes(q) ||
-                                  (o.resellerName || '').toLowerCase().includes(q) ||
-                                  (o.resellerEmail || '').toLowerCase().includes(q) ||
-                                  (o.packageName || '').toLowerCase().includes(q)
-                                );
-                              })
-                              .map((order) => {
-                                const isProcessing = orderProcessingId === order.id;
-
-                                return (
-                                  <tr key={order.id} className="hover:bg-slate-900/60 transition-colors">
-                                    <td className="py-3.5 px-4 font-mono font-bold text-slate-200">
-                                      {order.id}
-                                    </td>
-                                    <td className="py-3.5 px-4">
-                                      <div className="font-bold text-slate-100">{order.resellerName}</div>
-                                      <div className="text-[10px] text-slate-400">{order.resellerEmail}</div>
-                                      {order.resellerPhone && <div className="text-[10px] text-slate-500">{order.resellerPhone}</div>}
-                                    </td>
-                                    <td className="py-3.5 px-4 font-bold text-teal-300">
-                                      {order.packageName}
-                                    </td>
-                                    <td className="py-3.5 px-4">
-                                      <span className="px-2 py-0.5 rounded-md bg-teal-950 border border-teal-500/40 text-teal-300 font-mono font-bold text-xs">
-                                        +{order.scanCredits} Seans
-                                      </span>
-                                    </td>
-                                    <td className="py-3.5 px-4 text-right font-mono font-black text-emerald-400 text-sm">
-                                      {order.priceText || `${order.price.toLocaleString('tr-TR')} $`}
-                                    </td>
-                                    <td className="py-3.5 px-4 text-slate-300 max-w-xs truncate text-[11px]">
-                                      {order.paymentReference || <span className="text-slate-500 italic">Belirtilmedi</span>}
-                                    </td>
-                                    <td className="py-3.5 px-4 text-center">
-                                      {order.status === 'pending' && (
-                                        <span className="px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-bold animate-pulse">
-                                          ⏳ Ödeme Onayı Bekliyor
-                                        </span>
-                                      )}
-                                      {order.status === 'approved' && (
-                                        <span className="px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-bold">
-                                          ✓ Onaylandı & Kredi Yüklendi
-                                        </span>
-                                      )}
-                                      {order.status === 'rejected' && (
-                                        <span className="px-2.5 py-1 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[10px] font-bold">
-                                          ✕ Reddedildi
-                                        </span>
-                                      )}
-                                    </td>
-                                    <td className="py-3.5 px-4 text-right text-slate-400 text-[11px] font-mono">
-                                      {new Date(order.createdAt).toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric' })}
-                                    </td>
-                                    <td className="py-3.5 px-4 text-center">
-                                      {order.status === 'pending' ? (
-                                        <div className="flex items-center justify-center gap-1.5">
-                                          <button
-                                            onClick={() => handleRejectDealerOrder(order)}
-                                            disabled={isProcessing}
-                                            className="px-2.5 py-1.5 rounded-xl bg-rose-950/60 hover:bg-rose-900 text-rose-300 hover:text-white border border-rose-500/40 font-bold text-[10px] transition-all cursor-pointer"
-                                            title="Siparişi Reddet"
-                                          >
-                                            Reddet
-                                          </button>
-                                        </div>
-                                      ) : order.status === 'approved' ? (
-                                        <div className="flex items-center justify-center gap-1.5 flex-wrap">
-                                          {invoices.some(i => i.orderId === order.id) ? (
-                                            <>
-                                              <button
-                                                onClick={() => {
-                                                  const inv = invoices.find(i => i.orderId === order.id);
-                                                  if (inv) handleOpenViewInvoice(inv);
-                                                }}
-                                                className="px-2.5 py-1 rounded-lg bg-purple-950/70 hover:bg-purple-900 text-purple-300 border border-purple-500/40 text-[10px] font-bold flex items-center gap-1 cursor-pointer transition-all"
-                                                title="Mevcut faturayı görüntüle"
-                                              >
-                                                <FileText className="w-3 h-3 text-purple-400" />
-                                                <span>Mevcut Fatura</span>
-                                              </button>
-                                              <button
-                                                onClick={() => {
-                                                  const inv = invoices.find(i => i.orderId === order.id);
-                                                  if (inv) handleSendInvoiceViaWhatsApp(inv);
-                                                }}
-                                                className="px-2.5 py-1 rounded-lg bg-emerald-950/70 hover:bg-emerald-900 text-emerald-300 border border-emerald-500/40 text-[10px] font-bold flex items-center gap-1 cursor-pointer transition-all"
-                                                title="Mevcut faturayı WhatsApp ile ilet"
-                                              >
-                                                <MessageCircle className="w-3 h-3 text-emerald-400" />
-                                                <span>WhatsApp</span>
-                                              </button>
-                                            </>
-                                          ) : (
-                                            <span className="text-[10px] font-semibold text-amber-300">Fatura taslağı mali müşavir incelemesinde</span>
-                                          )}
-                                        </div>
-                                      ) : (
-                                        <span className="text-[10px] text-slate-500 font-mono">
-                                          Reddedildi
-                                        </span>
-                                      )}
-                                    </td>
-                                  </tr>
-                                );
-                              })}
-
-                            {dealerOrders.length === 0 && (
-                              <tr>
-                                <td colSpan={9} className="p-8 text-center text-slate-500 text-xs">
-                                  Henüz bayilerden gelen bir paket satın alma talebi bulunmuyor.
-                                </td>
-                              </tr>
-                            )}
                           </tbody>
                         </table>
                       </div>
@@ -5217,7 +4968,7 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
                           Üye &amp; Ödeme Onayları
                         </h3>
                         <p className="text-xs text-slate-400 leading-relaxed">
-                          Kullanıcı profilleri, havale dekont ve kripto ödeme onayları, kredi bakiye yüklemeleri.
+                          Kullanıcı profilleri, ödeme durumu ve yönetici kredi düzeltmeleri.
                         </p>
                       </div>
                       <div className="space-y-2 pt-2 border-t border-slate-800">
@@ -7652,14 +7403,14 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
                   type="text"
                   value={creditModalReason}
                   onChange={(e) => setCreditModalReason(e.target.value)}
-                  placeholder="Örn: Havale ile 100 Seans Kredi Satın Alımı, Demo Desteği vb."
+                  placeholder="Örn: Yönetici kredi düzeltmesi, demo desteği vb."
                   className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-slate-100 text-xs focus:border-emerald-500 outline-none"
                 />
 
                 {/* Quick Reason Presets */}
                 <div className="flex flex-wrap gap-1.5">
                   {[
-                    'Havale / EFT ile Paket Satın Alma',
+                    'Yönetici Kredi Düzeltmesi',
                     'Aylık Bayi Kota / Hediye Tanımlaması',
                     'Teknik Destek & Seans İadesi',
                     'Yönetici Özel İzni & Demo Hibesi',

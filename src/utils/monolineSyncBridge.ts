@@ -23,7 +23,6 @@ import {
 } from './authManager';
 import {
   DealerPackageOrder,
-  getAllDealerPackageOrders,
   getLocalDealerOrders,
   saveLocalDealerOrders,
 } from './dealerOrderManager';
@@ -203,10 +202,9 @@ export async function syncFrekansWithMonolineEngine(options?: {
 
   const runSync = async (): Promise<SystemStateResponse | null> => {
     try {
-      const [allUsers, allResellers, dealerOrders, memberOrders] = await Promise.all([
+      const [allUsers, allResellers, memberOrders] = await Promise.all([
         adminGetAllMembers(),
         getAllResellers(),
-        getAllDealerPackageOrders(),
         fetchAllFrekansMemberOrders(),
       ]);
 
@@ -372,7 +370,7 @@ export async function syncFrekansWithMonolineEngine(options?: {
         });
       });
 
-      if (activeMember) {
+      if (activeMember && allUsers.some((user) => user.uid === activeMember.uid)) {
         upsertPerson({
           uid: activeMember.uid,
           fullName: activeMember.fullName,
@@ -395,7 +393,7 @@ export async function syncFrekansWithMonolineEngine(options?: {
         });
       }
 
-      if (activeReseller) {
+      if (activeReseller && allResellers.some((reseller) => reseller.uid === activeReseller.uid)) {
         upsertPerson({
           uid: activeReseller.uid,
           fullName: activeReseller.resellerName,
@@ -416,7 +414,7 @@ export async function syncFrekansWithMonolineEngine(options?: {
         });
       }
 
-      // 2. Collect all real orders from Frekans (dealer_package_orders + orders)
+      // 2. Collect paid member orders and confirmed card/wallet dealer orders
       const unifiedOrdersMap = new Map<
         string,
         {
@@ -431,45 +429,6 @@ export async function syncFrekansWithMonolineEngine(options?: {
       >();
 
       const usersWithExplicitOrder = new Set<string>();
-
-      dealerOrders.forEach((dOrder: DealerPackageOrder) => {
-        if (!dOrder || !dOrder.id || dOrder.status !== 'approved') return;
-        if (LEGACY_DEMO_USER_IDS.has(dOrder.resellerId)) return;
-        const amt = Number(dOrder.price);
-        if (isNaN(amt) || amt <= 0) return;
-
-        const cleanEmail = (dOrder.resellerEmail || '').trim().toLowerCase();
-        const cleanName = (dOrder.resellerName || '').trim().toLowerCase();
-        let canonicalUserId =
-          cleanEmail && emailToUidMap.has(cleanEmail)
-            ? emailToUidMap.get(cleanEmail)!
-            : dOrder.resellerId;
-
-        if (!unifiedMembersMap.has(canonicalUserId) && cleanName) {
-          for (const [mUid, mVal] of unifiedMembersMap.entries()) {
-            if (mVal.fullName.trim().toLowerCase() === cleanName) {
-              canonicalUserId = mUid;
-              break;
-            }
-          }
-        }
-
-        if (!canonicalUserId) return;
-        usersWithExplicitOrder.add(canonicalUserId);
-        if (cleanEmail) usersWithExplicitOrder.add(cleanEmail);
-
-        const mappedPkg = mapFrekansPkgToMonolinePkgId(dOrder.packageId, amt);
-
-        unifiedOrdersMap.set(dOrder.id, {
-          order_id: dOrder.id,
-          user_id: canonicalUserId,
-          user_name: dOrder.resellerName || 'Bayi',
-          user_email: cleanEmail,
-          order_amount: amt,
-          package_id: mappedPkg,
-          timestamp: dOrder.approvedAt || dOrder.createdAt || new Date().toISOString(),
-        });
-      });
 
       memberOrders.forEach((mOrder: MemberOrder) => {
         if (!mOrder || !mOrder.id) return;
@@ -496,6 +455,29 @@ export async function syncFrekansWithMonolineEngine(options?: {
           order_amount: amt,
           package_id: mapFrekansPkgToMonolinePkgId(mOrder.packageId, amt),
           timestamp: mOrder.date || new Date().toISOString(),
+        });
+      });
+
+      getLocalDealerOrders().forEach((order) => {
+        if (!order.id || order.status !== 'approved') return;
+        if (LEGACY_DEMO_USER_IDS.has(order.resellerId)) return;
+        const amount = Number(order.price);
+        if (!Number.isFinite(amount) || amount <= 0) return;
+        const email = (order.resellerEmail || '').trim().toLowerCase();
+        const userId = email && emailToUidMap.has(email)
+          ? emailToUidMap.get(email)!
+          : order.resellerId;
+        if (!userId) return;
+        usersWithExplicitOrder.add(userId);
+        if (email) usersWithExplicitOrder.add(email);
+        unifiedOrdersMap.set(order.id, {
+          order_id: order.id,
+          user_id: userId,
+          user_name: order.resellerName || 'Bayi',
+          user_email: email,
+          order_amount: amount,
+          package_id: mapFrekansPkgToMonolinePkgId(order.packageId, amount),
+          timestamp: order.approvedAt || order.createdAt || new Date().toISOString(),
         });
       });
 
@@ -963,11 +945,7 @@ export async function recordMonolinePackageOrderToFrekans(
 
     // Record DealerPackageOrder for both payload.user_id and primaryResellerUid
     const paymentMethodMapped: DealerPackageOrder['paymentMethod'] =
-      payload.payment_method === 'CARD_3D'
-        ? 'credit_card_3d'
-        : payload.payment_method === 'USDT_TRC20'
-        ? 'usdt_trc20'
-        : 'bank_transfer';
+      payload.payment_method === 'WALLET_BALANCE' ? 'wallet_balance' : 'credit_card_3d';
 
     const newOrder: DealerPackageOrder = {
       id: tx.order_id,

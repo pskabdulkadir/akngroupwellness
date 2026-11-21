@@ -163,6 +163,10 @@ export async function initPostgresDatabase(options: { applySchema?: boolean } = 
         created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
       );
       CREATE INDEX IF NOT EXISTS idx_credit_ledger_user_created ON credit_ledger(user_id, created_at DESC);
+      CREATE TABLE IF NOT EXISTS deleted_user_ids (
+        user_id VARCHAR(64) PRIMARY KEY,
+        deleted_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
     `);
     isPostgresAvailable = true;
     return true;

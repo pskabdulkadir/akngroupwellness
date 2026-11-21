@@ -232,21 +232,7 @@ interface AdminAuditLogRecord {
 let transactions: CommissionTransaction[] = [];
 let commissionLogs: CommissionLogRecord[] = [];
 let ordersLog: OrderLogRecord[] = [];
-interface DealerPackageOrderRecord {
-  order_id: string;
-  reseller_id: string;
-  package_id: string;
-  package_name: string;
-  scan_credits: number;
-  amount: number;
-  payment_method: 'BANK_TRANSFER';
-  payment_reference: string;
-  status: 'PENDING' | 'APPROVED' | 'REJECTED';
-  created_at: string;
-  approved_at: string | null;
-  admin_note: string | null;
-}
-let dealerPackageOrders: DealerPackageOrderRecord[] = [];
+
 let systemWallet: SystemWalletRecord = {
   id: 1,
   system_pool_balance: 0,
@@ -367,7 +353,6 @@ function buildPersistentState() {
     transactions,
     commissionLogs,
     ordersLog,
-    dealerPackageOrders,
     systemWallet,
     unclaimedCommissions,
     queueJobs,
@@ -754,7 +739,6 @@ function applyPersistentState(state: Record<string, any>) {
     transactions: (value) => (transactions = value),
     commissionLogs: (value) => (commissionLogs = value),
     ordersLog: (value) => (ordersLog = value),
-    dealerPackageOrders: (value) => (dealerPackageOrders = value),
     unclaimedCommissions: (value) => (unclaimedCommissions = value),
     queueJobs: (value) => (queueJobs = value),
     withdrawalRequests: (value) => (withdrawalRequests = value),
@@ -2927,10 +2911,20 @@ function upsertDealerInvoiceDraft(params: {
 
 function resetToCleanSlate(includeAdmin = true) {
   const preservedAdmin = members.find((member) => member.user_id === 'USR-ADMIN');
-  const preservedAdminCredentials = memberCredentials.get('USR-ADMIN');
+  const preservedAccounts = members.filter((member) =>
+    member.user_id !== 'USR-ADMIN' && ['admin', 'accounting'].includes(String((member as any).role || '').toLowerCase())
+  );
+  const preservedCredentials = new Map<string, { salt: string; hash: string }>(
+    members
+      .filter((member) => member.user_id === 'USR-ADMIN' || preservedAccounts.includes(member))
+      .flatMap((member) => {
+        const credentials = memberCredentials.get(member.user_id);
+        return credentials ? [[member.user_id, credentials] as const] : [];
+      })
+  );
   creditsOwnedByServer.clear();
   memberCredentials.clear();
-  if (preservedAdminCredentials) memberCredentials.set('USR-ADMIN', preservedAdminCredentials);
+  preservedCredentials.forEach((credentials, userId) => memberCredentials.set(userId, credentials));
   careerTiers = structuredClone(INITIAL_CAREER_TIERS);
   distributionParams = {
     system_fund_percent: SYSTEM_FUND_PERCENT,
@@ -3002,6 +2996,7 @@ function resetToCleanSlate(includeAdmin = true) {
           user_id: 'USR-ADMIN',
           full_name: 'Sistem Yöneticisi',
           email: 'psikologabdulkadirkan@gmail.com',
+          role: 'admin',
           city: 'İstanbul',
           sponsor_id: null,
           sponsor_db_id: null,
@@ -3053,6 +3048,7 @@ function resetToCleanSlate(includeAdmin = true) {
   if (includeAdmin && preservedAdmin) {
     members = [{
       ...preservedAdmin,
+      ...({ role: 'admin' } as any),
       id: 1,
       global_line_id: 1,
       sponsor_id: null,
@@ -3068,6 +3064,12 @@ function resetToCleanSlate(includeAdmin = true) {
       ) as MonolineMember['wallets'],
     }];
   }
+  if (includeAdmin) {
+    for (const account of preservedAccounts) {
+      const id = members.length + 1;
+      members.push({ ...account, id, global_line_id: id, sponsor_id: 'USR-ADMIN', sponsor_db_id: 1 });
+    }
+  }
 }
 
 async function persistFactoryReset() {
@@ -3076,6 +3078,13 @@ async function persistFactoryReset() {
 
   const snapshot = buildPersistentState();
   const resetWrite = statePersistPromise.then(() => withTransaction(async (client) => {
+    await client.query(`
+      INSERT INTO deleted_user_ids (user_id)
+      SELECT user_id FROM users
+      WHERE user_id <> 'USR-ADMIN'
+        AND LOWER(COALESCE(member_data->>'role', '')) NOT IN ('admin', 'accounting')
+      ON CONFLICT (user_id) DO NOTHING
+    `);
     await client.query('DELETE FROM payout_batch_items');
     await client.query('DELETE FROM accounting_bank_transactions');
     await client.query('DELETE FROM accounting_events');
@@ -3087,9 +3096,23 @@ async function persistFactoryReset() {
     await client.query('DELETE FROM payout_batches');
     await client.query('DELETE FROM admin_wallet_adjustments');
     await client.query('DELETE FROM notification_outbox');
-    await client.query("DELETE FROM reseller_credits WHERE user_id <> 'USR-ADMIN'");
+    await client.query('DELETE FROM user_contract_approvals');
+    await client.query("DELETE FROM reseller_credits WHERE user_id <> 'USR-ADMIN' AND user_id NOT IN (SELECT user_id FROM users WHERE LOWER(COALESCE(member_data->>'role', '')) IN ('admin', 'accounting'))");
     await client.query('DELETE FROM idempotency_keys');
-    await client.query("DELETE FROM users WHERE user_id <> 'USR-ADMIN'");
+    await client.query("DELETE FROM users WHERE user_id <> 'USR-ADMIN' AND LOWER(COALESCE(member_data->>'role', '')) NOT IN ('admin', 'accounting')");
+    await client.query("UPDATE users SET monoline_position = NULL WHERE user_id <> 'USR-ADMIN'");
+    await client.query(`
+      WITH protected_accounts AS (
+        SELECT user_id, ROW_NUMBER() OVER (ORDER BY user_id) + 1 AS position
+        FROM users
+        WHERE user_id <> 'USR-ADMIN'
+          AND LOWER(COALESCE(member_data->>'role', '')) IN ('admin', 'accounting')
+      )
+      UPDATE users AS account
+      SET monoline_position = protected_accounts.position, sponsor_id = 'USR-ADMIN'
+      FROM protected_accounts
+      WHERE account.user_id = protected_accounts.user_id
+    `);
 
     const adminUpdate = await client.query(
       `UPDATE users SET sponsor_id = NULL, monoline_position = 1, career_level = 1,
@@ -5133,6 +5156,7 @@ async function hydrateStateFromPostgres(): Promise<void> {
             memberCredentials.set(row.user_id, { salt: row.password_salt, hash: row.password_hash });
           }
           return {
+            ...(row.member_data && typeof row.member_data === 'object' ? row.member_data : {}),
             id: lineId,
             user_id: row.user_id,
             global_line_id: lineId,
@@ -7680,44 +7704,6 @@ async function startServer(options: { listen?: boolean } = {}) {
     }
   });
 
-  app.get('/api/v1/admin/dealer-package-orders', requireAdminJwt, (_req, res) => {
-    const orders = dealerPackageOrders.map((order) => {
-      const member = members.find((item) => item.user_id === order.reseller_id);
-      return {
-        ...order,
-        reseller_name: member?.full_name || order.reseller_id,
-        reseller_email: member?.email || '',
-        reseller_phone: member?.phone || '',
-      };
-    });
-    return res.json({ status: 'success', orders });
-  });
-
-  app.post('/api/v1/admin/dealer-package-orders/:orderId/reject', requireAdminJwt, async (req, res) => {
-    try {
-      const orderId = String(req.params.orderId || '').trim();
-      const adminNote = typeof req.body?.admin_note === 'string' ? req.body.admin_note.trim().slice(0, 500) : null;
-      const outcome = await runInAtomicTransaction(async () => {
-        const order = dealerPackageOrders.find((item) => item.order_id === orderId);
-        if (!order) return { httpStatus: 404, message: 'Sipariş sunucuda bulunamadı.' };
-        if (order.status !== 'PENDING') return { httpStatus: 409, message: 'Yalnızca bekleyen siparişler reddedilebilir.' };
-        const rollbackState = captureRollbackState();
-        try {
-          order.status = 'REJECTED';
-          order.admin_note = adminNote;
-          await persistApplicationState();
-          return { httpStatus: 200, message: 'Sipariş reddedildi.' };
-        } catch (error) {
-          applyPersistentState(rollbackState);
-          throw error;
-        }
-      });
-      return res.status(outcome.httpStatus).json({ status: outcome.httpStatus < 300 ? 'success' : 'error', message: outcome.message });
-    } catch (err: any) {
-      return res.status(500).json({ status: 'error', message: err?.message || 'Sipariş reddedilemedi.' });
-    }
-  });
-
   // Yerel PostgreSQL-18 Sağlık ve Durum Kontrolü
   app.get('/api/v1/db/status', async (_req, res) => {
     const isAvailable = getIsPostgresAvailable();
@@ -7814,12 +7800,19 @@ async function startServer(options: { listen?: boolean } = {}) {
         resetBeforeSync = false,
       } = req.body || {};
 
-      await runInAtomicTransaction(() => {
+      await runInAtomicTransaction(async () => {
+        const candidateMembers = Array.isArray(frekansMembers) ? [...frekansMembers] : [];
+        const candidateIds = candidateMembers.map((member) => String(member?.uid || '').trim()).filter(Boolean);
+        const deletedUsers = await pgQuery(
+          'SELECT user_id FROM deleted_user_ids WHERE user_id = ANY($1::text[])',
+          [candidateIds]
+        );
+        const deletedUserIds = new Set((deletedUsers?.rows || []).map((row: any) => row.user_id));
+        const incomingMembers = candidateMembers.filter((member) => !deletedUserIds.has(String(member?.uid || '').trim()));
+
         if (resetBeforeSync) {
           resetToCleanSlate(true);
         }
-
-        const incomingMembers = Array.isArray(frekansMembers) ? [...frekansMembers] : [];
         incomingMembers.sort(
           (a, b) =>
             new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime()
@@ -7969,6 +7962,7 @@ async function startServer(options: { listen?: boolean } = {}) {
 
         for (const ord of incomingOrders) {
           if (!ord || !ord.order_id || !ord.user_id) continue;
+          if (!members.some((member) => member.user_id === String(ord.user_id).trim())) continue;
           const ordId = String(ord.order_id).trim();
           const amt = Number(ord.order_amount);
           if (isNaN(amt) || amt <= 0) continue;
@@ -8333,6 +8327,7 @@ async function startServer(options: { listen?: boolean } = {}) {
       {
         try {
           await withTransaction(async (client) => {
+            await client.query('DELETE FROM deleted_user_ids WHERE user_id = $1', [newUserId]);
             await client.query(
               `INSERT INTO users (user_id, email, full_name, phone, city, referral_code, sponsor_id, monoline_position, career_level, scan_credits, is_active, is_locked, activity_expires_at, password_salt, password_hash, created_at, updated_at)
                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
@@ -8969,6 +8964,11 @@ async function startServer(options: { listen?: boolean } = {}) {
       res.status(404).json({ status: 'error', message: 'Silinecek bayi/üye bulunamadı.' });
       return;
     }
+    const selectedMember = members[idx];
+    if (selectedMember.user_id === 'USR-ADMIN' || ['admin', 'accounting'].includes(String((selectedMember as any).role || '').toLowerCase())) {
+      res.status(403).json({ status: 'error', message: 'Yönetici ve muhasebe hesapları silinemez.' });
+      return;
+    }
 
     const rollbackState = captureRollbackState();
     const removed = members[idx];
@@ -8980,8 +8980,18 @@ async function startServer(options: { listen?: boolean } = {}) {
     try {
       await runInAtomicTransaction(async () => {
         await withTransaction(async (client) => {
+          await client.query(
+            'INSERT INTO deleted_user_ids (user_id) VALUES ($1) ON CONFLICT (user_id) DO UPDATE SET deleted_at = CURRENT_TIMESTAMP',
+            [removed.user_id]
+          );
+          await client.query('DELETE FROM commission_logs WHERE target_user_id = $1', [removed.user_id]);
+          await client.query('DELETE FROM notification_outbox WHERE user_id = $1', [removed.user_id]);
+          await client.query('DELETE FROM user_contract_approvals WHERE user_id = $1', [removed.user_id]);
+          await client.query('DELETE FROM idempotency_keys WHERE user_id = $1', [removed.user_id]);
+          commissionLogs = commissionLogs.filter((log) => log.target_external_id !== removed.user_id);
           await client.query('UPDATE users SET sponsor_id = $1 WHERE sponsor_id = $2', [targetUplineId, removed.user_id]);
-          await client.query('DELETE FROM users WHERE user_id = $1', [removed.user_id]);
+          const deletedUser = await client.query('DELETE FROM users WHERE user_id = $1 RETURNING user_id', [removed.user_id]);
+          if (deletedUser.rowCount !== 1) throw new Error('Üye Supabase veritabanında bulunamadı; silme işlemi geri alındı.');
 
           members.splice(idx, 1);
           for (const member of members) {
@@ -9000,6 +9010,7 @@ async function startServer(options: { listen?: boolean } = {}) {
         });
       });
 
+      userContractApprovals.splice(0, userContractApprovals.length, ...userContractApprovals.filter((approval) => approval.user_id !== removed.user_id));
       res.locals.applicationStatePersisted = true;
       res.json({
         status: 'success',
@@ -12005,12 +12016,14 @@ async function startServer(options: { listen?: boolean } = {}) {
 
   app.post('/api/v1/reset', requireAdminJwt, async (_req, res) => {
     try {
-      await statePersistPromise;
-      resetToCleanSlate(true);
-      await persistFactoryReset();
+      await runInAtomicTransaction(async () => {
+        await statePersistPromise;
+        resetToCleanSlate(true);
+        await persistFactoryReset();
+      });
       res.json({
         status: 'success',
-        message: 'Fabrika sıfırlaması tamamlandı. USR-ADMIN ve sistem ayarları korundu; diğer üyeler ve işlem kayıtları kalıcı olarak temizlendi.',
+        message: 'Fabrika sıfırlaması tamamlandı. Yönetici, muhasebe hesapları ve SYSTEM_POOL korundu; diğer üyeler ve işlem kayıtları kalıcı olarak temizlendi.',
         state: buildStateResponse(),
       });
     } catch (error: any) {

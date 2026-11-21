@@ -3091,7 +3091,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <Clock className="w-4 h-4 text-amber-400" />
-                        <h4 className="text-sm font-bold text-slate-100">Son Kredi & Paket Satın Alma Talepleriniz</h4>
+                        <h4 className="text-sm font-bold text-slate-100">Son Kredi & Paket Satın Alma İşlemleriniz</h4>
                       </div>
                       <span className="text-[11px] text-slate-400">
                         {dealerOrders.filter(o => o.resellerId === activeReseller.uid || Boolean(o.resellerEmail && activeReseller.email && o.resellerEmail.toLowerCase() === activeReseller.email.toLowerCase())).length} Sipariş
@@ -3116,17 +3116,11 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                             </div>
 
                             <div className="flex items-center gap-2">
-                              {ord.status === 'pending' && (
-                                <span className="px-3 py-1 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[11px] font-bold flex items-center gap-1.5 animate-pulse">
-                                  <Clock className="w-3.5 h-3.5" />
-                                  <span>Ödeme & Yönetici Onayı Bekleniyor</span>
-                                </span>
-                              )}
                               {ord.status === 'approved' && (
                                 <div className="flex items-center gap-2 flex-wrap">
                                   <span className="px-3 py-1 rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[11px] font-bold flex items-center gap-1.5">
                                     <CheckCircle2 className="w-3.5 h-3.5" />
-                                    <span>Yönetici Onayladı & Krediler Yüklendi</span>
+                                    <span>Ödeme Onaylandı & Krediler Yüklendi</span>
                                   </span>
 
                                   {invoices.some(i => i.orderId === ord.id) ? (
@@ -3148,12 +3142,6 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                                     <span className="text-[11px] font-semibold text-amber-300">Fatura taslağı mali müşavir incelemesinde</span>
                                   )}
                                 </div>
-                              )}
-                              {ord.status === 'rejected' && (
-                                <span className="px-3 py-1 rounded-xl bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[11px] font-bold flex items-center gap-1.5">
-                                  <AlertCircle className="w-3.5 h-3.5" />
-                                  <span>Talebiniz Reddedildi</span>
-                                </span>
                               )}
                             </div>
                           </div>

@@ -1698,7 +1698,7 @@ export interface OrderCommissionPayload {
   timestamp?: string;
   enforce_career_depth_lock?: boolean;
   order_type?: 'ACTIVITY_RENEWAL' | 'STANDARD_ORDER' | 'ACTIVATION' | 'DEALER_REGISTRATION';
-  payment_method?: 'CARD_3D' | 'CREDIT_CARD_3D' | 'BANK_EFT' | 'USDT_TRC20' | 'WALLET_BALANCE';
+  payment_method?: 'CARD_3D' | 'CREDIT_CARD_3D' | 'WALLET_BALANCE';
   merchant_oid?: string;
   transaction_id?: string;
   client_ip?: string;

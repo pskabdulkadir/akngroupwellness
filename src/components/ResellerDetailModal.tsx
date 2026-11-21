@@ -10,7 +10,6 @@ import {
   Coins,
   DollarSign,
   Users,
-  FileText,
   Share2,
   ExternalLink,
   Copy,
@@ -57,10 +56,6 @@ import {
   generateWhatsAppShareUrl,
   generateTelegramShareUrl
 } from '../utils/resellerManager';
-import { 
-  DealerPackageOrder, 
-  getAllDealerPackageOrders 
-} from '../utils/dealerOrderManager';
 import { UserMember, getLocalMembersDirectory, saveToLocalMembersDirectory } from '../utils/authManager';
 import { doc, setDoc, db } from '../lib/db';
 import { formatUsd } from '../utils/currency';
@@ -79,7 +74,7 @@ export const ResellerDetailModal: React.FC<ResellerDetailModalProps> = ({
   if (!reseller) return null;
 
   // Active sub-tab state inside details modal
-  const [activeTab, setActiveTab] = useState<'profile' | 'financial' | 'referred' | 'commissions' | 'orders' | 'marketing'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'financial' | 'referred' | 'commissions' | 'marketing'>('profile');
   
   // Local editable copy of current reseller
   const [currentReseller, setCurrentReseller] = useState<Reseller>(reseller);
@@ -87,7 +82,6 @@ export const ResellerDetailModal: React.FC<ResellerDetailModalProps> = ({
   // Data lists
   const [referredUsers, setReferredUsers] = useState<UserMember[]>([]);
   const [commissions, setCommissions] = useState<CommissionTransaction[]>([]);
-  const [dealerOrders, setDealerOrders] = useState<DealerPackageOrder[]>([]);
   const [associatedMember, setAssociatedMember] = useState<UserMember | null>(null);
   const [creditLogs, setCreditLogs] = useState<CreditTransaction[]>([]);
   const [isLiveSynced, setIsLiveSynced] = useState<boolean>(false);
@@ -120,14 +114,6 @@ export const ResellerDetailModal: React.FC<ResellerDetailModalProps> = ({
       const comms = await getCommissionsForReseller(reseller.uid);
       setCommissions(comms);
 
-      // 3. Fetch orders
-      const allOrders = await getAllDealerPackageOrders();
-      const myOrders = allOrders.filter(
-        o => o.resellerId === reseller.uid || Boolean(o.resellerEmail && reseller.email && o.resellerEmail.toLowerCase() === reseller.email.toLowerCase())
-      );
-      setDealerOrders(myOrders);
-
-      // 4. Find associated user account in local members directory
       const allMembers = getLocalMembersDirectory();
       const matched = allMembers.find(
         m => m.uid === reseller.uid || Boolean(m.email && reseller.email && m.email.toLowerCase() === reseller.email.toLowerCase())
@@ -492,18 +478,6 @@ export const ResellerDetailModal: React.FC<ResellerDetailModalProps> = ({
           >
             <Percent className="w-4 h-4" />
             <span>Komisyonlar ({commissions.length})</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('orders')}
-            className={`px-4 py-2.5 rounded-xl flex items-center gap-2 transition-all cursor-pointer shrink-0 ${
-              activeTab === 'orders'
-                ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md shadow-emerald-950/70'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
-            }`}
-          >
-            <FileText className="w-4 h-4" />
-            <span>Paket Siparişleri ({dealerOrders.length})</span>
           </button>
 
           <button
@@ -1213,83 +1187,6 @@ export const ResellerDetailModal: React.FC<ResellerDetailModalProps> = ({
             ) : (
               <div className="p-8 text-center rounded-2xl bg-slate-950 border border-slate-800 text-slate-500 text-xs">
                 Bu bayiye ait henüz bir komisyon işlemi bulunmamaktadır.
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* TAB 5: BAYİ PAKET SİPARİŞLERİ */}
-        {activeTab === 'orders' && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between gap-3 p-3 rounded-2xl bg-slate-950/80 border border-slate-800">
-              <div className="text-xs text-slate-300">
-                Bayinin merkezden satın aldığı lisans & kredi paketi siparişleri:
-              </div>
-              <span className="px-3 py-1 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/40 text-xs font-bold font-mono">
-                {dealerOrders.length} Paket Siparişi
-              </span>
-            </div>
-
-            {dealerOrders.length > 0 ? (
-              <div className="rounded-2xl border border-slate-800 bg-slate-950/80 overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs border-collapse">
-                    <thead>
-                      <tr className="border-b border-slate-800 bg-slate-900/90 text-slate-400 font-bold uppercase tracking-wider text-[10px]">
-                        <th className="py-3 px-4">Sipariş No</th>
-                        <th className="py-3 px-4">Paket Adı</th>
-                        <th className="py-3 px-4">Kredi Miktarı</th>
-                        <th className="py-3 px-4 text-right">Tutar</th>
-                        <th className="py-3 px-4">Dekont / Açıklama</th>
-                        <th className="py-3 px-4 text-center">Durum</th>
-                        <th className="py-3 px-4 text-right">Tarih</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-850">
-                      {dealerOrders.map((order) => (
-                        <tr key={order.id} className="hover:bg-slate-900/60 transition-colors">
-                          <td className="py-3 px-4 font-mono font-bold text-slate-200">{order.id}</td>
-                          <td className="py-3 px-4 font-bold text-teal-300">{order.packageName}</td>
-                          <td className="py-3 px-4">
-                            <span className="px-2 py-0.5 rounded-md bg-teal-950 border border-teal-500/40 text-teal-300 font-mono font-bold text-xs">
-                              +{order.scanCredits} Seans
-                            </span>
-                          </td>
-                          <td className="py-3 px-4 text-right font-mono font-bold text-emerald-400">
-                            {order.priceText || formatUsd(order.price)}
-                          </td>
-                          <td className="py-3 px-4 text-slate-300 text-[11px] max-w-xs truncate">
-                            {order.paymentReference || <span className="text-slate-500 italic">Belirtilmedi</span>}
-                          </td>
-                          <td className="py-3 px-4 text-center">
-                            {order.status === 'approved' && (
-                              <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-bold">
-                                ✓ Onaylandı & Yüklendi
-                              </span>
-                            )}
-                            {order.status === 'pending' && (
-                              <span className="px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-bold animate-pulse">
-                                ⏳ Havale Onayı Bekliyor
-                              </span>
-                            )}
-                            {order.status === 'rejected' && (
-                              <span className="px-2.5 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[10px] font-bold">
-                                ✕ Reddedildi
-                              </span>
-                            )}
-                          </td>
-                          <td className="py-3 px-4 text-right text-slate-400 text-[11px] font-mono">
-                            {new Date(order.createdAt).toLocaleDateString('tr-TR')}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            ) : (
-              <div className="p-8 text-center rounded-2xl bg-slate-950 border border-slate-800 text-slate-500 text-xs">
-                Bu bayiye ait kayıtlı bir paket satın alma siparişi bulunmamaktadır.
               </div>
             )}
           </div>

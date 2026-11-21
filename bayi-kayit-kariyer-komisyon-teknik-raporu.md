@@ -22,8 +22,8 @@ Bayi başvurusu / üyelik
   ├─ Ödeme bekleyen başvuru: PENDING, pasif/kilitli, kredi yok
   ├─ Yönetici onaylı/yerel reseller kaydı: ayrı yol; ödeme kanıtı her zaman aranmayabilir
   └─ Paket/üyelik siparişi
-       ├─ Sanal POS veya bayi paket siparişi onayı
-       ├─ Sunucu sipariş tutarı, paket, sözleşme ve ödeme kanıtını doğrular
+       ├─ 3D Secure kart tahsilatı (uygun bayi kaydında sponsor cüzdanı seçeneği)
+       ├─ Sunucu sepet toplamını, ülke fiyatını, sözleşmeleri ve ödeme kanıtını doğrular
        └─ processOrderCommission
             ├─ paket kredisi + paket bonusu
             ├─ kişisel/grup hacimleri güncellenir
@@ -42,20 +42,19 @@ Bayi başvurusu / üyelik
 - `authManager.registerMember`, ödeme bekleyen başvuruda kullanıcıyı `PENDING`, bayi statüsünü `pending`, erişimi kapalı ve krediyi sıfır olarak oluşturur (`src/utils/authManager.ts:1018-1083`). Bu yolun daha güvenli davranışı ödeme onayını beklemektir.
 - Sunucudaki kayıt handler’ı `/api/v1/members`, `/api/v1/register` ve `/api/v1/members/register` yollarını yönetir (`server.ts:7931-7934`). `pending_payment` gelmezse varsayılan değer ödeme beklemeyen kayıt yönündedir (`server.ts:7668-7682`).
 - `skip_initial_order` dalı, ödeme kanıtı olmadan üye aktif hale getirilip paket kredisi ve bonusu verilmesine imkân verebilir; bu alan için yönetici yetkisi denetimi ayrıca doğrulanmalıdır (`server.ts:7800-7817`).
+- Doğrudan yönetici bayi oluşturma isteği seçilen `country_code` değerini Monoline üyelik API’sine taşır; bölgesel fiyatın Firestore ve Monoline kayıtlarında aynı ülkeye dayanması gerekir (`src/utils/authManager.ts`, `server.ts` üyelik handler’ı).
 - Kayıt yolu içinde bellek state’i, kredi/komisyon yan etkileri ve PostgreSQL yazımı ayrı adımlarda gerçekleşiyor; PostgreSQL hatası oluştuğunda bellek değişikliklerinin tamamı için açık rollback görünmüyor (`server.ts:7781-7817,7820-7894`).
 - Kayıt isteği `request_id` taşıyabiliyor; kayıt transaction’ı içinde `MEMBER_REGISTRATION` idempotency satırı yazılıyor ve aynı `request_id` için önceden kayıt varsa `409 REQUEST_ALREADY_RECORDED` dönülüyor. Ön kontrol ile INSERT arasındaki yarışta PRIMARY KEY çakışması transaction’ı düşürür; bu durumda replay yanıtı üretilmez ve bu yol test edilmedi (`server.ts` kayıt handler’ı, `src/utils/authManager.ts`).
 - Başka bir bayi onay akışı, başvuruyu `approved` yapıp reseller profili açabiliyor; bu yolun POS ödeme kanıtıyla aynı şey olmadığı unutulmamalıdır (`src/utils/authManager.ts:1311-1408`).
 
 ### 2.2 Ödeme doğrulaması ve paket siparişi
 
-- Kartla ödeme bileşeni sunucudan bölgesel fiyatları alır; ilk bayi kaydında tek paket/tek adet gibi sepet kısıtları uygular (`src/components/PaymentModal.tsx:285-330`). Sunucu da sepet toplamını kendi fiyat kataloğuyla karşılaştırır (`server.ts:11215-11245`).
-- Sipariş webhook’u sipariş kimliği ve ödeme bilgilerini kontrol eder; sözleşme onayları, ödeme yöntemi, `merchant_oid`, işlem ID’si, kullanıcı ve tutar eşleşmesi arar (`server.ts:6996-7086`).
-- POS arayüzünde test kartları ve sandbox akışı vardır. Test kartları gerçek tahsilat kanıtı değildir (`src/components/PaymentModal.tsx:102-108`; `server/paymentProviders.ts:78-105`). Gerçek banka sağlayıcısının ayrıca bağlandığı bu incelemede doğrulanmadı.
-- Havale/diğer manuel bayi paket talepleri `pending` durumda bekleyebilir; yönetici onayı kredi tanımlar (`src/utils/dealerOrderManager.ts:132-177,279-292,480-510`). Uygulama içi yönetici onayı, harici banka hesabına paranın gerçekten geçtiğinin tek başına kanıtı değildir.
-- Bayi paket siparişi `approved` durumuna geçirildikten sonra Monoline’a sipariş webhook’u ve senkronizasyon tetiklenir (`src/utils/dealerOrderManager.ts:438-458`). Senkronizasyon köprüsü sadece onaylı bayi siparişlerini alır (`src/utils/monolineSyncBridge.ts:412-457`).
-- Üye sipariş senkronizasyonu yalnızca `paymentStatus === 'PAID'` kayıtlarını alır; `PENDING`, `REJECTED`, `DEMO` kayıtları dışarıda kalır (`src/utils/monolineSyncBridge.ts:460-485`). Kullanıcı profilinden sentetik kayıt üretme yolunda da `paymentStatus === 'PAID'` şartı vardır (`src/utils/monolineSyncBridge.ts:488-525`).
-- Tam Frekans senkronizasyon endpoint’i admin JWT gerektirir (`server.ts:7317-7320`). Köprü admin token olmadan da isteği gönderebilir, fakat normal kullanıcı bağlamında bu senkronizasyonun yetkisiz kalması olasıdır (`src/utils/monolineSyncBridge.ts:548-580`). Ödeme webhook’unun doğrudan sunucuya yazdığı sipariş ile Frekans’a geri yansıtma adımı ayrı değerlendirilmelidir.
-- Bayi havale paket siparişi (`POST /api/v1/members/:userId/dealer-package-orders`) `order_id` ile idempotenttir: aynı bayi ve paket için mevcut sipariş `200` ile döner, farklı sahiplik `409` alır. Bu rota ayrı `idempotency_keys` satırı yazmaz ve belirsiz commit için `UNKNOWN_VERIFY_REQUIRED` döndürmez; hata `500` döner. `dealerOrderManager.ts` ağ hatası ve `5xx` yanıtlarda aynı `order_id` ile en fazla üç kez dener (`postDealerOrderWithRetry`). Bu yeniden denemenin canlıda test edilmesi gerekir.
+- Kart ödeme bileşenleri sunucudan hedef ülkeye göre fiyat alır; ilk bayi kaydında tek paket/tek adet kısıtı uygulanır. Diğer sepetlerde her kalem ve miktar sunucu toplamıyla doğrulanır (`src/components/PaymentModal.tsx`, `server.ts` POS başlatma ve settlement uçları).
+- Settlement sipariş kimliği, 3D Secure ödeme kanıtı, sözleşme onayları, `merchant_oid`, işlem ID’si, kullanıcı ve tutar eşleşmesini doğrular. Sepet kalemlerini tekrar fiyatlandırır; komisyonu toplam tahsilat üzerinden bir kez, krediyi katalogdaki sabit kredi adetlerinin toplamından hesaplar (`server.ts` `/api/v1/integrations/order-commission`, `processOrderCommission`).
+- POS arayüzünde test kartları ve sandbox akışı vardır. Test kartları gerçek tahsilat kanıtı değildir (`src/components/PaymentModal.tsx`; `server/paymentProviders.ts`). Gerçek banka sağlayıcısının ayrıca bağlandığı bu incelemede doğrulanmadı.
+- Eski bayi havale siparişi yönetim ekranı kaldırılmıştır. `GET /api/v1/admin/dealer-package-orders` ve `POST /api/v1/admin/dealer-package-orders/:orderId/reject` uçları ile listeleme/red istemcisi yoktur. Kartla veya sponsor cüzdanıyla sonuçlanmış bayi sipariş geçmişi yerel kayıtta tutulur; bekleyen/eski banka transferi kayıtları bu görünümden filtrelenir (`src/utils/dealerOrderManager.ts`). Kazanılmış komisyonların bayiye banka yoluyla ödenmesi ayrı bir çekim/payout sürecidir ve bu temizlik kapsamında kaldırılmamıştır.
+- Üye sipariş senkronizasyonu `paymentStatus === 'PAID'` kayıtlarını, bayi paket geçmişi ise yalnızca onaylanmış kart/cüzdan işlemlerini yerel kayıttan alır; bekleyen/eski banka transferi kayıtları dışarıda kalır (`src/utils/monolineSyncBridge.ts`, `src/utils/dealerOrderManager.ts`). Kullanıcı profilinden sentetik kayıt üretme yolunda da `paymentStatus === 'PAID'` şartı vardır.
+- Tam Frekans senkronizasyon endpoint’i admin JWT gerektirir. Köprü admin token olmadan da isteği gönderebilir, fakat normal kullanıcı bağlamında bu senkronizasyonun yetkisiz kalması olasıdır. Ödeme webhook’unun doğrudan sunucuya yazdığı sipariş ile Frekans’a geri yansıtma adımı ayrı değerlendirilmelidir.
 
 ### 2.3 Paket kredisi ve yönetici bonusu
 
@@ -94,7 +93,7 @@ Kariyer tablosunda 6. seviye “Marziyye”, 7. seviye “Kâmile” iken bir de
 
 ### 4.1 Sipariş bazlı temel motor
 
-`processOrderCommission` yinelenen sipariş kimliğini engeller, pozitif tutarı doğrular ve eksik Monoline üyesini otomatik oluşturabilir (`server.ts:1681-1787`). İşlem paketi/kredi, hacim, kariyer, komisyon ve risk durumlarını aynı motor çevresinde günceller. Sipariş ID’si idempotency kontrolünde kullanılır (`server.ts:1683-1699,1853-1855`).
+`processOrderCommission` yinelenen sipariş kimliğini engeller, pozitif tutarı doğrular ve eksik Monoline üyesini otomatik oluşturabilir. Çoklu sepetlerde en yüksek paket seviyesi korunurken kredi miktarı tüm kalemlerin katalog kredileriyle toplanır; komisyon yüzdeleri bir kez toplam, bölgesel sipariş tutarına uygulanır (`server.ts`, POS settlement ve `processOrderCommission`). Sipariş ID’si idempotency kontrolünde kullanılır.
 
 ### 4.2 Kodda görülen nominal oranlar
 
@@ -174,24 +173,24 @@ Yönetici onayı çekim kaydını `APPROVED` yapabilir; bu tek başına bankadan
 - `npm run lint`: `tsc --noEmit`
 - `npm run build`: `vite build`
 
-Kaynakta görülen test dosyaları toplam 22 test içeriyor:
+Kaynakta görülen test dosyaları toplam 26 test içeriyor (kaynak sayımı; bu güncellemeden sonra çalıştırılmadı):
 
 | Dosya | Kapsam |
 |---|---|
 | `server/paymentProviders.test.ts` | 3DS sandbox, kart reddi ve sağlayıcı testleri (5) |
 | `src/utils/dualEngineCommission.test.ts` | Komisyon oranı, derinlik, pasif/kilitli üye yardımcıları (6) |
 | `src/utils/expenseVoucherEngine.test.ts` | Stopaj yardımcıları, XML ve banka dosyası biçimi (4) |
-| `src/utils/financialModel.test.ts` | Paket ve finansal model yardımcıları (4) |
+| `src/utils/financialModel.test.ts` | Paket, bölge fiyatı, sabit kredi ve finansal model yardımcıları (8) |
 | `src/utils/withdrawalPayout.test.ts` | IBAN doğrulaması (3) |
 
-Bulunan testlerde bayi kaydının ödeme öncesi/sonrası, `skip_initial_order` yetkisi, eşzamanlı sipariş onayı, PostgreSQL rollback, 14 günlük cron, muhasebe olaylarının uçtan uca akışı veya gerçek POS settlement senaryosu görünmüyor. Kullanıcının kendi ortamında `npx tsc --noEmit` hatasız geçti, `npm test` 22/22 testi başarıyla tamamladı ve `npm run build` başarılı oldu. Bu çalışma alanında komutlar ACL politikası nedeniyle çalıştırılamadı; son `dealerOrderManager.ts` yeniden deneme değişikliği bu doğrulamadan sonra yapıldığı için yeniden derleme ve test gerekir. Mevcut testler ödeme, kayıt idempotency veya belirsiz 503 senaryolarını kapsamaz.
+Bulunan testlerde bayi kaydının ödeme öncesi/sonrası, `skip_initial_order` yetkisi, PostgreSQL rollback, 14 günlük cron, muhasebe olaylarının uçtan uca akışı veya gerçek POS settlement senaryosu görünmüyor. Önceki doğrulama raporunda TypeScript, test ve build başarılı olarak bildirilmişti; bu rapor güncellemesindeki son değişiklikler için `npx tsc --noEmit`, `npm test` ve `npm run build` yeniden çalıştırılmadı. Mevcut testler ödeme, kayıt idempotency veya belirsiz 503 senaryolarını tam uçtan uca kapsamaz.
 
 ## 9. Önerilen doğrulama senaryoları
 
 1. Bekleyen bayi başvurusu: hesap pasif, kredi sıfır; ödeme kanıtı olmadan sipariş/komisyon/hacim oluşmamalı.
 2. Ödeme reddi, callback imza hatası, tutar uyuşmazlığı ve replay: hiçbir kredi veya komisyon eklenmemeli.
 3. Başarılı tek ödeme ve aynı callback’in tekrar gönderilmesi: bir sipariş, bir kredi tahsisi, bir muhasebe olayı oluşmalı.
-4. İki yönetici aynı bayi siparişini aynı anda onayladığında paket kredisi yalnızca bir kez eklenmeli.
+4. Aynı doğrulanmış kart ödemesiyle settlement isteği yinelendiğinde sipariş/komisyon/kredi ikinci kez işlenmemeli; farklı ülke ve çoklu sepet tutarları sunucu fiyatlarıyla eşleşmeli.
 5. Her kariyer eşiğinin bir altı, tam eşiği ve tek-kol sınırına yakın dağılımı ayrı test edilmeli; farklı kol kariyer gereksinimleri doğrulanmalı.
 6. 14 günlük vade öncesi/sonrası ve iade akışı: bekleyen/çekilebilir bakiye, clawback ve muhasebe olay durumu mutabık kalmalı.
 7. Firma ve bireysel alıcı için stopaj oranları, müşavir onaylı konfigürasyon üzerinden sınanmalı; yasal oranlar uygulama varsayımıyla karıştırılmamalı.
@@ -213,5 +212,6 @@ Akışta siparişin kariyer/komisyon motoruna giden yolları ve temel nominal or
 - `release-pending` POST isteği yönetici veya yalnızca kendi üyesi için doğrulanmış token ister (`server.ts:4705-4731,8117-8137`). İstemci isteğinde Authorization başlığı gönderilmediğinden 401 oluşabiliyordu; istek artık oturum token’ını Bearer olarak gönderir (`src/components/MonolineMlmPortalModal.tsx`).
 - Unilevel/Monoline havuza devredilen komisyon kayıtları motor türünü ayrı korur (`src/services/commissionService.ts`); admin ekranındaki Monoline etiketi “Monoline teşvik” olarak netleştirilmiştir. Frekans ve tam ekran panellerde mobil viewport/safe-area iyileştirmeleri de uygulanmıştır.
 - Render deploy hatası: `bonusWallets` modülü bulunamadı (`ERR_MODULE_NOT_FOUND`). Yerel depoda import yok; `package.json` başlatma script’i `tsx server.ts`, logdaki komut ise `node server.ts` gösteriyor. Render Root Directory ve Start Command ayarları kontrol edilmeli.
+- Eski manuel havale bayi paket yönetimi kaldırıldı: AdminPanel ve bayi ayrıntı penceresindeki bekleyen sipariş tabloları/ret işlemi, `/api/v1/admin/dealer-package-orders` GET ve `/api/v1/admin/dealer-package-orders/:orderId/reject` POST uçları, server state alanı ve senkronizasyon köprüsündeki havale sipariş replay yolu kaldırıldı. Kart/cüzdan settlement ve onaylı sipariş geçmişi korunur; eski pending/banka transferi local kayıtları gösterilmez.
 - Commit ve push henüz yapılmadı; yerel değişiklik listesi `git status` ile yeniden kontrol edilmeli.
-- Doğrulama sınırı: bu rapor kaynak kod incelemesine dayanır. Canlı Render logları, `DATABASE_URL` hedefi ve PgBouncer modu bu çalışma alanından doğrulanmamıştır; 1.2M+ log girdisinin kesin tetikleyicisi için ilk DB hatası ile inbound istek hacmi incelenmelidir. Banka sağlayıcı kimlik bilgileri/hesap ekstresi mevcut değildir; gerçek şirket net geliri henüz hesaplanamaz. Build, lint ve test kullanıcı ortamında geçti; canlı tarayıcı doğrulaması yapılmadı. Son `dealerOrderManager.ts` değişikliği ayrıca doğrulanmalı.
+- Doğrulama sınırı: bu rapor kaynak kod incelemesine dayanır. Canlı Render logları, `DATABASE_URL` hedefi ve PgBouncer modu bu çalışma alanından doğrulanmamıştır; 1.2M+ log girdisinin kesin tetikleyicisi için ilk DB hatası ile inbound istek hacmi incelenmelidir. Banka sağlayıcı kimlik bilgileri/hesap ekstresi mevcut değildir; gerçek şirket net geliri henüz hesaplanamaz. Son UI/API/rapor değişiklikleri için build, lint ve test kullanıcı ortamında yeniden çalıştırılmalıdır; canlı tarayıcı doğrulaması yapılmadı.

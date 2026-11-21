@@ -361,19 +361,64 @@ export async function runTransaction(
 }
 
 export function wipeAllLocalApplicationData(): void {
-  if (typeof window !== 'undefined') {
-    Object.keys(memoryStore).forEach((k) => delete memoryStore[k]);
-    try {
-      const keysToRemove: string[] = [];
-      for (let i = 0; i < localStorage.length; i++) {
-        const k = localStorage.key(i);
-        if (k && k.startsWith(LOCAL_DOC_STORE_PREFIX)) {
-          keysToRemove.push(k);
-        }
-      }
-      keysToRemove.forEach((k) => localStorage.removeItem(k));
-    } catch {
-      // ignore
+  if (typeof window === 'undefined') return;
+
+  const isProtectedAccount = (value: any) => {
+    const role = String(value?.role || '').toLowerCase();
+    const uid = String(value?.uid || value?.user_id || '');
+    return uid === 'USR-ADMIN' || uid === 'ADMIN-AKN-01' || uid === 'ACCOUNTING-01' ||
+      role === 'admin' || role === 'accounting';
+  };
+
+  Object.keys(memoryStore).forEach((key) => delete memoryStore[key]);
+  try {
+    const documentKeys: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key?.startsWith(LOCAL_DOC_STORE_PREFIX)) documentKeys.push(key);
     }
+    documentKeys.forEach((key) => localStorage.removeItem(key));
+
+    for (const [key, protectedOnly] of [
+      ['aurabio_members_directory_v1', true],
+      ['aurabio_resellers_directory_v1', true],
+      ['aurabio_commissions_directory_v1', false],
+      ['aurabio_credit_logs_directory_v1', false],
+      ['aurabio_member_orders_history_v1', false],
+      ['aurabio_dealer_package_orders_v1', false],
+      ['aurabio_digital_invoices_v1', false],
+    ] as const) {
+      if (protectedOnly) {
+        try {
+          const parsed = JSON.parse(localStorage.getItem(key) || '[]');
+          const accounts = Array.isArray(parsed) ? parsed.filter(isProtectedAccount) : [];
+          if (accounts.length) localStorage.setItem(key, JSON.stringify(accounts));
+          else localStorage.removeItem(key);
+        } catch {
+          localStorage.removeItem(key);
+        }
+      } else {
+        localStorage.removeItem(key);
+      }
+    }
+
+    const activeMember = JSON.parse(localStorage.getItem('aurabio_active_session_v1') || 'null');
+    if (!isProtectedAccount(activeMember)) {
+      localStorage.removeItem('aurabio_active_session_v1');
+      sessionStorage.removeItem('aurabio_member_wallet_token_v1');
+    }
+    const activeReseller = JSON.parse(localStorage.getItem('aurabio_active_reseller_session_v1') || 'null');
+    if (!isProtectedAccount(activeReseller)) localStorage.removeItem('aurabio_active_reseller_session_v1');
+    for (const key of ['aurabio_stored_referral_code_v1', 'aurabio_cached_referral_code_v1']) {
+      localStorage.removeItem(key);
+      sessionStorage.removeItem(key);
+    }
+
+    window.dispatchEvent(new CustomEvent('aurabio_members_updated'));
+    window.dispatchEvent(new CustomEvent('aurabio_resellers_updated'));
+    window.dispatchEvent(new CustomEvent('aurabio_commissions_updated'));
+    window.dispatchEvent(new CustomEvent('aurabio_credit_logs_updated'));
+  } catch {
+    // A successful server reset remains authoritative if browser cache cleanup fails.
   }
 }
