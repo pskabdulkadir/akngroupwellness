@@ -44,7 +44,8 @@ export type GuideTab =
   | 'reports_comparison'
   | 'mobile_tools' 
   | 'theory' 
-  | 'tips' 
+  | 'tips'
+  | 'dealer_backoffice'
   | 'faq';
 
 export const UserGuideModal: React.FC<UserGuideModalProps> = ({ isOpen, onClose }) => {
@@ -377,6 +378,18 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({ isOpen, onClose 
           >
             <Sun className="w-4 h-4" />
             <span>İpuçları</span>
+          </button>
+
+          <button
+            onClick={() => setActiveSection('dealer_backoffice')}
+            className={`min-w-0 px-2 sm:px-3 py-2 sm:py-2.5 rounded-t-2xl text-xs sm:text-sm font-bold flex items-center gap-1.5 border-b-2 transition-all whitespace-normal break-words text-left cursor-pointer ${
+              activeSection === 'dealer_backoffice'
+                ? 'bg-slate-900 text-emerald-400 border-emerald-400 shadow-sm'
+                : 'text-slate-400 hover:text-slate-200 border-transparent'
+            }`}
+          >
+            <BookOpen className="w-4 h-4" />
+            <span>Bayi Back Office</span>
           </button>
 
           <button
@@ -927,6 +940,32 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({ isOpen, onClose 
                   <p className="text-xs text-slate-400">Kamera, mikrofon veya Bluetooth çalışmıyorsa tarayıcı izinlerini ve cihaz desteğini kontrol edin.</p>
                 </div>
               </div>
+            </div>
+          )}
+
+          {activeSection === 'dealer_backoffice' && (
+            <div className="space-y-4">
+              <div className="rounded-2xl border border-emerald-500/30 bg-emerald-950/30 p-4">
+                <h3 className="font-bold text-emerald-200">Bayi panelini kullanma</h3>
+                <p className="mt-1 text-sm leading-relaxed text-slate-300">Bayi Back Office ana menüsünden ihtiyacınız olan bölümü seçin. İşlemler tamamlandığında aynı menüden diğer bölümlere dönebilirsiniz.</p>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {[
+                  ['Cüzdan & Banka', 'Bakiye ve işlemlerinizi görüntüleyin; çekim talebi oluşturmadan önce kendi adınıza kayıtlı banka ve IBAN bilgilerinizi kontrol edin.'],
+                  ['Aktiflik & Paket', 'Aktiflik sürenizi takip edin ve kullanılabilir ödeme yöntemleriyle güncel paket kataloğundan alışveriş yapın.'],
+                  ['Referans & QR', 'Size ait referans kodu ve QR bağlantısını yeni üyelerle paylaşın.'],
+                  ['Ağ Yapısı', 'Sponsor ağınızı ve Monoline hattındaki konumunuzu görüntüleyin.'],
+                  ['Profil ve Güvenlik', 'Profil bilgilerinizi güncel tutun; hesabınız destekliyorsa iki aşamalı doğrulamayı etkinleştirin.'],
+                  ['Plaket ve Geri Bildirim', 'Kariyer seviyenize ait bilgileri görüntüleyin; destek veya öneri için yönetim ekibine bildirim gönderin.'],
+                  ['Dokümanlar', 'Kullanma Kılavuzu ve İş Sunumu & Dijital Katalog bağlantıları bu bölümde bulunur. Paylaşılan dosyalar ayrıca listelenir.'],
+                ].map(([title, description]) => (
+                  <div key={title} className="rounded-xl border border-slate-700 bg-slate-950/60 p-4">
+                    <h4 className="text-sm font-bold text-slate-100">{title}</h4>
+                    <p className="mt-1 text-xs leading-relaxed text-slate-300">{description}</p>
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs leading-relaxed text-amber-200/90">Paket, komisyon ve çekim koşulları sistemde gösterilen güncel tutar ve kurallara göre değişebilir; işlem öncesinde paneldeki bilgileri esas alın.</p>
             </div>
           )}
 

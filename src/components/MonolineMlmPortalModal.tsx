@@ -5,6 +5,8 @@ import { CareerMatrixView } from './CareerMatrixView';
 import { CommissionEngineView } from './CommissionEngineView';
 import { DataBackupRestoreModal } from './DataBackupRestoreModal';
 import { DealerBackOfficeView, type DealerBackOfficeSubTab } from './DealerBackOfficeView';
+import { UserGuideModal } from './UserGuideModal';
+import { BusinessPresentationModal } from './BusinessPresentationModal';
 import { LedgerTransactionsView } from './LedgerTransactionsView';
 import { MonolineTimelineView } from './MonolineTimelineView';
 import { UnilevelOrganizationTreePanel } from './UnilevelOrganizationTreePanel';
@@ -49,6 +51,10 @@ interface MonolineMlmPortalModalProps {
   onSubTabChange?: (tab: MonolineSubTab) => void;
   embedded?: boolean;
   isAdminAuthenticated?: boolean;
+  onOpenAuthModal?: (
+    mode?: 'login' | 'register' | 'dealer',
+    sponsor?: { uid: string; resellerName: string; referralCode: string; email?: string; phone?: string }
+  ) => void;
 }
 
 export const MonolineMlmPortalModal: React.FC<MonolineMlmPortalModalProps> = ({
@@ -61,6 +67,7 @@ export const MonolineMlmPortalModal: React.FC<MonolineMlmPortalModalProps> = ({
   onSubTabChange,
   embedded = false,
   isAdminAuthenticated = false,
+  onOpenAuthModal,
 }) => {
   const safeInitialTab: MonolineSubTab =
     !isAdminAuthenticated &&
@@ -85,6 +92,8 @@ export const MonolineMlmPortalModal: React.FC<MonolineMlmPortalModalProps> = ({
   const [selectedMemberId, setSelectedMemberId] = useState<string>('');
   const [monolineTreeView, setMonolineTreeView] = useState<'MONOLINE' | 'UNILEVEL'>('MONOLINE');
   const [dealerBackOfficeTab, setDealerBackOfficeTab] = useState<DealerBackOfficeSubTab>('wallet');
+  const [isUserGuideOpen, setIsUserGuideOpen] = useState(false);
+  const [isBusinessPresentationOpen, setIsBusinessPresentationOpen] = useState(false);
   const [lastTransaction, setLastTransaction] = useState<CommissionTransaction | null>(null);
   const [checkoutRequest, setCheckoutRequest] = useState<{
     packageId: string;
@@ -1518,6 +1527,8 @@ export const MonolineMlmPortalModal: React.FC<MonolineMlmPortalModalProps> = ({
                 onRegisterReferralMember={handleRegisterMember}
                 isSubmitting={isSubmitting}
                 isAdminAuthenticated={isAdminAuthenticated}
+                onOpenUserGuide={() => setIsUserGuideOpen(true)}
+                onOpenBusinessPresentation={() => setIsBusinessPresentationOpen(true)}
               />
             )}
 
@@ -1735,13 +1746,24 @@ export const MonolineMlmPortalModal: React.FC<MonolineMlmPortalModalProps> = ({
     </div>
   );
 
-  if (embedded) {
-    return innerContent;
-  }
-
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden bg-slate-950/80 backdrop-blur-xs">
-      {innerContent}
-    </div>
+    <>
+      {embedded ? innerContent : (
+        <div className="fixed inset-0 z-50 overflow-hidden bg-slate-950/80 backdrop-blur-xs">
+          {innerContent}
+        </div>
+      )}
+      {isUserGuideOpen && (
+        <UserGuideModal isOpen={isUserGuideOpen} onClose={() => setIsUserGuideOpen(false)} />
+      )}
+      {isBusinessPresentationOpen && (
+        <BusinessPresentationModal
+          isOpen={isBusinessPresentationOpen}
+          onClose={() => setIsBusinessPresentationOpen(false)}
+          currentUser={authenticatedUser}
+          onOpenAuthModal={onOpenAuthModal}
+        />
+      )}
+    </>
   );
 };

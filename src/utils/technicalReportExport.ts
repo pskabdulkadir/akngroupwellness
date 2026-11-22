@@ -4,6 +4,8 @@ import { TOTAL_HEALING_COUNT } from '../data/healingLibrary';
 import { CAREER_TIERS, FREKANS_PACKAGES, MONOLINE_DEPTH_RATES } from '../types/monoline';
 import { formatUsd } from './currency';
 
+const PACKAGE_COUNT = FREKANS_PACKAGES.length;
+
 /**
  * Downloads a Word-compatible .doc file (HTML-based Word format with official styling, tables and formatting)
  * Word opens this natively and perfectly preserves tables, colors, headings, bullet points and fonts.
@@ -112,7 +114,7 @@ export function downloadTechnicalReportWord(): void {
     <div style="text-align: center; margin-bottom: 20pt;">
       <div style="font-size: 16pt; font-weight: bold; color: #047857; letter-spacing: 1.5pt; margin-bottom: 6pt;">AKN GLOBAL GROUP LTD</div>
       <h1 style="border: none; margin-top: 2pt; margin-bottom: 4pt; color: #064e3b;">AURABIO FREKANS BİYO-REZONANS &amp; MONOLINE 7 NEFİS MLM SİSTEMİ</h1>
-      <p style="font-size: 13pt; font-weight: bold; color: #059669; margin-top: 0;">RESMİ İŞ SUNUM RAPORU, DİJİTAL KATALOG, TEKNİK MİMARİ VE 14 BAYİ PAKETİ TEKLİFİ</p>
+      <p style="font-size: 13pt; font-weight: bold; color: #059669; margin-top: 0;">RESMİ İŞ SUNUM RAPORU, DİJİTAL KATALOG, TEKNİK MİMARİ VE ${PACKAGE_COUNT} BAYİ PAKETİ TEKLİFİ</p>
       <p style="font-size: 9pt; color: #64748b;">Kurumsal Üretici: AuraBio Kuantum Biyo-Rezonans &amp; Frekans Enstitüsü • Sistem Sürümü: v6.0 Enterprise</p>
     </div>
 
@@ -163,8 +165,8 @@ export function downloadTechnicalReportWord(): void {
       • <strong>%20 Kurumsal Fatura / Stopaj İadesi:</strong> Fatura kesen şirket sahibi bayiler %20 vergi kesintisini geri alabilir.
     </div>
 
-    <h2>4. 14 RESMİ BAYİLİK &amp; SEANS KREDİSİ HAVUZU ALIŞVERİŞ PAKETİ</h2>
-    <p>Bayi Back-Office üzerinden satın alınabilen 14 resmi paket. Paket fiyatı USD cinsindendir ve krediler 1 USD = 1 Kredi kuralıyla tanımlanır. Paket alımında ek sabit kredi bonusu uygulanmaz:</p>
+    <h2>4. ${PACKAGE_COUNT} RESMİ BAYİLİK &amp; SEANS KREDİSİ HAVUZU ALIŞVERİŞ PAKETİ</h2>
+    <p>Bayi Back-Office üzerinden satın alınabilen ${PACKAGE_COUNT} resmi paket. Paket fiyatı USD cinsindendir ve krediler 1 USD = 1 Kredi kuralıyla tanımlanır. Paket alımında ek sabit kredi bonusu uygulanmaz:</p>
     <table>
       <thead>
         <tr>
@@ -390,7 +392,7 @@ export function downloadTechnicalReportPDF(): void {
   
   doc.setFontSize(8.5);
   doc.setFont('helvetica', 'normal');
-  doc.text(clean('Resmi Is Sunum Raporu, Biyo-Rezonans Mimarisi, 14 Bayi Paketi ve Gelir Modeli'), margin + 5, y + 16);
+  doc.text(clean(`Resmi Is Sunum Raporu, Biyo-Rezonans Mimarisi, ${PACKAGE_COUNT} Bayi Paketi ve Gelir Modeli`), margin + 5, y + 16);
   doc.text(clean(`Surum: v6.0 • Tarih: ${new Date().toLocaleDateString('tr-TR')}`), pageWidth - margin - 52, y + 16);
 
   y += 30;
@@ -482,7 +484,7 @@ export function downloadTechnicalReportPDF(): void {
   doc.setTextColor(15, 23, 42);
   doc.setFontSize(10.5);
   doc.setFont('helvetica', 'bold');
-  doc.text(clean('4. 14 RESMI BAYILIK VE SEANS KREDISI HAVUZU ALISVERIS PAKETI'), margin, y);
+  doc.text(clean(`4. ${PACKAGE_COUNT} RESMI BAYILIK VE SEANS KREDISI HAVUZU ALISVERIS PAKETI`), margin, y);
   y += 5;
 
   FREKANS_PACKAGES.forEach((pkg) => {

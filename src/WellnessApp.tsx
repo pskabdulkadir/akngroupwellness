@@ -1349,8 +1349,9 @@ export default function WellnessApp({
           isOpen={isBusinessPresentationOpen}
           onClose={() => setIsBusinessPresentationOpen(false)}
           currentUser={currentUser}
-          onOpenAuthModal={(mode) => {
+          onOpenAuthModal={(mode, sponsor) => {
             setIsBusinessPresentationOpen(false);
+            setDealerRegistrationSponsor(sponsor || null);
             setAuthModalInitialMode(mode || 'register');
             setIsAuthModalOpen(true);
           }}
@@ -1509,6 +1510,12 @@ export default function WellnessApp({
           handleLogout();
         }}
         authenticatedUser={currentUser}
+        onOpenAuthModal={(mode, sponsor) => {
+          setIsMonolineModalOpen(false);
+          setDealerRegistrationSponsor(sponsor || null);
+          setAuthModalInitialMode(mode || 'register');
+          setIsAuthModalOpen(true);
+        }}
         onSubTabChange={setMonolineInitialSubTab}
         onGoToCamera={() => {
           setIsMonolineModalOpen(false);

@@ -2557,7 +2557,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                       <a
                         href={`https://wa.me/?text=${encodeURIComponent(
                           `🌟 AuraBio Kuantum Biyo-Rezonans & Monoline 7 Nefis MLM İş Sunum Raporu (v6.0 Enterprise)\n\n` +
-                          `Canlı optik & 3D biyo-aura taraması, 10s vokal akustik F0 analizi, Web BLE akıllı saat nabız köprüsü, 302+ kadim şifa, 14 resmi kredi paketi ve %20 Direkt Sponsor + %25 Monoline Tek Hat + %5 Sistem Fonu gelir modelini interaktif kataloğumuzdan inceleyin:\n` +
+                          `Canlı optik & 3D biyo-aura taraması, 10s vokal akustik F0 analizi, Web BLE akıllı saat nabız köprüsü, 302+ kadim şifa, ${FREKANS_PACKAGES.length} resmi kredi paketi ve %20 Direkt Sponsor + %25 Monoline Tek Hat + %5 Sistem Fonu gelir modelini interaktif kataloğumuzdan inceleyin:\n` +
                           `${typeof window !== 'undefined' ? window.location.origin : ''}/?ref=${encodeURIComponent(activeReseller.referralCode)}&view=presentation\n\n` +
                           `🎁 Yetkili Bayi Referans Kodu: ${activeReseller.referralCode}`
                         )}`}
@@ -2602,7 +2602,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                         <div className="text-emerald-400 font-semibold">• Biyo-Rezonans, 302+ Frekans, 50+ Hastalık &amp; MindSpace Stüdyo</div>
                         <div className="text-amber-300 font-semibold">• Monoline 7 Nefis MLM (%20 Sponsor • %25 Tek Hat • %5 Sistem Fonu)</div>
                         <div className="text-indigo-300 font-semibold">• Liderlik Eşleşme (%20) • Fast-ROI (%75 İade)</div>
-                        <div className="text-slate-400">• 14 Resmi Alışveriş Paketi (101 Krediden 6.031 Krediye)</div>
+                        <div className="text-slate-400">• {FREKANS_PACKAGES.length} Resmi Alışveriş Paketi (96 Krediden 6.031 Krediye)</div>
                       </div>
                     </div>
 
@@ -2634,7 +2634,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                         <span>Canlı Hızlı Gelir Simülatörü</span>
                       </div>
                       <h4 className="text-base font-extrabold text-slate-100 mt-0.5">
-                        Danışan Seansı + 14 Paket + Monoline 7 Nefis MLM Tahmini Kazanç
+                        Danışan Seansı + {FREKANS_PACKAGES.length} Paket + Monoline 7 Nefis MLM Tahmini Kazanç
                       </h4>
                     </div>
                     {onOpenBusinessPresentation && (

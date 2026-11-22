@@ -62,7 +62,10 @@ interface BusinessPresentationModalProps {
   isOpen: boolean;
   onClose: () => void;
   currentUser?: UserMember | null;
-  onOpenAuthModal?: (mode?: 'login' | 'register' | 'dealer') => void;
+  onOpenAuthModal?: (
+    mode?: 'login' | 'register' | 'dealer',
+    sponsor?: { uid: string; resellerName: string; referralCode: string; email?: string; phone?: string }
+  ) => void;
   onOpenResellerModal?: (tab?: 'overview' | 'packages' | 'share') => void;
   onOpenDealerBusinessCard?: () => void;
 }
@@ -87,10 +90,15 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
   const [activeSection, setActiveSection] = useState<TabSection>('what_it_is');
   const [copiedLink, setCopiedLink] = useState<boolean>(false);
   const [copiedCode, setCopiedCode] = useState<boolean>(false);
+  const [registrationError, setRegistrationError] = useState<string | null>(null);
   const [activeReseller, setActiveReseller] = useState<Reseller | null>(() => getActiveResellerSession());
   const [referredDealerInfo, setReferredDealerInfo] = useState<Reseller | null>(null);
   const [dealerPackages, setDealerPackages] = useState<DealerPackage[]>(() => getDealerPackages());
-  const [pkgCatalogFilter, setPkgCatalogFilter] = useState<'ALL_15' | 'STARTER' | 'CLINIC' | 'ENTERPRISE' | 'STARTER_3'>('ALL_15');
+  const [pkgCatalogFilter, setPkgCatalogFilter] = useState<'ALL' | 'STARTER' | 'CLINIC' | 'ENTERPRISE' | 'STARTER_3'>('ALL');
+  const packageCount = FREKANS_PACKAGES.length;
+  const packageCreditRange = FREKANS_PACKAGES.map((pkg) => pkg.sessionCredits);
+  const minPackageCredits = Math.min(...packageCreditRange);
+  const maxPackageCredits = Math.max(...packageCreditRange);
   const [qrDataUrl, setQrDataUrl] = useState<string>('');
 
   // Interactive Multi-Way Earnings Calculator State (100% Pure USD Architecture)
@@ -104,9 +112,13 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
   const [includeFastRoi, setIncludeFastRoi] = useState<boolean>(true);
 
   // Active Referral Code Determination
-  const activeReferralCode = activeReseller?.referralCode 
-    || currentUser?.dealerDetails?.referralCode 
-    || currentUser?.referredByCode 
+  const urlReferralCode = typeof window !== 'undefined'
+    ? new URLSearchParams(window.location.search).get('ref')?.trim().toUpperCase()
+    : '';
+  const activeReferralCode = urlReferralCode
+    || activeReseller?.referralCode
+    || currentUser?.dealerDetails?.referralCode
+    || currentUser?.referredByCode
     || detectAndSaveReferralCodeFromUrl()
     || getStoredReferralCode() 
     || '';
@@ -171,10 +183,43 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
     setTimeout(() => setCopiedCode(false), 2500);
   };
 
+  const handleDealerRegistration = async () => {
+    setRegistrationError(null);
+    const referralCode = activeReferralCode.trim().toUpperCase();
+    if (!referralCode) {
+      onClose();
+      onOpenAuthModal?.('dealer');
+      return;
+    }
+
+    let sponsor: Reseller | null;
+    try {
+      sponsor = referredDealerInfo?.referralCode.toUpperCase() === referralCode
+        ? referredDealerInfo
+        : await getResellerByCode(referralCode);
+    } catch {
+      sponsor = null;
+    }
+    if (!sponsor) {
+      setRegistrationError('Paylaşım yapan bayinin referans kodu doğrulanamadı. Lütfen katalog bağlantısını yeniden açın.');
+      return;
+    }
+
+    setStoredReferralCode(sponsor.referralCode);
+    onClose();
+    onOpenAuthModal?.('dealer', {
+      uid: sponsor.uid,
+      resellerName: sponsor.resellerName,
+      referralCode: sponsor.referralCode,
+      email: sponsor.email,
+      phone: sponsor.phone,
+    });
+  };
+
   // WhatsApp Share Message
   const waShareText = encodeURIComponent(
     `🌟 AuraBio Kuantum Biyo-Rezonans & Monoline 7 Nefis MLM İş Sunum Raporu (v6.0 Enterprise)\n\n` +
-    `Canlı optik & 3D biyo-aura spektrometresi, 10s vokal biyo-akustik analiz, Web BLE akıllı saat nabız köprüsü, 302+ kadim şifa frekansı, 50+ hastalık ansiklopedisi, MindSpace Studio, 14 resmi bayilik kredi paketi ve %20 Direkt Sponsor + %25 Monoline 7 Derinlik Tek Hat + %5 Sistem / Kariyer Fonu gelir modelini inceleyin:\n\n` +
+    `Canlı optik & 3D biyo-aura spektrometresi, 10s vokal biyo-akustik analiz, Web BLE akıllı saat nabız köprüsü, 302+ kadim şifa frekansı, 50+ hastalık ansiklopedisi, MindSpace Studio, ${packageCount} resmi bayilik kredi paketi ve %20 Direkt Sponsor + %25 Monoline 7 Derinlik Tek Hat + %5 Sistem / Kariyer Fonu gelir modelini inceleyin:\n\n` +
     `📊 Resmi Dijital Katalog & İnteraktif İş Sunumu:\n${fullShareUrl}\n\n` +
     `🎁 Yetkili Bayi Referans Kodu: ${activeReferralCode}`
   );
@@ -231,7 +276,7 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
 
   // Filtered packages
   const filteredPackages = FREKANS_PACKAGES.filter((pkg) => {
-    if (pkgCatalogFilter === 'ALL_15') return true;
+    if (pkgCatalogFilter === 'ALL') return true;
     if (pkgCatalogFilter === 'STARTER') return pkg.defaultPrice <= 20000;
     if (pkgCatalogFilter === 'CLINIC') return pkg.defaultPrice > 20000 && pkg.defaultPrice <= 100000;
     if (pkgCatalogFilter === 'ENTERPRISE') return pkg.defaultPrice > 100000;
@@ -267,7 +312,7 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
                 )}
               </div>
               <h2 className="text-base sm:text-lg font-black text-slate-100 mt-1">
-                Kuantum Biyo-Rezonans, 16 Bütüncül Teknoloji, 14 Bayi Paketi &amp; Monoline 7 Nefis MLM Kataloğu
+                Kuantum Biyo-Rezonans, 16 Bütüncül Teknoloji, {packageCount} Bayi Paketi &amp; Monoline 7 Nefis MLM Kataloğu
               </h2>
             </div>
           </div>
@@ -352,8 +397,8 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
               {
                 id: 'packages' as TabSection,
                 num: '5',
-                title: '5. 14 Resmi Bayilik Paketi',
-                short: '14 Bayilik Paketi',
+                title: `5. ${packageCount} Resmi Bayilik Paketi`,
+                short: `${packageCount} Bayilik Paketi`,
                 icon: Coins,
                 color: 'purple',
               },
@@ -463,11 +508,7 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
                 )}
 
                 <button
-                  onClick={() => {
-                    setStoredReferralCode(referredDealerInfo.referralCode);
-                    onClose();
-                    if (onOpenAuthModal) onOpenAuthModal('register');
-                  }}
+                  onClick={() => void handleDealerRegistration()}
                   className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-teal-600 hover:from-indigo-500 hover:to-teal-500 text-white text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-md shadow-indigo-950"
                 >
                   <Sparkles className="w-3.5 h-3.5" />
@@ -769,7 +810,7 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
                     onClick={() => setActiveSection('packages')}
                     className="px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold cursor-pointer border border-slate-700"
                   >
-                    14 Bayi Paketini İncele
+                    {packageCount} Bayi Paketini İncele
                   </button>
                 </div>
               </div>
@@ -1156,9 +1197,9 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
                     2
                   </div>
                   <div className="space-y-1">
-                    <h4 className="text-sm font-bold text-slate-100">14 Resmi Paketten Seçim Yapın &amp; Seans Kredisi Yükleyin</h4>
+                    <h4 className="text-sm font-bold text-slate-100">{packageCount} Resmi Paketten Seçim Yapın &amp; Seans Kredisi Yükleyin</h4>
                     <p className="text-xs text-slate-400 leading-relaxed">
-                      Bayi Back-Office içerisindeki <strong>14 Resmi Alışveriş Paketi</strong> sekmesinden bütçenize uygun paketi seçin. Paket fiyatı USD cinsindendir ve 1 USD = 1 Kredi kuralı uygulanır; ek paket bonusu yoktur. Desteklenen ödeme yöntemlerinden biriyle ödemenizi tamamlayın; ödenmiş sipariş kredileri sunucu tarafından kredi defterine kaydedilir.
+                      Bayi Back-Office içerisindeki <strong>{packageCount} Resmi Alışveriş Paketi</strong> sekmesinden bütçenize uygun paketi seçin. Paket fiyatı USD cinsindendir ve 1 USD = 1 Kredi kuralı uygulanır; ek paket bonusu yoktur. Desteklenen ödeme yöntemlerinden biriyle ödemenizi tamamlayın; ödenmiş sipariş kredileri sunucu tarafından kredi defterine kaydedilir.
                     </p>
                   </div>
                 </div>
@@ -1430,7 +1471,7 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
                     className="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs shadow-lg shadow-emerald-950 transition-all flex items-center justify-center gap-2 cursor-pointer"
                   >
                     <Briefcase className="w-4 h-4" />
-                    <span>14 Resmi Bayi Paketini İncele &amp; Başla</span>
+                    <span>{packageCount} Resmi Bayi Paketini İncele &amp; Başla</span>
                   </button>
                 </div>
 
@@ -1439,7 +1480,7 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
             </div>
           )}
 
-          {/* SECTION 5: 15 RESMİ BAYİLİK KREDİ PAKETİ KATALOĞU */}
+          {/* SECTION 5: RESMİ BAYİLİK KREDİ PAKETİ KATALOĞU */}
           {activeSection === 'packages' && (
             <div className="space-y-6 animate-fade-in">
               
@@ -1450,10 +1491,10 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
                     <span>Resmi Bayilik Seans Kredisi Havuzu &amp; Monoline Alışveriş Paketleri</span>
                   </div>
                   <h3 className="text-xl sm:text-2xl font-black text-white leading-tight">
-                    96 Seans Kredisinden 15.000 Seans Kredisine 14 Resmi Paket
+                    {minPackageCredits.toLocaleString('tr-TR')} Seans Kredisinden {maxPackageCredits.toLocaleString('tr-TR')} Seans Kredisine {packageCount} Resmi Paket
                   </h3>
                   <p className="text-xs sm:text-sm text-slate-300 leading-relaxed max-w-3xl">
-                    Paket satın alındığında seans kredileri anında havuzunuza yüklenir ve her alımda paket kredisine ek olarak 32 seans kredisi bonus tanımlanır. Baz dağıtım %20 direkt sponsor, %25 yedi derinlik ve %5 sistem fonudur; ek V2.2 bonusları ayrıca hesaplanır.
+                    Paket satın alındığında katalogda belirtilen seans kredileri havuzunuza yüklenir. Paket alımında katalog fiyatı ve kredi miktarı esas alınır; sabit ek kredi bonusu uygulanmaz. Komisyon ve diğer ödüller ilgili sistem kurallarına göre hesaplanır.
                   </p>
                 </div>
 
@@ -1461,14 +1502,14 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
                 <div className="flex flex-wrap items-center gap-1.5 bg-slate-950 p-1.5 rounded-xl border border-slate-800 shrink-0">
                   <button
                     type="button"
-                    onClick={() => setPkgCatalogFilter('ALL_15')}
+                    onClick={() => setPkgCatalogFilter('ALL')}
                     className={`px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-all ${
-                      pkgCatalogFilter === 'ALL_15'
+                      pkgCatalogFilter === 'ALL'
                         ? 'bg-emerald-600 text-white shadow-sm'
                         : 'text-slate-400 hover:text-slate-200'
                     }`}
                   >
-                    Tüm 14 Paket
+                    Tüm {packageCount} Paket
                   </button>
                   <button
                     type="button"
@@ -1571,8 +1612,8 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
                           onClose();
                           if (onOpenResellerModal) {
                             onOpenResellerModal('packages');
-                          } else if (onOpenAuthModal) {
-                            onOpenAuthModal('dealer');
+                          } else {
+                            void handleDealerRegistration();
                           }
                         }}
                         className={`w-full py-2.5 rounded-xl font-black text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-md ${
@@ -1798,7 +1839,7 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
                       </span>
                     </div>
                     <p className="text-xs text-slate-400 leading-relaxed">
-                      Kurumlara, kliniklere veya ortaklarınıza fiziki sunum yapabilmeniz için sistemin en güncel 16 modülünü, 14 resmi kredi paketini ve Monoline 7 Nefis MLM gelir modelini içeren resmi Word (.doc) ve vektör PDF kataloğunu indirebilirsiniz.
+                      Kurumlara, kliniklere veya ortaklarınıza fiziki sunum yapabilmeniz için sistemin en güncel 16 modülünü, {packageCount} resmi kredi paketini ve Monoline 7 Nefis MLM gelir modelini içeren resmi Word (.doc) ve vektör PDF kataloğunu indirebilirsiniz.
                     </p>
                     <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800 text-[11px] text-slate-300 space-y-1.5">
                       <div className="font-bold text-emerald-300">Belge İçeriği (v6.0 Enterprise):</div>
@@ -1806,7 +1847,7 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
                       <div>• 16 Bütüncül Biyo-Rezonans &amp; Spektrometre Teknolojisi</div>
                       <div>• 302+ Kadim Şifa Frekansı &amp; 50+ Hastalık Protokolü Matrisi</div>
                       <div>• Monoline 7 Nefis MLM (%20 Sponsor • %25 Tek Hat • %5 Sistem Fonu)</div>
-                      <div>• 14 Resmi Alışveriş Paketi Fiyatlandırma &amp; Birim Maliyet Tabloları</div>
+                      <div>• {packageCount} Resmi Alışveriş Paketi Fiyatlandırma &amp; Birim Maliyet Tabloları</div>
                       <div>• BDDK / TCMB 3D Secure Sanal POS &amp; Yasal Uyum Beyanları</div>
                     </div>
                   </div>
@@ -1858,30 +1899,25 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
             <span>AuraBio Frekans v6.0 Enterprise • Kuantum Biyo-Rezonans &amp; Monoline 7 Nefis MLM Sistemi</span>
           </div>
 
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <button
-              onClick={() => {
-                if (activeReferralCode) setStoredReferralCode(activeReferralCode);
-                onClose();
-                if (onOpenAuthModal) onOpenAuthModal('dealer');
-              }}
-              className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white text-xs font-black shadow-md shadow-amber-950 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-            >
-              <Briefcase className="w-3.5 h-3.5" />
-              <span>Bayilik Başvurusu Yap</span>
-            </button>
+          <div className="flex w-full flex-col gap-2 sm:w-auto">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => void handleDealerRegistration()}
+                className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white text-xs font-black shadow-md shadow-amber-950 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <Briefcase className="w-3.5 h-3.5" />
+                <span>Bayilik Başvurusu Yap</span>
+              </button>
 
-            <button
-              onClick={() => {
-                if (activeReferralCode) setStoredReferralCode(activeReferralCode);
-                onClose();
-                if (onOpenAuthModal) onOpenAuthModal('register');
-              }}
-              className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black shadow-md shadow-emerald-950 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Hemen Kayıt Ol</span>
-            </button>
+              <button
+                onClick={() => void handleDealerRegistration()}
+                className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black shadow-md shadow-emerald-950 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Hemen Bayi Kaydı Başlat</span>
+              </button>
+            </div>
+            {registrationError && <p role="alert" className="text-xs font-semibold text-rose-300">{registrationError}</p>}
           </div>
         </div>
 

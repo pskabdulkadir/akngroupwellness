@@ -6,6 +6,7 @@ import {
   ArrowLeftRight,
   ArrowRight,
   Award,
+  BookOpen,
   Check,
   CheckCircle2,
   Clock,
@@ -167,6 +168,8 @@ interface DealerBackOfficeViewProps {
   onRecordWalletNewMember?: (newMember: any, tx?: any) => Promise<void>;
   isSubmitting: boolean;
   isAdminAuthenticated?: boolean;
+  onOpenUserGuide: () => void;
+  onOpenBusinessPresentation: () => void;
 }
 
 // Deterministic SVG QR Matrix generator (21x21 Version 1 QR structure with finder patterns)
@@ -251,6 +254,8 @@ export const DealerBackOfficeView: React.FC<DealerBackOfficeViewProps> = ({
   onRegisterReferralMember,
   isSubmitting,
   isAdminAuthenticated = false,
+  onOpenUserGuide,
+  onOpenBusinessPresentation,
   feedbackTickets = [],
 }) => {
 
@@ -5085,7 +5090,25 @@ Paket Alarak Aktifliği Yenile →
 
       {/* SUB-TAB: 💬 ŞİKAYETLER VE ÖNERİLER (YÖNETİCİYE DOĞRUDAN İLETİM & GERİ BİLDİRİM PANELİ) */}
       {subTab === 'documents' && !isAdminAuthenticated && (
-        <SharedDocumentsPanel access="dealer" />
+        <div className="space-y-5">
+          <section className="rounded-2xl border border-indigo-200 bg-gradient-to-br from-indigo-950 via-slate-900 to-slate-950 p-5 text-white shadow-sm sm:p-6">
+            <div className="mb-4">
+              <h2 className="text-lg font-black">Bayi Rehberleri ve Sunum Materyalleri</h2>
+              <p className="mt-1 text-sm text-slate-300">Panel kullanımı ile güncel iş sunumu ve dijital kataloğa buradan ulaşabilirsiniz.</p>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <button type="button" onClick={onOpenUserGuide} className="flex items-center gap-3 rounded-xl border border-teal-400/30 bg-teal-500/10 p-4 text-left transition-colors hover:bg-teal-500/20">
+                <BookOpen className="h-5 w-5 shrink-0 text-teal-300" />
+                <span><strong className="block text-sm">Kullanma Kılavuzu</strong><span className="mt-1 block text-xs text-slate-300">Uygulama özellikleri ve kullanım adımları</span></span>
+              </button>
+              <button type="button" onClick={onOpenBusinessPresentation} className="flex items-center gap-3 rounded-xl border border-emerald-400/30 bg-emerald-500/10 p-4 text-left transition-colors hover:bg-emerald-500/20">
+                <FileText className="h-5 w-5 shrink-0 text-emerald-300" />
+                <span><strong className="block text-sm">İş Sunumu ve Dijital Katalog</strong><span className="mt-1 block text-xs text-slate-300">Paketler, paylaşım bağlantısı ve PDF/Word çıktıları</span></span>
+              </button>
+            </div>
+          </section>
+          <SharedDocumentsPanel access="dealer" />
+        </div>
       )}
 
       {subTab === 'feedback' && (
