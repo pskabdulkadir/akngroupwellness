@@ -166,7 +166,11 @@ export function parseCurrentUrlState(): Partial<AppNavigationState> {
       if (!result.activeTab && stored.activeTab && VALID_TABS.includes(stored.activeTab)) {
         result.activeTab = stored.activeTab;
       }
-      if (!result.activeModal && stored.activeModal) {
+      const hasSession = Boolean(
+        localStorage.getItem('aurabio_active_session_v1') ||
+        localStorage.getItem('aurabio_active_reseller_session_v1')
+      );
+      if (!result.activeModal && stored.activeModal && !(stored.activeModal === 'auth' && hasSession)) {
         result.activeModal = stored.activeModal;
         result.reportId = stored.reportId;
         result.diseaseId = stored.diseaseId;
@@ -187,7 +191,12 @@ export function parseCurrentUrlState(): Partial<AppNavigationState> {
   try {
     const treatmentJson = localStorage.getItem(STORAGE_KEY_ACTIVE_TREATMENT);
     if (treatmentJson) {
-      result.activeTreatment = JSON.parse(treatmentJson);
+      const parsedTreatment = JSON.parse(treatmentJson);
+      if (parsedTreatment && typeof parsedTreatment === 'object') {
+        result.activeTreatment = parsedTreatment;
+      } else {
+        localStorage.removeItem(STORAGE_KEY_ACTIVE_TREATMENT);
+      }
     }
   } catch (err) {
     console.warn('Active treatment parse error:', err);

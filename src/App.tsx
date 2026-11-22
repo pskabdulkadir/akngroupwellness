@@ -43,7 +43,7 @@ export default function App() {
       if (viewParam === 'wellness') return 'wellness';
       if (viewParam === 'welcome') return 'welcome';
       
-      const saved = sessionStorage.getItem('akn_active_app_view');
+      const saved = sessionStorage.getItem('akn_active_app_view') || localStorage.getItem('akn_active_app_view');
       if (saved === 'accounting' || saved === 'wellness' || saved === 'welcome') {
         return saved as ActiveAppView;
       }
@@ -67,6 +67,7 @@ export default function App() {
   useEffect(() => {
     try {
       sessionStorage.setItem('akn_active_app_view', activeView);
+      localStorage.setItem('akn_active_app_view', activeView);
     } catch {
       // ignore
     }

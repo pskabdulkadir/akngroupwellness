@@ -139,7 +139,7 @@ export default function WellnessApp({
   const [isExpiredModalDismissed, setIsExpiredModalDismissed] = useState<boolean>(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(() => {
     const member = getActiveMemberSession();
-    if (member) return false;
+    if (member || getActiveResellerSession()) return false;
     if (initialNav.activeModal === 'auth') return true;
     const st = getDeviceDemoStatus();
     // Link ilk tıklandığında: Demo otomatik başlamaz, Bayi Giriş & Üye Paneli açılır
