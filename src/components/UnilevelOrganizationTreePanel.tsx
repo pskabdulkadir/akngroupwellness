@@ -99,6 +99,28 @@ export const CAREER_TIER_CONFIG: Record<
   },
 };
 
+const collectSubtreeIds = (list: MonolineMember[], rootId: string): Set<string> => {
+  const childrenBySponsor = new Map<string, string[]>();
+  for (const m of list) {
+    if (!m.sponsor_id) continue;
+    const siblings = childrenBySponsor.get(m.sponsor_id) || [];
+    siblings.push(m.user_id);
+    childrenBySponsor.set(m.sponsor_id, siblings);
+  }
+  const visited = new Set<string>([rootId]);
+  const queue = [rootId];
+  while (queue.length > 0) {
+    const current = queue.shift() as string;
+    for (const childId of childrenBySponsor.get(current) || []) {
+      if (!visited.has(childId)) {
+        visited.add(childId);
+        queue.push(childId);
+      }
+    }
+  }
+  return visited;
+};
+
 export interface UnilevelOrganizationTreePanelProps {
   mode: 'admin' | 'dealer';
   currentDealerId?: string;
@@ -123,6 +145,7 @@ export const UnilevelOrganizationTreePanel: React.FC<UnilevelOrganizationTreePan
   const [filterCareer, setFilterCareer] = useState<number | 'ALL'>('ALL');
   const [filterStatus, setFilterStatus] = useState<'ALL' | 'ACTIVE' | 'PASSIVE'>('ALL');
   const [filterLeg, setFilterLeg] = useState<'ALL' | 'LEFT' | 'RIGHT' | 'AUTO'>('ALL');
+  const [dealerViewStyle, setDealerViewStyle] = useState<'chart' | 'list'>('chart');
 
   // Edit / Management Modal State (Admin Mode)
   const [editingMember, setEditingMember] = useState<MonolineMember | null>(null);
@@ -174,7 +197,7 @@ export const UnilevelOrganizationTreePanel: React.FC<UnilevelOrganizationTreePan
         (activeMem?.uid && mList.find((m) => m.user_id === activeMem.uid)?.user_id) ||
         mList[0]?.user_id;
       setRootUserId(targetId);
-      setExpandedNodes(new Set([targetId]));
+      setExpandedNodes(collectSubtreeIds(mList, targetId));
     } else {
       // Admin defaults to system root (USR-ADMIN or first member)
       const adminMember = mList.find((m) => m.user_id === 'USR-ADMIN') || mList[0];
@@ -264,6 +287,11 @@ export const UnilevelOrganizationTreePanel: React.FC<UnilevelOrganizationTreePan
 
   const collapseAll = () => {
     setExpandedNodes(new Set(rootUserId ? [rootUserId] : []));
+  };
+
+  const focusNode = (userId: string) => {
+    setRootUserId(userId);
+    setExpandedNodes(collectSubtreeIds(members, userId));
   };
 
   // Open Edit Modal for Admin
@@ -646,10 +674,7 @@ export const UnilevelOrganizationTreePanel: React.FC<UnilevelOrganizationTreePan
                 {!isRoot && (
                   <button
                     type="button"
-                    onClick={() => {
-                      setRootUserId(m.user_id);
-                      setExpandedNodes(new Set([m.user_id]));
-                    }}
+                    onClick={() => focusNode(m.user_id)}
                     className="px-2 py-1 text-[11px] font-semibold rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer"
                   >
                     Alt Ekibini Gör
@@ -665,6 +690,97 @@ export const UnilevelOrganizationTreePanel: React.FC<UnilevelOrganizationTreePan
           <div className="pl-6 border-l-2 border-slate-200 ml-5 my-2 space-y-2">
             {children.map((child) => renderTreeNode(child.user_id, depth + 1))}
           </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderChartNode = (userId: string): React.ReactNode => {
+    const m = memberMap.get(userId);
+    if (!m) return null;
+
+    const children = membersBySponsor.get(userId) || [];
+    const isExpanded = expandedNodes.has(userId);
+    const isRoot = userId === rootUserId;
+    const isActive = m.is_active !== false;
+    const careerCfg = CAREER_TIER_CONFIG[m.career_level || 1] || CAREER_TIER_CONFIG[1];
+    const term = searchTerm.toLowerCase();
+    const matchesSearch = !searchTerm || m.full_name.toLowerCase().includes(term) || m.user_id.toLowerCase().includes(term);
+    const matchesCareer = filterCareer === 'ALL' || m.career_level === filterCareer;
+    const matchesStatus =
+      filterStatus === 'ALL' || (filterStatus === 'ACTIVE' && isActive) || (filterStatus === 'PASSIVE' && !isActive);
+    const isMatch = matchesSearch && matchesCareer && matchesStatus;
+
+    return (
+      <div className="flex flex-col items-center">
+        <div
+          className={`w-52 p-3 rounded-xl border text-center transition-all ${
+            isRoot
+              ? 'bg-slate-900 text-white border-slate-700 shadow-lg ring-2 ring-emerald-500/50'
+              : isActive
+              ? 'bg-white border-slate-200 text-slate-900 hover:border-emerald-300 hover:shadow-sm'
+              : 'bg-slate-100 border-slate-300 text-slate-500'
+          } ${isMatch ? '' : 'opacity-40'}`}
+        >
+          <div className="font-bold text-sm truncate">{m.full_name}</div>
+          <div className={`text-[10px] font-mono ${isRoot ? 'text-slate-300' : 'text-slate-400'}`}>{m.user_id}</div>
+
+          <div className="flex flex-wrap items-center justify-center gap-1.5 mt-2">
+            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-lg border ${careerCfg.bg} ${careerCfg.border} ${careerCfg.text}`}>
+              {careerCfg.icon} {m.career_level || 1}. {careerCfg.name}
+            </span>
+            <span
+              className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                isActive ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'
+              }`}
+            >
+              {isActive ? 'AKTİF' : 'PASİF'}
+            </span>
+          </div>
+
+          <div className={`text-[11px] mt-2 ${isRoot ? 'text-slate-300' : 'text-slate-600'}`}>
+            Direkt: <strong>{children.length}</strong> · Toplam Ekip: <strong>{getSubtreeCount(userId)}</strong>
+          </div>
+          <div className={`text-[11px] font-mono mt-0.5 ${isRoot ? 'text-slate-300' : 'text-slate-500'}`}>
+            Ekip Hacmi: ${getSubtreeVolume(userId).toLocaleString('tr-TR')}
+          </div>
+
+          <div className="flex items-center justify-center gap-1.5 mt-2.5">
+            {children.length > 0 && (
+              <button
+                type="button"
+                onClick={() => toggleNode(userId)}
+                className="px-2 py-0.5 text-[11px] font-semibold rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer"
+              >
+                {isExpanded ? 'Daralt' : `Alt Ekip (${children.length})`}
+              </button>
+            )}
+            {!isRoot && (
+              <button
+                type="button"
+                onClick={() => focusNode(userId)}
+                className="px-2 py-0.5 text-[11px] font-semibold rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 cursor-pointer"
+              >
+                Odakla
+              </button>
+            )}
+          </div>
+        </div>
+
+        {children.length > 0 && isExpanded && (
+          <>
+            <div className="w-px h-6 bg-slate-300" />
+            <div className="flex items-start">
+              {children.map((child, i) => (
+                <div key={child.user_id} className="relative flex flex-col items-center px-3 pt-6">
+                  {i > 0 && <span className="absolute top-0 left-0 w-1/2 h-px bg-slate-300" />}
+                  {i < children.length - 1 && <span className="absolute top-0 right-0 w-1/2 h-px bg-slate-300" />}
+                  <span className="absolute top-0 left-1/2 -translate-x-1/2 w-px h-6 bg-slate-300" />
+                  {renderChartNode(child.user_id)}
+                </div>
+              ))}
+            </div>
+          </>
         )}
       </div>
     );
@@ -958,6 +1074,25 @@ export const UnilevelOrganizationTreePanel: React.FC<UnilevelOrganizationTreePan
               </p>
             </div>
 
+            {mode === 'dealer' && (
+              <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-lg text-xs font-bold">
+                <button
+                  type="button"
+                  onClick={() => setDealerViewStyle('chart')}
+                  className={`px-2.5 py-1 rounded-md cursor-pointer ${dealerViewStyle === 'chart' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'}`}
+                >
+                  Şema Görünümü
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDealerViewStyle('list')}
+                  className={`px-2.5 py-1 rounded-md cursor-pointer ${dealerViewStyle === 'list' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'}`}
+                >
+                  Liste Görünümü
+                </button>
+              </div>
+            )}
+
             {/* Breadcrumbs or quick root switch */}
             {mode === 'admin' && (
               <div className="flex items-center gap-2 text-xs">
@@ -982,7 +1117,10 @@ export const UnilevelOrganizationTreePanel: React.FC<UnilevelOrganizationTreePan
 
           {/* Tree Structure Output */}
           <div className="overflow-x-auto p-2">
-            {rootUserId && renderTreeNode(rootUserId, 0)}
+            {rootUserId &&
+              (mode === 'dealer' && dealerViewStyle === 'chart'
+                ? renderChartNode(rootUserId)
+                : renderTreeNode(rootUserId, 0))}
           </div>
         </div>
       )}
