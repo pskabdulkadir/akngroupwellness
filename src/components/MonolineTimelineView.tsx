@@ -1,14 +1,13 @@
-import React, { useMemo, useState } from 'react';
+import React, { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertCircle,
-  ArrowDown,
   ArrowRight,
   CheckCircle2,
   GitBranch,
   Plus,
   Search,
   ShieldCheck,
-
+  User,
   Users,
 } from 'lucide-react';
 import {
@@ -265,6 +264,48 @@ export const MonolineTimelineView: React.FC<MonolineTimelineViewProps> = ({
       (new Date(a.joined_at).getTime() || 0) - (new Date(b.joined_at).getTime() || 0) ||
       a.global_line_id - b.global_line_id
   );
+
+  const verticalListRef = useRef<HTMLDivElement>(null);
+  const avatarRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const [sponsorLinkPaths, setSponsorLinkPaths] = useState<string[]>([]);
+  const verticalLayoutKey = registrationOrderedMembers.map((m) => m.user_id).join(',');
+
+  useLayoutEffect(() => {
+    if (orientation !== 'vertical') return;
+    const container = verticalListRef.current;
+    if (!container) return;
+
+    const measure = () => {
+      const base = container.getBoundingClientRect();
+      const centerOf = (id: string) => {
+        const el = avatarRefs.current.get(id);
+        if (!el) return null;
+        const r = el.getBoundingClientRect();
+        return { x: r.left - base.left + r.width / 2, y: r.top - base.top + r.height / 2 };
+      };
+
+      const paths: string[] = [];
+      for (const member of registrationOrderedMembers) {
+        if (!member.sponsor_id) continue;
+        const from = centerOf(member.sponsor_id);
+        const to = centerOf(member.user_id);
+        if (!from || !to) continue;
+        const span = Math.abs(to.y - from.y);
+        const bow = 14 + Math.min(span / 10, 64);
+        const x = Math.min(from.x, to.x) - bow;
+        paths.push(
+          `M ${from.x} ${from.y} C ${x} ${from.y}, ${x} ${to.y}, ${to.x} ${to.y}`
+        );
+      }
+      setSponsorLinkPaths(paths);
+    };
+
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(container);
+    return () => observer.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orientation, verticalLayoutKey, selectedMember?.user_id]);
 
   return (
     <div className="space-y-8">
@@ -982,7 +1023,23 @@ export const MonolineTimelineView: React.FC<MonolineTimelineViewProps> = ({
             </div>
           </div>
         ) : (
-          <div className="space-y-2 max-w-4xl mx-auto">
+          <div ref={verticalListRef} className="relative max-w-2xl mx-auto py-2">
+            <svg
+              className="absolute inset-0 w-full h-full pointer-events-none overflow-visible"
+              aria-hidden="true"
+            >
+              {sponsorLinkPaths.map((d, i) => (
+                <path
+                  key={i}
+                  d={d}
+                  fill="none"
+                  stroke="#a78bfa"
+                  strokeOpacity={0.7}
+                  strokeWidth={1.5}
+                  strokeDasharray="4 4"
+                />
+              ))}
+            </svg>
             {registrationOrderedMembers.map((member, idx) => {
               const isSelected = member.user_id === selectedMember?.user_id;
               const isDirectChildOfSelected =
@@ -990,115 +1047,119 @@ export const MonolineTimelineView: React.FC<MonolineTimelineViewProps> = ({
               const sponsorObj = member.sponsor_id
                 ? sortedMembers.find((s) => s.user_id === member.sponsor_id)
                 : null;
+              const siblingCount = member.sponsor_id
+                ? registrationOrderedMembers.filter((m) => m.sponsor_id === member.sponsor_id).length
+                : 0;
+              const isFirstSibling =
+                siblingCount > 1 &&
+                registrationOrderedMembers.findIndex((m) => m.sponsor_id === member.sponsor_id) === idx;
+              const isLast = idx === registrationOrderedMembers.length - 1;
+
+              const avatarRing = isSelected
+                ? 'bg-gradient-to-br from-indigo-500 via-violet-500 to-fuchsia-500'
+                : isDirectChildOfSelected
+                ? 'bg-gradient-to-br from-emerald-400 to-teal-500'
+                : 'bg-gradient-to-br from-sky-300 to-cyan-400';
+              const avatarIcon = isSelected
+                ? 'text-indigo-600'
+                : isDirectChildOfSelected
+                ? 'text-emerald-600'
+                : 'text-sky-600';
+              const cardTone = isSelected
+                ? 'bg-gradient-to-r from-slate-900 to-indigo-950 border-indigo-900 text-white shadow-sm'
+                : isDirectChildOfSelected
+                ? 'bg-emerald-50/60 border-emerald-200 text-slate-900 hover:border-emerald-300'
+                : 'bg-white border-slate-200 text-slate-900 hover:border-slate-300';
+              const subTone = isSelected ? 'text-slate-300' : 'text-slate-500';
+              const badgeTone = isSelected
+                ? 'bg-amber-300 text-slate-900'
+                : isDirectChildOfSelected
+                ? 'bg-emerald-600 text-white'
+                : 'bg-slate-100 text-slate-700 border border-slate-200';
 
               return (
-                <React.Fragment key={member.user_id}>
+                <div
+                  key={member.user_id}
+                  onClick={() => {
+                    if (isAdminAuthenticated) onSelectMember(member.user_id);
+                  }}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (isAdminAuthenticated && (e.key === 'Enter' || e.key === ' ')) {
+                      onSelectMember(member.user_id);
+                    }
+                  }}
+                  className={`flex items-stretch gap-3 ${
+                    isAdminAuthenticated ? 'cursor-pointer' : 'cursor-default'
+                  }`}
+                >
                   <div
-                    onClick={() => {
-                      if (isAdminAuthenticated) onSelectMember(member.user_id);
-                    }}
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={(e) => {
-                      if (isAdminAuthenticated && (e.key === 'Enter' || e.key === ' ')) {
-                        onSelectMember(member.user_id);
-                      }
-                    }}
-                    className={`p-4 rounded-2xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${
-                      isAdminAuthenticated ? 'cursor-pointer' : 'cursor-default'
-                    } ${
-                      isSelected
-                        ? 'bg-slate-900 text-white border-slate-900'
-                        : isDirectChildOfSelected
-                        ? 'bg-emerald-50/70 border-emerald-300 text-slate-900'
-                        : 'bg-white border-slate-200 text-slate-900 hover:border-slate-300'
+                    className={`w-40 shrink-0 flex items-center justify-end pr-3 ${
+                      siblingCount > 1 ? 'border-r-2 border-dashed border-violet-300' : ''
                     }`}
                   >
-                    <div className="flex items-center gap-4">
-                      <div
-                        className={`w-12 h-12 rounded-xl flex flex-col items-center justify-center font-mono tabular-nums shrink-0 border ${
-                          isSelected
-                            ? 'bg-slate-800 border-slate-700 text-white'
-                            : 'bg-slate-50 border-slate-200 text-slate-900'
-                        }`}
-                      >
-                        <span className="text-[10px] text-slate-400">
-                          {isSelected ? 'KÖK' : `ALT #${idx}`}
-                        </span>
-                        <span className="text-sm font-bold">#{member.global_line_id}</span>
+                    {isFirstSibling && (
+                      <span className="px-2 py-0.5 rounded-full bg-violet-50 text-violet-700 border border-violet-200 text-[10px] font-semibold whitespace-nowrap">
+                        {siblingCount === 2 ? 'İki Yeni Pozisyon' : `${siblingCount} Yeni Pozisyon`}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="w-12 shrink-0 flex flex-col items-center">
+                    <span
+                      className={`w-0 flex-1 ${idx === 0 ? '' : 'border-l-2 border-dashed border-slate-300'}`}
+                    />
+                    <div
+                      ref={(el) => {
+                        if (el) avatarRefs.current.set(member.user_id, el);
+                        else avatarRefs.current.delete(member.user_id);
+                      }}
+                      className={`relative z-10 w-12 h-12 rounded-full p-[3px] shadow-sm ${avatarRing}`}
+                    >
+                      <div className="w-full h-full rounded-full bg-white flex items-center justify-center">
+                        <User className={`w-5 h-5 ${avatarIcon}`} />
                       </div>
+                    </div>
+                    <span
+                      className={`w-0 flex-1 ${isLast ? '' : 'border-l-2 border-dashed border-slate-300'}`}
+                    />
+                  </div>
 
-                      <div className="space-y-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="font-bold text-sm">{member.full_name}</span>
-                          <MemberRegionBadge countryCode={member?.country_code} />
-                          <span
-                            className={`text-xs ${
-                              isSelected ? 'text-slate-300' : 'text-slate-500'
-                            }`}
-                          >
-                            ·{' '}
-                            {member.career_level > 0
-                              ? `Kariyer Seviyesi ${member.career_level}`
-                              : 'Aday'}
-                          </span>
-                          <span
-                            className={`text-xs font-mono tabular-nums ${
-                              isSelected ? 'text-amber-300' : 'text-slate-600'
-                            }`}
-                          >
-                            · {(member.session_credits ?? 0).toLocaleString('tr-TR')} Seans Kredisi
-                          </span>
-                        </div>
-
-                        <div
-                          className={`text-xs ${
-                            isSelected ? 'text-slate-300' : 'text-slate-500'
-                          }`}
-                        >
-                          {isSelected ? (
-                            <span>
-                              Kendi Bayi Hesabınız · Sizden Sonraki Alt Ağaç:{' '}
-                              {downlineMembersAfterDealer.length} Bayi
-                            </span>
-                          ) : (
-                            <span>
-                              Direkt Sponsoru:{' '}
-                              <strong>
-                                {sponsorObj
-                                  ? `#${sponsorObj.global_line_id} ${sponsorObj.full_name}`
-                                  : '-'}
-                              </strong>{' '}
-                              · Referans Kodu: {member.ref_code}
-                            </span>
-                          )}
-                        </div>
+                  <div
+                    className={`flex-1 min-w-0 my-2 px-4 py-3 rounded-xl border transition-all flex items-center justify-between gap-3 ${cardTone}`}
+                  >
+                    <div className="min-w-0">
+                      <div className="text-sm font-bold truncate">{member.full_name}</div>
+                      <div className={`text-[11px] mt-0.5 truncate ${subTone}`}>
+                        {isSelected
+                          ? 'Kök bayi (siz)'
+                          : `Sponsor: ${sponsorObj?.full_name || '-'}`}
+                        {' · '}
+                        {member.career_level > 0 ? `Seviye ${member.career_level}` : 'Aday'}
+                      </div>
+                      <div className="mt-1.5">
+                        <MemberRegionBadge countryCode={member?.country_code} isSelected={isSelected} />
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-6 font-mono tabular-nums text-xs shrink-0">
-                      {isDirectChildOfSelected && !isSelected && (
-                        <div className="text-emerald-800 font-semibold">
-                          ★ Doğrudan Sponsorunuz (%20)
-                        </div>
-                      )}
-                      <div className="text-right">
-                        <div className={isSelected ? 'text-slate-400' : 'text-slate-500'}>
-                          Toplam Kazanç
-                        </div>
-                        <div className="text-sm font-bold">
-                          {formatUsd(member.wallets?.total_earnings ?? 0, 2)}
-                        </div>
+                    <div className="text-right shrink-0 font-mono tabular-nums space-y-1">
+                      <div className="flex items-center justify-end gap-1.5">
+                        {isDirectChildOfSelected && (
+                          <span className="px-1.5 py-0.5 rounded-md bg-emerald-100 text-emerald-800 text-[10px] font-semibold">
+                            Doğrudan
+                          </span>
+                        )}
+                        <span className={`px-2 py-0.5 rounded-lg text-[11px] font-bold ${badgeTone}`}>
+                          #{member.global_line_id}
+                        </span>
+                      </div>
+                      <div className={`text-[11px] ${subTone}`}>
+                        {formatUsd(member.wallets?.total_earnings ?? 0, 2)}
                       </div>
                     </div>
                   </div>
-
-                  {idx < registrationOrderedMembers.length - 1 && (
-                    <div className="flex justify-center">
-                      <ArrowDown className="w-4 h-4 text-slate-300" />
-                    </div>
-                  )}
-                </React.Fragment>
+                </div>
               );
             })}
           </div>
