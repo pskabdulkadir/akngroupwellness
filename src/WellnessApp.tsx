@@ -138,8 +138,9 @@ export default function WellnessApp({
   });
   const [isExpiredModalDismissed, setIsExpiredModalDismissed] = useState<boolean>(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(() => {
-    if (initialNav.activeModal === 'auth') return true;
     const member = getActiveMemberSession();
+    if (member) return false;
+    if (initialNav.activeModal === 'auth') return true;
     const st = getDeviceDemoStatus();
     // Link ilk tıklandığında: Demo otomatik başlamaz, Bayi Giriş & Üye Paneli açılır
     if (!member && !st.isStarted && !st.isExpired) {
@@ -633,7 +634,7 @@ export default function WellnessApp({
         setIsBusinessPresentationOpen(true);
       } else if (viewParam === 'technical') {
         setIsTechnicalReportOpen(true);
-      } else if (viewParam === 'register') {
+      } else if (viewParam === 'register' && !currentUser) {
         setAuthModalInitialMode('register');
         setIsAuthModalOpen(true);
       }
