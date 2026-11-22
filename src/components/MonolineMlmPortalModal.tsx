@@ -446,14 +446,13 @@ export const MonolineMlmPortalModal: React.FC<MonolineMlmPortalModalProps> = ({
   const handleCreateWithdrawal = async (payload: {
     user_id: string;
     amount: number;
-    method: 'IBAN' | 'TRC20';
+    method: 'IBAN';
     holder_name: string;
     bank_name?: string;
     iban?: string;
     region?: 'DOMESTIC' | 'INTERNATIONAL';
-    channel?: 'TR_IBAN' | 'SWIFT' | 'SEPA' | 'WISE' | 'TRC20';
+    channel?: 'TR_IBAN' | 'SWIFT' | 'SEPA' | 'WISE';
     swift_code?: string;
-    trc20_address?: string;
     wants_tax_refund?: boolean;
     invoice_number?: string;
     invoice_file_name?: string;
@@ -509,8 +508,6 @@ export const MonolineMlmPortalModal: React.FC<MonolineMlmPortalModalProps> = ({
       iban_holder_name: string;
       bank_name: string;
       iban: string;
-      trc20_address: string;
-      preferred_method: 'IBAN' | 'TRC20';
     }
   ) => {
     setIsSubmitting(true);

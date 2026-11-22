@@ -40,6 +40,8 @@ import {
   Power,
   Eye,
   Receipt,
+  ShoppingBag,
+  Banknote,
   FileText,
   Printer,
   Download,
@@ -127,6 +129,7 @@ import { AdminDealerManagementTab } from './AdminDealerManagementTab';
 import { DigitalInvoiceModal } from './DigitalInvoiceModal';
 import { CampaignsManagerAdminTab } from './CampaignsManagerAdminTab';
 import { SiteContentAdminTab } from './SiteContentAdminTab';
+import { AdminPurchaseInvoicesTab, AdminBankCommissionTab } from './AdminFinanceReportTabs';
 import { EthicsGuidelinesAdminTab } from './EthicsGuidelinesAdminTab';
 import { MonolineMlmPortalModal } from './MonolineMlmPortalModal';
 import { SharedDocumentsPanel } from './SharedDocumentsPanel';
@@ -150,7 +153,7 @@ interface AdminPanelModalProps {
 
 export const ADMIN_SESSION_KEY = 'aurabio_admin_session_v1';
 export const ADMIN_TAB_KEY = 'aurabio_admin_tab_v1';
-const ADMIN_TABS = ['organization_tree', 'dealer_management', 'members', 'packages', 'resellers', 'dealers', 'devices', 'invoices', 'campaigns', 'scans', 'monoline_sql', 'site_content', 'ethics_guidelines'] as const;
+const ADMIN_TABS = ['organization_tree', 'dealer_management', 'members', 'packages', 'resellers', 'dealers', 'devices', 'invoices', 'purchase_invoices', 'bank_commission', 'campaigns', 'scans', 'monoline_sql', 'site_content', 'ethics_guidelines'] as const;
 type AdminTab = typeof ADMIN_TABS[number];
 const ADMIN_MODULE_LINKS: { id: Exclude<AdminTab, 'monoline_sql'>; label: string; icon: React.ComponentType<{ className?: string }>; color: string }[] = [
   { id: 'organization_tree', label: 'Unilevel & Monoline Ağaç Yönetimi', icon: GitBranch, color: 'emerald' },
@@ -161,6 +164,8 @@ const ADMIN_MODULE_LINKS: { id: Exclude<AdminTab, 'monoline_sql'>; label: string
   { id: 'dealers', label: 'Bayi Başvuruları', icon: Briefcase, color: 'amber' },
   { id: 'devices', label: 'Cihaz Demo Yönetimi', icon: Smartphone, color: 'blue' },
   { id: 'invoices', label: 'Dijital E-Fatura Yönetimi', icon: Receipt, color: 'violet' },
+  { id: 'purchase_invoices', label: 'Faturalar', icon: ShoppingBag, color: 'violet' },
+  { id: 'bank_commission', label: 'Banka Komisyon', icon: Banknote, color: 'emerald' },
   { id: 'campaigns', label: 'Kampanyalar & Fırsatlar', icon: Gift, color: 'pink' },
   { id: 'site_content', label: 'Site İçerikleri', icon: FileText, color: 'sky' },
   { id: 'ethics_guidelines', label: 'Etik Kurallar', icon: ShieldAlert, color: 'orange' },
@@ -4504,6 +4509,10 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
                 onSuccessMessage={(msg) => setActionSuccessMsg(msg)}
               />
             )}
+
+            {adminTab === 'purchase_invoices' && <AdminPurchaseInvoicesTab invoices={invoices} />}
+
+            {adminTab === 'bank_commission' && <AdminBankCommissionTab />}
 
             {adminTab === 'scans' && (
               <div className="space-y-4">

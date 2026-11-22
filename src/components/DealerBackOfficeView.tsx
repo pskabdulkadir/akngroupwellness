@@ -114,14 +114,13 @@ interface DealerBackOfficeViewProps {
   onCreateWithdrawal: (data: {
     user_id: string;
     amount: number;
-    method: 'IBAN' | 'TRC20';
+    method: 'IBAN';
     holder_name: string;
     bank_name?: string;
     iban?: string;
     region?: MemberRegion;
     channel?: WithdrawalChannel;
     swift_code?: string;
-    trc20_address?: string;
     wants_tax_refund?: boolean;
     invoice_number?: string;
     tax_id_or_tckn?: string;
@@ -140,8 +139,6 @@ interface DealerBackOfficeViewProps {
       iban_holder_name: string;
       bank_name: string;
       iban: string;
-      trc20_address: string;
-      preferred_method: 'IBAN' | 'TRC20';
     }
   ) => Promise<void>;
   onUpdateCredentials: (
@@ -304,6 +301,7 @@ export const DealerBackOfficeView: React.FC<DealerBackOfficeViewProps> = ({
   const [showNewSubDealerPassword, setShowNewSubDealerPassword] = useState<boolean>(false);
   const [newSubDealerLeg, setNewSubDealerLeg] = useState<'LEFT' | 'RIGHT' | 'AUTO'>('AUTO');
   const [showNetworkAddModal, setShowNetworkAddModal] = useState<boolean>(false);
+  const [monolineViewStyle, setMonolineViewStyle] = useState<'line' | 'schema'>('line');
 
   const sortedMembers = useMemo(
     () => [...members].sort((a, b) => a.global_line_id - b.global_line_id),
@@ -1190,13 +1188,11 @@ export const DealerBackOfficeView: React.FC<DealerBackOfficeViewProps> = ({
   };
 
   // Withdrawal form state (Bank Audit Compliance: IBAN Only + Name Cross-Check + %20 Vergi Kesintisi & Fatura Yükleme)
-  const [withdrawMethod, setWithdrawMethod] = useState<'IBAN' | 'TRC20'>('IBAN');
   const [withdrawAmount, setWithdrawAmount] = useState<number>(1000);
   const [customIban, setCustomIban] = useState<string>('');
   const [customBankName, setCustomBankName] = useState<string>('');
   const [customIbanHolder, setCustomIbanHolder] = useState<string>(member?.full_name || '');
   const [withdrawComplianceError, setWithdrawComplianceError] = useState<string | null>(null);
-  const [customTrc20, setCustomTrc20] = useState<string>('');
 
   // %20 Vergi İadesi Fatura Yükleme State'leri
   const [wantsTaxRefund, setWantsTaxRefund] = useState<boolean>(true);
@@ -1433,10 +1429,6 @@ export const DealerBackOfficeView: React.FC<DealerBackOfficeViewProps> = ({
   );
   const [editBankName, setEditBankName] = useState<string>(member?.bank_details?.bank_name || '');
   const [editIban, setEditIban] = useState<string>(member?.bank_details?.iban || '');
-  const [editTrc20, setEditTrc20] = useState<string>(member?.bank_details?.trc20_address || '');
-  const [editPreferredMethod, setEditPreferredMethod] = useState<'IBAN' | 'TRC20'>(
-    member?.bank_details?.preferred_method || 'IBAN'
-  );
   const [totpCode, setTotpCode] = useState<string>('482910');
 
   // Sync local profile form when member changes
@@ -1454,9 +1446,6 @@ export const DealerBackOfficeView: React.FC<DealerBackOfficeViewProps> = ({
       setCustomIbanHolder(member.bank_details?.iban_holder_name || member.full_name || '');
       setEditBankName(member.bank_details?.bank_name || '');
       setEditIban(member.bank_details?.iban || '');
-      setEditTrc20(member.bank_details?.trc20_address || '');
-      setEditPreferredMethod(member.bank_details?.preferred_method || 'IBAN');
-      setWithdrawMethod('IBAN');
       setWithdrawComplianceError(null);
     }
   }, [member?.user_id]);
@@ -1709,8 +1698,6 @@ export const DealerBackOfficeView: React.FC<DealerBackOfficeViewProps> = ({
       iban_holder_name: editIbanHolder,
       bank_name: editBankName,
       iban: editIban,
-      trc20_address: editTrc20,
-      preferred_method: editPreferredMethod,
     });
   };
 
@@ -1722,6 +1709,64 @@ export const DealerBackOfficeView: React.FC<DealerBackOfficeViewProps> = ({
     () => dealerDownlineTree.filter((m) => m.user_id !== member?.user_id),
     [dealerDownlineTree, member?.user_id]
   );
+
+  const monolineChildrenMap = useMemo(() => {
+    const map = new Map<string, MonolineMember[]>();
+    for (const node of dealerDownlineTree) {
+      if (!node.sponsor_id) continue;
+      const siblings = map.get(node.sponsor_id) || [];
+      siblings.push(node);
+      map.set(node.sponsor_id, siblings);
+    }
+    return map;
+  }, [dealerDownlineTree]);
+
+  const monolineSchemaRoot = useMemo(
+    () => (member ? dealerDownlineTree.find((n) => n.user_id === member.user_id) ?? null : null),
+    [dealerDownlineTree, member]
+  );
+
+  const renderMonolineSchemaNode = (node: MonolineMember): React.ReactNode => {
+    const children = monolineChildrenMap.get(node.user_id) || [];
+    const isRoot = node.user_id === monolineSchemaRoot?.user_id;
+    return (
+      <div className="flex flex-col items-center">
+        <div
+          className={`w-56 rounded-xl p-3 border text-center ${
+            isRoot ? 'bg-slate-900 text-white border-slate-900 shadow-sm' : 'bg-white border-emerald-200 text-slate-900'
+          }`}
+        >
+          <div className={`text-[10px] font-mono font-bold ${isRoot ? 'text-amber-300' : 'text-emerald-800'}`}>
+            {isRoot ? 'KÖK BAYİ (SİZ)' : `ALT HAT #${node.global_line_id}`}
+          </div>
+          <div className="font-bold text-sm truncate mt-1">{node.full_name}</div>
+          <div className={`text-[10px] font-mono truncate ${isRoot ? 'text-slate-300' : 'text-slate-500'}`}>
+            Kod: {node.ref_code}
+          </div>
+          <div className={`text-[11px] mt-2 ${isRoot ? 'text-slate-300' : 'text-slate-600'}`}>
+            Direkt: <strong>{children.length}</strong> · Kişisel Hacim:{' '}
+            <strong>{node.personal_volume.toLocaleString('tr-TR')} $</strong>
+          </div>
+        </div>
+
+        {children.length > 0 && (
+          <>
+            <div className="w-px h-6 bg-emerald-300" />
+            <div className="flex items-start">
+              {children.map((child, i) => (
+                <div key={child.user_id} className="relative flex flex-col items-center px-3 pt-6">
+                  {i > 0 && <span className="absolute top-0 left-0 w-1/2 h-px bg-emerald-300" />}
+                  {i < children.length - 1 && <span className="absolute top-0 right-0 w-1/2 h-px bg-emerald-300" />}
+                  <span className="absolute top-0 left-1/2 -translate-x-1/2 w-px h-6 bg-emerald-300" />
+                  {renderMonolineSchemaNode(child)}
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+    );
+  };
 
   // SOL KOL & SAĞ KOL (İKİLİ DENGE HATTI) VE KARİYER YETERLİLİK / EKSİKLER ANALİZİ
   const branchAndQualificationStats = useMemo(() => {
@@ -3366,9 +3411,7 @@ Paket Alarak Aktifliği Yenile →
                             <td className="py-2.5 px-2 font-sans">
                               <div className="font-semibold text-slate-900">{w.method}</div>
                               <div className="text-[11px] font-mono text-slate-500 truncate max-w-[170px]">
-                                {w.method === 'IBAN'
-                                  ? `${w.bank_details?.bank_name || 'Banka'} · ${w.bank_details?.iban || w.payout_address || '-'}`
-                                  : (w.bank_details?.trc20_address || w.payout_address || '-')}
+                                {`${w.bank_details?.bank_name || 'Banka'} · ${w.bank_details?.iban || w.payout_address || '-'}`}
                               </div>
                             </td>
                             <td className="py-2.5 px-2 text-right font-semibold text-slate-700">
@@ -4378,7 +4421,36 @@ Paket Alarak Aktifliği Yenile →
                 </div>
               </div>
 
-              {/* Yatay Monoline Tek Hat Ağaç Yapısı */}
+              <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-lg text-xs font-bold w-fit">
+                <button
+                  type="button"
+                  onClick={() => setMonolineViewStyle('line')}
+                  className={`px-3 py-1.5 rounded-md cursor-pointer ${
+                    monolineViewStyle === 'line' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  Hat Görünümü
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMonolineViewStyle('schema')}
+                  className={`px-3 py-1.5 rounded-md cursor-pointer ${
+                    monolineViewStyle === 'schema' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  Tek Hat Şeması
+                </button>
+              </div>
+
+              {monolineViewStyle === 'schema' && monolineSchemaRoot && (
+                <div className="overflow-x-auto pb-3 pt-1">
+                  <div className="inline-flex justify-center min-w-full">
+                    {renderMonolineSchemaNode(monolineSchemaRoot)}
+                  </div>
+                </div>
+              )}
+
+              {monolineViewStyle === 'line' && (
               <div className="overflow-x-auto pb-3 pt-1">
                 <div className="inline-flex items-stretch gap-3 min-w-full">
                   {dealerDownlineTree.map((node, idx) => {
@@ -4488,6 +4560,7 @@ Paket Alarak Aktifliği Yenile →
                   })}
                 </div>
               </div>
+              )}
 
               {/* Dikey Tek Hat Alt Bayi Listesi */}
               <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3">

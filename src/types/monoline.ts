@@ -215,7 +215,7 @@ const RAW_FREKANS_PACKAGES: Array<Omit<PackageDefinition, 'features' | 'unitSess
       '1.206 Bayi Seans Kredisi Havuzu (1.00 $/seans birim maliyet)',
       'Safir Kurumsal Marka Başlığı ile Özelleştirilmiş Danışan Raporları',
       '7. Kariyer (Kâmile) Paket D Alışveriş Uygunluğu',
-      'Kurumsal IBAN & TRC20 Hızlı Komisyon Mutabakatı',
+      'Kurumsal IBAN Hızlı Komisyon Mutabakatı',
     ],
   },
   {

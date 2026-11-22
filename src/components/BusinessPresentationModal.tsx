@@ -1729,7 +1729,7 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
                     <span>5. %100 USD Bazlı Şeffaf Cüzdan ve Küresel Çekim Güvencesi</span>
                   </div>
                   <p className="text-xs text-slate-600 leading-relaxed">
-                    Tüm kazançlar, komisyonlar ve bonuslar doğrudan ABD Doları (USD) olarak şeffaf şekilde cüzdanınıza yansıtılır. Bayilerimiz hak edişlerini resmi banka TR IBAN veya TRC20 kripto cüzdanlarına kur kaybı yaşamadan güvenle çekebilir.
+                    Tüm kazançlar, komisyonlar ve bonuslar doğrudan ABD Doları (USD) olarak şeffaf şekilde cüzdanınıza yansıtılır. Bayilerimiz hak edişlerini resmi banka TR IBAN hesaplarına kur kaybı yaşamadan güvenle çekebilir.
                   </p>
                 </div>
 

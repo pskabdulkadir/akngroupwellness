@@ -6563,7 +6563,7 @@ async function startServer(options: { listen?: boolean } = {}) {
     next();
   }
 
-  // Body: { user_id?, amount, method: 'IBAN'|'TRC20', address }
+  // Body: { user_id?, amount, method: 'IBAN', address }
   // İşlem: Kullanıcının bakiyesini düşüp talebi PENDING olarak kaydeder (Atomic Transaction).
   app.post(
     '/api/v1/user/withdrawal-request',
@@ -6786,9 +6786,9 @@ async function startServer(options: { listen?: boolean } = {}) {
 
   // Alias for backward compatibility
   app.post('/api/v1/withdrawals', (req, res) => {
-    const { user_id, amount, method, iban, trc20_address, holder_name, bank_name, region, channel, swift_code } =
+    const { user_id, amount, method, iban, holder_name, bank_name, region, channel, swift_code } =
       req.body;
-    req.body.address = method === 'TRC20' ? trc20_address : iban;
+    req.body.address = iban;
     req.body.user_id = user_id;
     req.body.amount = amount;
     req.body.method = method;
@@ -6848,6 +6848,27 @@ async function startServer(options: { listen?: boolean } = {}) {
       });
     } catch (err: any) {
       res.status(503).json({ status: 'error', code: 'DATABASE_READ_FAILED', message: err?.message || 'Çekim talepleri PostgreSQL’den okunamadı.' });
+    }
+  });
+
+  app.get('/api/v1/admin/banking/commission-balances', requireAdminJwt, async (_req, res) => {
+    try {
+      const result = await pgQuery(
+        `SELECT u.user_id, u.full_name, u.email, u.phone, u.referral_code, u.career_level,
+                COALESCE(w.balance, 0) AS balance,
+                COALESCE(w.pending_balance, 0) AS pending_balance,
+                COALESCE(w.total_withdrawn, 0) AS total_withdrawn,
+                COALESCE(NULLIF(w.iban, ''), u.member_data->'bank_details'->>'iban', '') AS iban,
+                COALESCE(NULLIF(w.iban_holder_name, ''), u.full_name) AS iban_holder_name,
+                COALESCE(NULLIF(w.bank_name, ''), u.member_data->'bank_details'->>'bank_name', '') AS bank_name
+         FROM wallets w
+         JOIN users u ON u.user_id = w.user_id
+         WHERE COALESCE(w.balance, 0) > 0 OR COALESCE(w.pending_balance, 0) > 0
+         ORDER BY COALESCE(w.balance, 0) DESC, u.full_name`
+      );
+      res.json({ status: 'success', data: result?.rows || [] });
+    } catch (err: any) {
+      res.status(503).json({ status: 'error', code: 'DATABASE_READ_FAILED', message: err?.message || 'Komisyon bakiyeleri PostgreSQL’den okunamadı.' });
     }
   });
 
@@ -8686,8 +8707,6 @@ async function startServer(options: { listen?: boolean } = {}) {
       iban_holder_name,
       bank_name,
       iban,
-      trc20_address,
-      preferred_method,
     } = req.body;
 
     if (full_name) {

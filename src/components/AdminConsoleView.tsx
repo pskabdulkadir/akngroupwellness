@@ -6068,7 +6068,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                       GET /api/v1/admin/withdrawals
                     </div>
                     <div className="text-[11px] text-slate-500">
-                      Bekleyen ve tamamlanan tüm çekim talepleri (IBAN & TRC20)
+                      Bekleyen ve tamamlanan tüm çekim talepleri (IBAN)
                     </div>
                   </div>
                   <button
