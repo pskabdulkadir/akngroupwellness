@@ -1894,6 +1894,7 @@ export async function getOrCreateResellerForUser(user: UserMember): Promise<Rese
 
   const localResellers = getLocalResellers();
   const serverBalance = userUid ? await getServerCreditsBalance(userUid) : null;
+  const serverBankInfo = userUid ? await getServerBankInfo(userUid) : null;
   const localFound = localResellers.find(r =>
     (userUid && r.uid === userUid) ||
     (userEmail && r.email && r.email.toLowerCase() === userEmail) ||
@@ -1901,8 +1902,11 @@ export async function getOrCreateResellerForUser(user: UserMember): Promise<Rese
     (userCompany && r.resellerName && r.resellerName.trim().toLowerCase() === userCompany)
   );
   if (localFound) {
-    const updated = { ...localFound, creditsBalance: serverBalance ?? undefined };
-    saveLocalResellers(localResellers.map((reseller) => reseller.uid === localFound.uid ? updated : reseller));
+    const updated = { ...localFound, bankInfo: serverBankInfo ?? localFound.bankInfo, creditsBalance: serverBalance ?? undefined };
+    const cachedReseller = serverBankInfo && !serverBankInfo.iban && localFound.bankInfo?.iban
+      ? { ...updated, bankInfo: localFound.bankInfo }
+      : updated;
+    saveLocalResellers(localResellers.map((reseller) => reseller.uid === localFound.uid ? cachedReseller : reseller));
     setActiveResellerSession(updated);
     return updated;
   }
@@ -1917,7 +1921,7 @@ export async function getOrCreateResellerForUser(user: UserMember): Promise<Rese
     if (user.dealerDetails?.referralCode && found.referralCode !== user.dealerDetails.referralCode) {
       found.referralCode = user.dealerDetails.referralCode;
     }
-    const updated = { ...found, creditsBalance: serverBalance ?? undefined };
+    const updated = { ...found, bankInfo: serverBankInfo ?? found.bankInfo, creditsBalance: serverBalance ?? undefined };
     setActiveResellerSession(updated);
     return updated;
   }
@@ -1939,7 +1943,7 @@ export async function getOrCreateResellerForUser(user: UserMember): Promise<Rese
     commissionRate: user.dealerDetails?.commissionRate || 20,
     creditsBalance: serverBalance ?? undefined,
     dealerPackageId: user.dealerPackageId || 'pkg-5k',
-    bankInfo: {
+    bankInfo: serverBankInfo ?? {
       bankName: user.dealerDetails?.bankInfo?.bankName || '',
       accountHolder: user.dealerDetails?.bankInfo?.accountHolder || user.fullName,
       iban: user.dealerDetails?.bankInfo?.iban || '',
@@ -2357,6 +2361,29 @@ export async function registerNewReseller(data: {
   }
 }
 
+async function getServerBankInfo(userId: string): Promise<BankInfo | null> {
+  const { getMemberWalletToken } = await import('./authManager');
+  const { getAdminToken } = await import('./adminSession');
+  const token = getMemberWalletToken() || getAdminToken();
+  if (!token) return null;
+
+  try {
+    const response = await fetch(`/api/v1/members/${encodeURIComponent(userId)}/profile`, {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: 'no-store',
+    });
+    if (!response.ok) return null;
+    const { bank_details } = await response.json();
+    return {
+      bankName: bank_details.bank_name || '',
+      accountHolder: bank_details.iban_holder_name || '',
+      iban: bank_details.iban || '',
+    };
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Update Reseller Bank Information (IBAN, Bank Name, Account Holder)
  */
@@ -2371,12 +2398,27 @@ export async function updateResellerBankInfo(
       return { success: false, message: 'Bayi kaydı bulunamadı.' };
     }
 
+    const { getMemberWalletToken } = await import('./authManager');
+    const { getAdminToken } = await import('./adminSession');
+    const token = getMemberWalletToken() || getAdminToken();
+    if (!token) return { success: false, message: 'Güvenli bayi oturumu bulunamadı; yeniden giriş yapın.' };
+
+    const response = await fetch(`/api/v1/members/${encodeURIComponent(resellerId)}/profile`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ bank_name: bankInfo.bankName, iban: bankInfo.iban }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      return { success: false, message: data.message || 'Banka bilgileri sunucuya kaydedilemedi.' };
+    }
+
     const updatedReseller: Reseller = {
       ...all[idx],
       bankInfo: {
-        bankName: (bankInfo.bankName || '').trim(),
-        accountHolder: (bankInfo.accountHolder || '').trim(),
-        iban: (bankInfo.iban || '').trim(),
+        bankName: data.bank_details.bank_name,
+        accountHolder: data.bank_details.iban_holder_name,
+        iban: data.bank_details.iban,
       },
       updatedAt: new Date().toISOString(),
     };

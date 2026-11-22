@@ -7915,9 +7915,9 @@ async function startServer(options: { listen?: boolean } = {}) {
               existing.ref_code = String(fm.referralCode).trim().toUpperCase();
             }
 
-            if (fm.bankName) existing.bank_details.bank_name = String(fm.bankName).trim();
-            if (fm.iban) existing.bank_details.iban = String(fm.iban).trim();
-            if (fm.ibanHolder) {
+            if (fm.bankName && !existing.bank_details.bank_name) existing.bank_details.bank_name = String(fm.bankName).trim();
+            if (fm.iban && !existing.bank_details.iban) existing.bank_details.iban = String(fm.iban).trim();
+            if (fm.ibanHolder && !existing.bank_details.iban_holder_name) {
               existing.bank_details.iban_holder_name = String(fm.ibanHolder).trim();
             }
           }
@@ -8662,6 +8662,16 @@ async function startServer(options: { listen?: boolean } = {}) {
     });
   });
 
+  app.get('/api/v1/members/:userId/profile', requireAdminOrOwnMember, (req, res) => {
+    const member = members.find((m) => m.user_id === req.params.userId);
+    if (!member) {
+      res.status(404).json({ status: 'error', message: 'Üye bulunamadı.' });
+      return;
+    }
+    res.set('Cache-Control', 'no-store');
+    res.json({ bank_details: member.bank_details });
+  });
+
   app.put('/api/v1/members/:userId/profile', requireAdminOrOwnMember, (req, res) => {
     const member = members.find((m) => m.user_id === req.params.userId);
     if (!member) {
@@ -8696,6 +8706,7 @@ async function startServer(options: { listen?: boolean } = {}) {
     res.json({
       status: 'success',
       message: `${member.full_name} profil ve resmi Banka TR IBAN bilgileri (İsim Eşleşmesi Doğrulanmış) güncellendi.`,
+      bank_details: member.bank_details,
       state: buildStateResponse(),
     });
   });

@@ -136,11 +136,11 @@ export const Header: React.FC<HeaderProps> = ({
       if (res) {
         setSyncStatusMsg(`Senkronize Edildi (${res.members?.length || 0} Üye, ${res.transactions?.length || 0} İşlem)`);
       } else {
-        setSyncStatusMsg('Senkronizasyon tamamlandı');
+        setSyncStatusMsg('Senkronizasyon yapılamadı. Yönetici oturumunu kontrol edin.');
       }
       setTimeout(() => setSyncStatusMsg(null), 3500);
     } catch {
-      setSyncStatusMsg('Senkronizasyon tamamlandı');
+      setSyncStatusMsg('Senkronizasyon yapılamadı.');
       setTimeout(() => setSyncStatusMsg(null), 2500);
     }
   };

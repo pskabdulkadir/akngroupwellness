@@ -202,6 +202,10 @@ export async function syncFrekansWithMonolineEngine(options?: {
 
   const runSync = async (): Promise<SystemStateResponse | null> => {
     try {
+      const { getAdminToken } = await import('./adminSession');
+      const adminToken = getAdminToken();
+      if (!adminToken) return null;
+
       const [allUsers, allResellers, memberOrders] = await Promise.all([
         adminGetAllMembers(),
         getAllResellers(),
@@ -526,12 +530,10 @@ export async function syncFrekansWithMonolineEngine(options?: {
         }
       });
 
-      const { getAdminToken } = await import('./adminSession');
-      const adminToken = getAdminToken();
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (adminToken) {
-        headers['Authorization'] = `Bearer ${adminToken}`;
-      }
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${adminToken}`,
+      };
 
       const res = await fetch('/api/v1/integrations/sync-frekans-data', {
         method: 'POST',
