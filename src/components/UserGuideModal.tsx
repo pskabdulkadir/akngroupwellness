@@ -664,7 +664,7 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({ isOpen, onClose 
                     <span>Hesap ve Bayi Paneli (Monoline 7 Nefis MLM - USD)</span>
                   </div>
                   <p className="text-xs text-slate-300 leading-relaxed">
-                    Giriş yaptıktan sonra menüdeki <strong>Bayi Paneli</strong> alanını açın. Sistemimiz <strong>%100 ABD Doları (USD)</strong> para birimiyle çalışan <strong>Küresel Tek Hat (Monoline) 7 Derinlik</strong> kazanç mimarisine sahiptir. Buradan 14 seans kredi paketini yönetebilirsiniz. Paket fiyatı USD cinsindendir ve 1 USD = 1 Kredi uygulanır; ek paket bonusu verilmez. %20 Direkt Sponsor ve %25 Monoline derinlik kazançlarınızı anlık USD cüzdanınızda takip edebilir, bakiye transferlerinizi ve çekim taleplerinizi güvenle gerçekleştirebilirsiniz.
+                    Bayi Back Office’te kayıt, sponsor, paket, ağ, kariyer ve cüzdan bölümlerini kullanın. Katalogda gösterilen güncel fiyat ve kredi miktarını esas alın; fiyat bölgeye göre değişebilir. Komisyonlar hemen çekilebilir olmayabilir ve gerçek sonuçlar siparişlerin, hesap aktifliğinin, kariyer koşullarının ve yürürlükteki sistem kurallarının doğrulanmasına bağlıdır.
                   </p>
                 </div>
               </div>
@@ -944,28 +944,76 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({ isOpen, onClose 
           )}
 
           {activeSection === 'dealer_backoffice' && (
-            <div className="space-y-4">
-              <div className="rounded-2xl border border-emerald-500/30 bg-emerald-950/30 p-4">
-                <h3 className="font-bold text-emerald-200">Bayi panelini kullanma</h3>
-                <p className="mt-1 text-sm leading-relaxed text-slate-300">Bayi Back Office ana menüsünden ihtiyacınız olan bölümü seçin. İşlemler tamamlandığında aynı menüden diğer bölümlere dönebilirsiniz.</p>
+            <div className="space-y-5">
+              <div className="rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-emerald-950/60 to-slate-950 p-5">
+                <h3 className="text-lg font-black text-emerald-200">Bayi kaydı ve sponsor bağlantısı</h3>
+                <ol className="mt-3 grid gap-3 sm:grid-cols-2">
+                  {[
+                    ['1. Başvuruyu açın', 'Giriş/Kayıt ekranından bayi kaydını başlatın. Ad-soyad, e-posta, telefon, ülke ve istenen bayi/işletme bilgilerini doğru girin. Güçlü ve en az 12 karakterli bir parola oluşturun.'],
+                    ['2. Sponsor kodunu doğrulayın', 'Bayi paylaşım bağlantısını kullandıysanız sponsor kodu otomatik gelebilir. Başvuruyu göndermeden önce ekranda görünen bayi adını ve referans kodunu kontrol edin.'],
+                    ['3. Paket ve koşulları inceleyin', 'Ülke seçimi fiyatı etkileyebilir. Katalogdaki paket, fiyat ve kredi miktarını kontrol edin; gerekli sözleşme/onay metinlerini okuyun.'],
+                    ['4. Ödeme ve hesap onayı', 'Başvurudan sonra hesap ödeme/onay bekliyor durumunda kalabilir. Ekranda sunulan ödeme adımlarını tamamlayıp hesabın etkinleştiğini panelden doğrulayın.'],
+                  ].map(([title, description]) => (
+                    <li key={title} className="rounded-xl border border-slate-700 bg-slate-950/70 p-4">
+                      <h4 className="text-sm font-bold text-slate-100">{title}</h4>
+                      <p className="mt-1 text-xs leading-relaxed text-slate-300">{description}</p>
+                    </li>
+                  ))}
+                </ol>
+                <p className="mt-3 text-xs leading-relaxed text-amber-200">Sponsor adı veya kodu doğru değilse başvuruyu göndermeyin; kodu paylaşan bayi ya da destek ekibiyle doğrulayın. Kayıt tamamlandıktan sonra sponsor ilişkisinin değiştirilebileceğini varsaymayın.</p>
               </div>
-              <div className="grid gap-3 sm:grid-cols-2">
-                {[
-                  ['Cüzdan & Banka', 'Bakiye ve işlemlerinizi görüntüleyin; çekim talebi oluşturmadan önce kendi adınıza kayıtlı banka ve IBAN bilgilerinizi kontrol edin.'],
-                  ['Aktiflik & Paket', 'Aktiflik sürenizi takip edin ve kullanılabilir ödeme yöntemleriyle güncel paket kataloğundan alışveriş yapın.'],
-                  ['Referans & QR', 'Size ait referans kodu ve QR bağlantısını yeni üyelerle paylaşın.'],
-                  ['Ağ Yapısı', 'Sponsor ağınızı ve Monoline hattındaki konumunuzu görüntüleyin.'],
-                  ['Profil ve Güvenlik', 'Profil bilgilerinizi güncel tutun; hesabınız destekliyorsa iki aşamalı doğrulamayı etkinleştirin.'],
-                  ['Plaket ve Geri Bildirim', 'Kariyer seviyenize ait bilgileri görüntüleyin; destek veya öneri için yönetim ekibine bildirim gönderin.'],
-                  ['Dokümanlar', 'Kullanma Kılavuzu ve İş Sunumu & Dijital Katalog bağlantıları bu bölümde bulunur. Paylaşılan dosyalar ayrıca listelenir.'],
-                ].map(([title, description]) => (
-                  <div key={title} className="rounded-xl border border-slate-700 bg-slate-950/60 p-4">
-                    <h4 className="text-sm font-bold text-slate-100">{title}</h4>
-                    <p className="mt-1 text-xs leading-relaxed text-slate-300">{description}</p>
-                  </div>
-                ))}
-              </div>
-              <p className="text-xs leading-relaxed text-amber-200/90">Paket, komisyon ve çekim koşulları sistemde gösterilen güncel tutar ve kurallara göre değişebilir; işlem öncesinde paneldeki bilgileri esas alın.</p>
+
+              <section className="rounded-2xl border border-slate-700 bg-slate-950/60 p-5">
+                <h3 className="font-bold text-slate-100">Bayi Back Office bölümleri</h3>
+                <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                  {[
+                    ['Cüzdan & Banka', 'Çekilebilir ve bekleyen bakiyeleri ayrı inceleyin. Çekim öncesinde hesap aktifliğini ve kendi adınıza kayıtlı IBAN bilgisini doğrulayın.'],
+                    ['Aktiflik & Paket', 'Aktiflik süresini takip edin; güncel paket kataloğunu, fiyatı ve kredi miktarını inceleyerek panelde sunulan işlemi seçin.'],
+                    ['Referans & QR', 'Kişisel referans bağlantınızı veya QR kodunuzu paylaşın. Yeni başvuru sahibinin doğru sponsor adını gördüğünü teyit etmesini isteyin.'],
+                    ['Ağ Yapısı', 'Sponsor ağını ve Monoline sıra görünümünü inceleyin; bunlar farklı ilişki/görünüm biçimleridir.'],
+                    ['Profil & Güvenlik', 'Profil bilgilerini güncel tutun, parolanızı paylaşmayın ve sunuluyorsa iki aşamalı doğrulamayı etkinleştirin.'],
+                    ['Kariyer Plaketi', 'Paneldeki güncel kariyer ve ilerleme bilgilerini kontrol edin. Eşikler dönemsel hacim ve ekip koşullarına bağlıdır.'],
+                    ['Geri Bildirim & Dokümanlar', 'Destek/öneri gönderin; Kullanma Kılavuzu, İş Sunumu & Dijital Katalog ve paylaşılan dosyalara erişin.'],
+                  ].map(([title, description]) => (
+                    <div key={title} className="rounded-xl border border-slate-700 bg-slate-900/70 p-4">
+                      <h4 className="text-sm font-bold text-slate-100">{title}</h4>
+                      <p className="mt-1 text-xs leading-relaxed text-slate-300">{description}</p>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              <section className="rounded-2xl border border-amber-500/30 bg-amber-950/20 p-5">
+                <h3 className="font-bold text-amber-200">Kariyer seviyeleri: uygulama içi eşikler</h3>
+                <p className="mt-1 text-xs leading-relaxed text-slate-300">Kariyer hesaplaması aktif hesap, son 30 günlük grup hacmi, aktif doğrudan referans ve bazı seviyelerde ayrı ekip kollarındaki nitelikli bayi şartlarına bağlıdır. Eşikler gelir veya ödül garantisi değildir.</p>
+                <div className="mt-3 overflow-x-auto">
+                  <table className="w-full min-w-[680px] border-collapse text-left text-xs">
+                    <thead><tr className="text-amber-200"><th className="border-b border-slate-700 p-2">Seviye</th><th className="border-b border-slate-700 p-2">Unvan</th><th className="border-b border-slate-700 p-2">Aktif direkt</th><th className="border-b border-slate-700 p-2">Grup hacmi</th><th className="border-b border-slate-700 p-2">Ek ekip koşulu</th></tr></thead>
+                    <tbody className="text-slate-300">
+                      {[
+                        ['1', 'Emmâre', '0', '$0', 'Yok'],
+                        ['2', 'Levvâme', '10', '$2.000', 'Yok'],
+                        ['3', 'Mülhime', '20', '$5.000', 'Yok'],
+                        ['4', 'Mutmainne', '50', '$10.000', 'Ayrı kolda 1 Levvâme'],
+                        ['5', 'Râziye', '100', '$50.000', 'Ayrı kollarda 2 Mülhime'],
+                        ['6', 'Marziyye', '500', '$350.000', 'Ayrı kollarda 2 Mutmainne ve 1 Mülhime'],
+                        ['7', 'Kâmile', '1.000', '$1.000.000', 'Ayrı kollarda 2 Râziye ve 2 Mutmainne'],
+                      ].map(([level, title, directs, volume, team]) => (
+                        <tr key={level} className="odd:bg-white/[0.03]"><td className="p-2">{level}</td><td className="p-2 font-semibold">{title}</td><td className="p-2">{directs}</td><td className="p-2">{volume}</td><td className="p-2">{team}</td></tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+
+              <section className="rounded-2xl border border-indigo-500/30 bg-indigo-950/20 p-5">
+                <h3 className="font-bold text-indigo-200">Komisyon, bekleme ve çekim</h3>
+                <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                  <p className="rounded-xl bg-slate-950/70 p-4 text-xs leading-relaxed text-slate-300"><strong className="text-white">Varsayılan komisyon yapısı:</strong> Kodda doğrudan sponsor için %20; Unilevel derinliklerinde %7, %5, %4, %3 ve sonraki üç derinlikte %2 oranları tanımlıdır. Global Monoline sırası için de ayrı, toplamı %5 olan oranlar bulunur. Uygulanabilirlik; sipariş, hesap aktifliği, kariyer ve güncel yönetim kurallarına bağlıdır.</p>
+                  <p className="rounded-xl bg-slate-950/70 p-4 text-xs leading-relaxed text-slate-300"><strong className="text-white">Ödeme zamanlaması:</strong> Komisyonlar önce bekleyen bakiyede tutulabilir; kodda varsayılan bekleme süresi 14 gündür. Vade, iade/inceleme durumu ve hesap uygunluğu çekilebilir bakiyeyi etkiler. Paneldeki bekleyen tutarı çekilebilir bakiye saymayın.</p>
+                </div>
+                <p className="mt-3 text-xs leading-relaxed text-amber-200">Gösterilen oranlar varsayılan teknik kurallardır; kazanç, yatırım geri dönüşü veya ödeme garantisi değildir. Geçerli kural, bakiye ve çekim koşulları için işlem anındaki panel bilgilerini ve resmi koşulları esas alın.</p>
+              </section>
             </div>
           )}
 

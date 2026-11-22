@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import { formatUsd } from '../utils/currency';
 import QRCode from 'qrcode';
 import { 
-  X, 
+  X,
+  ChevronLeft,
+  ChevronRight,
   Sparkles, 
   Share2, 
   Copy, 
@@ -41,8 +43,7 @@ import {
   Moon,
   Sun,
   RefreshCw,
-  Sliders,
-  ChevronRight
+  Sliders
 } from 'lucide-react';
 import { UserMember } from '../utils/authManager';
 import type { DealerPackage } from '../config/dealerPackages';
@@ -76,8 +77,18 @@ type TabSection =
   | 'how_to_use' 
   | 'simulator' 
   | 'packages' 
-  | 'compliance' 
+  | 'compliance'
   | 'share';
+
+const PRESENTATION_SLIDES: TabSection[] = [
+  'what_it_is',
+  'earnings',
+  'how_to_use',
+  'simulator',
+  'packages',
+  'compliance',
+  'share',
+];
 
 export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps> = ({
   isOpen,
@@ -269,6 +280,22 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
     monthlyFastRoiBonus;
 
   const yearlyProjectedEarnings = totalMonthlyEarnings * 12;
+  const activeSlideIndex = PRESENTATION_SLIDES.indexOf(activeSection);
+  const moveSlide = useCallback((direction: -1 | 1) => {
+    const nextIndex = (activeSlideIndex + direction + PRESENTATION_SLIDES.length) % PRESENTATION_SLIDES.length;
+    setActiveSection(PRESENTATION_SLIDES[nextIndex]);
+  }, [activeSlideIndex]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.target instanceof HTMLElement && ['INPUT', 'TEXTAREA', 'SELECT'].includes(event.target.tagName)) return;
+      if (event.key === 'ArrowRight') moveSlide(1);
+      if (event.key === 'ArrowLeft') moveSlide(-1);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, moveSlide]);
 
   // ROI Payback Calculation
   const dailyEarnings = totalMonthlyEarnings / 30;
@@ -284,8 +311,8 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
   });
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-5 bg-slate-950/95 backdrop-blur-2xl overflow-y-auto animate-in fade-in duration-200">
-      <div className="relative w-full max-w-6xl bg-slate-900 border border-emerald-500/40 rounded-3xl shadow-2xl shadow-emerald-950/80 overflow-hidden my-auto max-h-[94vh] flex flex-col">
+    <div className="fixed inset-0 z-[60] flex h-[100dvh] w-screen items-stretch justify-stretch bg-[#050914] text-white animate-in fade-in duration-200">
+      <div className="relative flex h-full w-full flex-col overflow-hidden bg-[radial-gradient(ellipse_at_top_left,_rgba(16,185,129,0.16),_transparent_36%),radial-gradient(ellipse_at_bottom_right,_rgba(99,102,241,0.14),_transparent_38%),#070b14]">
         
         {/* Top Header Bar */}
         <div className="px-5 py-4 bg-gradient-to-r from-slate-950 via-slate-900 to-emerald-950/80 border-b border-slate-800 flex items-center justify-between shrink-0">
@@ -302,7 +329,7 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
                   Resmi İş Sunum Raporu &amp; Dijital Tanıtım Kataloğu
                 </span>
                 <span className="px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 font-bold text-[10px] border border-amber-500/40">
-                  14 Kredi Paketi · Monoline 7 Nefis MLM
+                  {packageCount} Kredi Paketi · Monoline 7 Nefis MLM
                 </span>
                 {activeReferralCode && (
                   <span className="px-2 py-0.5 rounded-md bg-emerald-950 text-emerald-300 font-mono text-[10px] font-bold border border-emerald-500/40 flex items-center gap-1">
@@ -348,19 +375,12 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
           </div>
         </div>
 
-        {/* Listeli Butonlar Navigasyon Paneli (1..7 Sıralı Liste) */}
-        <div className="px-4 sm:px-6 py-3 bg-slate-950/95 border-b border-slate-800/90 shrink-0">
-          <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-800/60 text-xs">
-            <span className="font-extrabold text-amber-300 flex items-center gap-1.5 uppercase tracking-wider text-[11px]">
-              <Layers className="w-3.5 h-3.5 text-amber-400" />
-              <span>İş Sunum Raporu &amp; Dijital Katalog Bölümleri (1 - 7)</span>
-            </span>
-            <span className="text-[10px] text-slate-400 hidden sm:inline">
-              İncelemek istediğiniz konuya tıklayarak doğrudan ilgili bölüme geçebilirsiniz
-            </span>
+        <div className="shrink-0 border-b border-white/10 bg-slate-950/75 px-4 py-3 backdrop-blur-xl sm:px-7">
+          <div className="mb-3 flex items-center justify-between gap-3 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">
+            <span>Sunum bölümleri</span>
+            <span>{activeSlideIndex + 1} / {PRESENTATION_SLIDES.length}</span>
           </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-2">
+          <div className="flex gap-2 overflow-x-auto pb-1">
             {[
               {
                 id: 'what_it_is' as TabSection,
@@ -426,7 +446,7 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
                   key={btn.id}
                   type="button"
                   onClick={() => setActiveSection(btn.id)}
-                  className={`w-full text-left px-3 py-2.5 rounded-xl border transition-all flex items-center justify-between sm:flex-col sm:items-start gap-1.5 cursor-pointer text-xs ${
+                  className={`min-w-[190px] text-left px-3 py-2.5 rounded-xl border transition-all flex items-center justify-between gap-1.5 cursor-pointer text-xs ${
                     isActive
                       ? 'bg-gradient-to-r sm:bg-gradient-to-b from-amber-950/80 via-slate-900 to-amber-950/60 border-amber-400/90 text-amber-200 shadow-md ring-1 ring-amber-400/40 font-black'
                       : 'bg-slate-900/70 hover:bg-slate-850 border-slate-800 text-slate-300 hover:text-slate-100 hover:border-slate-700 font-semibold'
@@ -453,7 +473,7 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
                     </span>
                   </div>
                   {isActive && (
-                    <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-400/20 text-amber-300 font-bold border border-amber-400/30 sm:self-end">
+                    <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-400/20 text-amber-300 font-bold border border-amber-400/30">
                       Aktif ✓
                     </span>
                   )}
@@ -464,7 +484,7 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
         </div>
 
         {/* Scrollable Body */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-7 space-y-6">
+        <div key={activeSection} className="flex-1 overflow-y-auto px-4 py-5 sm:px-8 sm:py-8 space-y-6 animate-in fade-in slide-in-from-right-2 duration-300">
 
           {/* SİZİ DAVET EDEN YETKİLİ BAYİ KARTI (REFERRAL SHOWCASE BANNER) */}
           {referredDealerInfo && (
@@ -1890,6 +1910,20 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
             </div>
           )}
 
+        </div>
+
+        <div className="flex shrink-0 items-center justify-between gap-3 border-t border-white/10 bg-slate-950/80 px-4 py-3 backdrop-blur-xl sm:px-7">
+          <button type="button" aria-label="Önceki slayt" onClick={() => moveSlide(-1)} className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-bold text-slate-200 transition hover:bg-white/10">
+            <ChevronLeft className="h-4 w-4" /><span className="hidden sm:inline">Önceki slayt</span>
+          </button>
+          <div className="flex flex-1 items-center justify-center gap-1.5">
+            {PRESENTATION_SLIDES.map((slide, index) => (
+              <button key={slide} type="button" aria-label={`${index + 1}. slayta git`} aria-current={activeSlideIndex === index ? 'step' : undefined} onClick={() => setActiveSection(slide)} className={`h-1.5 rounded-full transition-all ${activeSlideIndex === index ? 'w-8 bg-emerald-400' : 'w-2 bg-slate-700 hover:bg-slate-500'}`} />
+            ))}
+          </div>
+          <button type="button" aria-label="Sonraki slayt" onClick={() => moveSlide(1)} className="inline-flex items-center gap-2 rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-3 py-2 text-xs font-bold text-emerald-200 transition hover:bg-emerald-500/20">
+            <span className="hidden sm:inline">Sonraki slayt</span><ChevronRight className="h-4 w-4" />
+          </button>
         </div>
 
         {/* Bottom Footer Bar with Quick Action CTAs */}
