@@ -135,23 +135,23 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({ isOpen, onClose 
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-5 bg-slate-950/85 backdrop-blur-xl animate-fade-in overflow-y-auto">
-      <div className="relative w-full max-w-4xl max-h-[92vh] bg-slate-900 border border-slate-700/80 rounded-3xl shadow-2xl flex flex-col overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-5 bg-white/85 backdrop-blur-xl animate-fade-in overflow-y-auto">
+      <div className="relative w-full max-w-4xl max-h-[92vh] bg-white border border-slate-200 rounded-3xl shadow-2xl flex flex-col overflow-hidden">
         
         {/* Modal Top Header */}
-        <div className="p-4 sm:p-6 bg-slate-950/90 border-b border-slate-800 flex items-center justify-between gap-4 shrink-0">
+        <div className="p-4 sm:p-6 bg-white border-b border-slate-200 flex items-center justify-between gap-4 shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-emerald-500/20 via-teal-500/20 to-indigo-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shadow-inner">
               <BookOpen className="w-6 h-6" />
             </div>
             <div>
               <div className="flex flex-wrap items-center gap-2">
-                <h2 className="text-lg sm:text-xl font-black text-slate-100">Kullanım Kılavuzu & Sesli Rehber</h2>
+                <h2 className="text-lg sm:text-xl font-black text-slate-900">Kullanım Kılavuzu & Sesli Rehber</h2>
                 <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-bold uppercase tracking-wider">
                   Güncel Kullanım Rehberi
                 </span>
               </div>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-slate-600">
                 Tarama, rapor, ses oturumları ve kişisel araçlar için adım adım yardım
               </p>
             </div>
@@ -160,7 +160,7 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({ isOpen, onClose 
           <div className="flex items-center gap-2">
             <button
               onClick={handleClose}
-              className="p-2.5 rounded-2xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition-colors cursor-pointer"
+              className="p-2.5 rounded-2xl bg-slate-100/80 hover:bg-slate-200 text-slate-700 hover:text-slate-900 border border-slate-300 transition-colors cursor-pointer"
               title="Kapat"
             >
               <X className="w-5 h-5" />
@@ -169,17 +169,17 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({ isOpen, onClose 
         </div>
 
         {/* Global Voice Assistant Control Banner */}
-        <div className="px-4 sm:px-6 py-3 bg-gradient-to-r from-emerald-950/70 via-slate-900 to-indigo-950/70 border-b border-slate-800 flex flex-wrap items-center justify-between gap-3 shrink-0">
+        <div className="px-4 sm:px-6 py-3 bg-gradient-to-r from-emerald-50 via-white to-indigo-50 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3 shrink-0">
           <div className="flex items-center gap-2.5">
             <div className={`w-8 h-8 rounded-xl flex items-center justify-center border transition-all ${
               isSpeaking 
                 ? 'bg-emerald-500/20 text-emerald-400 border-emerald-400 shadow-md shadow-emerald-500/30 animate-pulse' 
-                : 'bg-slate-800 text-slate-400 border-slate-700'
+                : 'bg-slate-100 text-slate-600 border-slate-300'
             }`}>
               <Volume2 className="w-4 h-4" />
             </div>
             <div>
-              <div className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+              <div className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
                 <span>Türkçe Sesli Rehber Asistanı</span>
                 {isSpeaking && (
                   <span className="flex items-center gap-0.5 text-[10px] text-emerald-400 font-mono">
@@ -188,7 +188,7 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({ isOpen, onClose 
                   </span>
                 )}
               </div>
-              <p className="text-[10px] text-slate-400">
+              <p className="text-[10px] text-slate-600">
                 Tüm kılavuzu veya seçeceğiniz modülü sesli olarak dinleyebilirsiniz.
               </p>
             </div>
@@ -215,7 +215,7 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({ isOpen, onClose 
             )}
 
             {/* Voice Speed Selector */}
-            <div className="flex items-center bg-slate-950 rounded-xl p-0.5 border border-slate-800">
+            <div className="flex items-center bg-white rounded-xl p-0.5 border border-slate-200">
               {[1.0, 1.25, 1.5].map((rate) => (
                 <button
                   key={rate}
@@ -223,7 +223,7 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({ isOpen, onClose 
                   className={`px-2 py-1 rounded-lg text-[10px] font-bold font-mono transition-all cursor-pointer ${
                     speechRate === rate 
                       ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' 
-                      : 'text-slate-400 hover:text-slate-200'
+                      : 'text-slate-600 hover:text-slate-800'
                   }`}
                 >
                   {rate}x
@@ -236,8 +236,8 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({ isOpen, onClose 
               onClick={toggleVoiceMute}
               className={`min-h-[48px] min-w-[48px] flex items-center justify-center p-2 rounded-xl border transition-colors cursor-pointer ${
                 isVoiceMuted 
-                  ? 'bg-rose-950/60 text-rose-300 border-rose-500/40' 
-                  : 'bg-slate-800 text-slate-300 border-slate-700 hover:text-white'
+                  ? 'bg-rose-50 text-rose-700 border-rose-300' 
+                  : 'bg-slate-100 text-slate-700 border-slate-300 hover:text-slate-900'
               }`}
               title={isVoiceMuted ? 'Sesli Asistanı Aç' : 'Sesli Asistanı Sessize Al'}
             >
@@ -247,13 +247,13 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({ isOpen, onClose 
         </div>
 
         {/* Tab Navigation Bar */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 items-stretch px-3 sm:px-6 pt-2.5 bg-slate-950/50 border-b border-slate-800 gap-1 overflow-y-auto scrollbar-none shrink-0">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 items-stretch px-3 sm:px-6 pt-2.5 bg-white/50 border-b border-slate-200 gap-1 overflow-y-auto scrollbar-none shrink-0">
           <button
             onClick={() => setActiveSection('steps')}
             className={`min-w-0 px-2 sm:px-3 py-2 sm:py-2.5 rounded-t-2xl text-xs sm:text-sm font-bold flex items-center gap-1.5 border-b-2 transition-all whitespace-normal break-words text-left cursor-pointer ${
               activeSection === 'steps'
-                ? 'bg-slate-900 text-emerald-400 border-emerald-400 shadow-sm'
-                : 'text-slate-400 hover:text-slate-200 border-transparent'
+                ? 'bg-slate-50 text-emerald-400 border-emerald-400 shadow-sm'
+                : 'text-slate-600 hover:text-slate-800 border-transparent'
             }`}
           >
             <Compass className="w-4 h-4" />
@@ -264,8 +264,8 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({ isOpen, onClose 
             onClick={() => setActiveSection('wearables')}
             className={`min-w-0 px-2 sm:px-3 py-2 sm:py-2.5 rounded-t-2xl text-xs sm:text-sm font-bold flex items-center gap-1.5 border-b-2 transition-all whitespace-normal break-words text-left cursor-pointer ${
               activeSection === 'wearables'
-                ? 'bg-slate-900 text-emerald-400 border-emerald-400 shadow-sm'
-                : 'text-slate-400 hover:text-slate-200 border-transparent'
+                ? 'bg-slate-50 text-emerald-400 border-emerald-400 shadow-sm'
+                : 'text-slate-600 hover:text-slate-800 border-transparent'
             }`}
           >
             <Watch className="w-4 h-4 text-emerald-400" />
@@ -276,8 +276,8 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({ isOpen, onClose 
             onClick={() => setActiveSection('mindspace')}
             className={`min-w-0 px-2 sm:px-3 py-2 sm:py-2.5 rounded-t-2xl text-xs sm:text-sm font-bold flex items-center gap-1.5 border-b-2 transition-all whitespace-normal break-words text-left cursor-pointer ${
               activeSection === 'mindspace'
-                ? 'bg-slate-900 text-indigo-400 border-indigo-400 shadow-sm'
-                : 'text-slate-400 hover:text-slate-200 border-transparent'
+                ? 'bg-slate-50 text-indigo-400 border-indigo-400 shadow-sm'
+                : 'text-slate-600 hover:text-slate-800 border-transparent'
             }`}
           >
             <Brain className="w-4 h-4 text-indigo-400" />
@@ -288,8 +288,8 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({ isOpen, onClose 
             onClick={() => setActiveSection('mandala_ecosystem')}
             className={`min-w-0 px-2 sm:px-3 py-2 sm:py-2.5 rounded-t-2xl text-xs sm:text-sm font-bold flex items-center gap-1.5 border-b-2 transition-all whitespace-normal break-words text-left cursor-pointer ${
               activeSection === 'mandala_ecosystem'
-                ? 'bg-slate-900 text-purple-400 border-purple-400 shadow-sm'
-                : 'text-slate-400 hover:text-slate-200 border-transparent'
+                ? 'bg-slate-50 text-purple-400 border-purple-400 shadow-sm'
+                : 'text-slate-600 hover:text-slate-800 border-transparent'
             }`}
           >
             <Layers className="w-4 h-4 text-purple-400" />
@@ -300,8 +300,8 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({ isOpen, onClose 
             onClick={() => setActiveSection('encyclopedia')}
             className={`min-w-0 px-2 sm:px-3 py-2 sm:py-2.5 rounded-t-2xl text-xs sm:text-sm font-bold flex items-center gap-1.5 border-b-2 transition-all whitespace-normal break-words text-left cursor-pointer ${
               activeSection === 'encyclopedia'
-                ? 'bg-slate-900 text-teal-400 border-teal-400 shadow-sm'
-                : 'text-slate-400 hover:text-slate-200 border-transparent'
+                ? 'bg-slate-50 text-teal-400 border-teal-400 shadow-sm'
+                : 'text-slate-600 hover:text-slate-800 border-transparent'
             }`}
           >
             <BookOpen className="w-4 h-4 text-emerald-400" />
@@ -312,8 +312,8 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({ isOpen, onClose 
             onClick={() => setActiveSection('acoustic')}
             className={`min-w-0 px-2 sm:px-3 py-2 sm:py-2.5 rounded-t-2xl text-xs sm:text-sm font-bold flex items-center gap-1.5 border-b-2 transition-all whitespace-normal break-words text-left cursor-pointer ${
               activeSection === 'acoustic'
-                ? 'bg-slate-900 text-cyan-400 border-cyan-400 shadow-sm'
-                : 'text-slate-400 hover:text-slate-200 border-transparent'
+                ? 'bg-slate-50 text-cyan-400 border-cyan-400 shadow-sm'
+                : 'text-slate-600 hover:text-slate-800 border-transparent'
             }`}
           >
             <Mic className="w-4 h-4 text-cyan-400" />
@@ -324,8 +324,8 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({ isOpen, onClose 
             onClick={() => setActiveSection('schools')}
             className={`min-w-0 px-2 sm:px-3 py-2 sm:py-2.5 rounded-t-2xl text-xs sm:text-sm font-bold flex items-center gap-1.5 border-b-2 transition-all whitespace-normal break-words text-left cursor-pointer ${
               activeSection === 'schools'
-                ? 'bg-slate-900 text-purple-400 border-purple-400 shadow-sm'
-                : 'text-slate-400 hover:text-slate-200 border-transparent'
+                ? 'bg-slate-50 text-purple-400 border-purple-400 shadow-sm'
+                : 'text-slate-600 hover:text-slate-800 border-transparent'
             }`}
           >
             <Sparkles className="w-4 h-4" />
@@ -336,8 +336,8 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({ isOpen, onClose 
             onClick={() => setActiveSection('reports_comparison')}
             className={`min-w-0 px-2 sm:px-3 py-2 sm:py-2.5 rounded-t-2xl text-xs sm:text-sm font-bold flex items-center gap-1.5 border-b-2 transition-all whitespace-normal break-words text-left cursor-pointer ${
               activeSection === 'reports_comparison'
-                ? 'bg-slate-900 text-emerald-400 border-emerald-400 shadow-sm'
-                : 'text-slate-400 hover:text-slate-200 border-transparent'
+                ? 'bg-slate-50 text-emerald-400 border-emerald-400 shadow-sm'
+                : 'text-slate-600 hover:text-slate-800 border-transparent'
             }`}
           >
             <Repeat className="w-4 h-4 text-emerald-400" />
@@ -348,8 +348,8 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({ isOpen, onClose 
             onClick={() => setActiveSection('mobile_tools')}
             className={`min-w-0 px-2 sm:px-3 py-2 sm:py-2.5 rounded-t-2xl text-xs sm:text-sm font-bold flex items-center gap-1.5 border-b-2 transition-all whitespace-normal break-words text-left cursor-pointer ${
               activeSection === 'mobile_tools'
-                ? 'bg-slate-900 text-amber-400 border-amber-400 shadow-sm'
-                : 'text-slate-400 hover:text-slate-200 border-transparent'
+                ? 'bg-slate-50 text-amber-400 border-amber-400 shadow-sm'
+                : 'text-slate-600 hover:text-slate-800 border-transparent'
             }`}
           >
             <Smartphone className="w-4 h-4" />
@@ -360,8 +360,8 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({ isOpen, onClose 
             onClick={() => setActiveSection('theory')}
             className={`min-w-0 px-2 sm:px-3 py-2 sm:py-2.5 rounded-t-2xl text-xs sm:text-sm font-bold flex items-center gap-1.5 border-b-2 transition-all whitespace-normal break-words text-left cursor-pointer ${
               activeSection === 'theory'
-                ? 'bg-slate-900 text-blue-400 border-blue-400 shadow-sm'
-                : 'text-slate-400 hover:text-slate-200 border-transparent'
+                ? 'bg-slate-50 text-blue-400 border-blue-400 shadow-sm'
+                : 'text-slate-600 hover:text-slate-800 border-transparent'
             }`}
           >
             <Layers className="w-4 h-4" />
@@ -372,8 +372,8 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({ isOpen, onClose 
             onClick={() => setActiveSection('tips')}
             className={`min-w-0 px-2 sm:px-3 py-2 sm:py-2.5 rounded-t-2xl text-xs sm:text-sm font-bold flex items-center gap-1.5 border-b-2 transition-all whitespace-normal break-words text-left cursor-pointer ${
               activeSection === 'tips'
-                ? 'bg-slate-900 text-amber-400 border-amber-400 shadow-sm'
-                : 'text-slate-400 hover:text-slate-200 border-transparent'
+                ? 'bg-slate-50 text-amber-400 border-amber-400 shadow-sm'
+                : 'text-slate-600 hover:text-slate-800 border-transparent'
             }`}
           >
             <Sun className="w-4 h-4" />
@@ -384,8 +384,8 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({ isOpen, onClose 
             onClick={() => setActiveSection('dealer_backoffice')}
             className={`min-w-0 px-2 sm:px-3 py-2 sm:py-2.5 rounded-t-2xl text-xs sm:text-sm font-bold flex items-center gap-1.5 border-b-2 transition-all whitespace-normal break-words text-left cursor-pointer ${
               activeSection === 'dealer_backoffice'
-                ? 'bg-slate-900 text-emerald-400 border-emerald-400 shadow-sm'
-                : 'text-slate-400 hover:text-slate-200 border-transparent'
+                ? 'bg-slate-50 text-emerald-400 border-emerald-400 shadow-sm'
+                : 'text-slate-600 hover:text-slate-800 border-transparent'
             }`}
           >
             <BookOpen className="w-4 h-4" />
@@ -396,8 +396,8 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({ isOpen, onClose 
             onClick={() => setActiveSection('faq')}
             className={`min-w-0 px-2 sm:px-3 py-2 sm:py-2.5 rounded-t-2xl text-xs sm:text-sm font-bold flex items-center gap-1.5 border-b-2 transition-all whitespace-normal break-words text-left cursor-pointer ${
               activeSection === 'faq'
-                ? 'bg-slate-900 text-indigo-400 border-indigo-400 shadow-sm'
-                : 'text-slate-400 hover:text-slate-200 border-transparent'
+                ? 'bg-slate-50 text-indigo-400 border-indigo-400 shadow-sm'
+                : 'text-slate-600 hover:text-slate-800 border-transparent'
             }`}
           >
             <HelpCircle className="w-4 h-4" />
@@ -411,9 +411,9 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({ isOpen, onClose 
           {/* TAB 1: 4 ADIMDA KULLANIM */}
           {activeSection === 'steps' && (
             <div className="space-y-4">
-              <div className="p-4 rounded-2xl bg-emerald-950/30 border border-emerald-500/30 flex items-start gap-3">
+              <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-500/30 flex items-start gap-3">
                 <Info className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
-                <p className="text-xs text-emerald-200/90 leading-relaxed">
+                <p className="text-xs text-emerald-800 leading-relaxed">
                   Başlangıçtan rapora kadar aşağıdaki 4 adımı izleyin. Her adımın yanındaki hoparlör düğmesiyle açıklamayı dinleyebilirsiniz.
                 </p>
               </div>
@@ -424,8 +424,8 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({ isOpen, onClose 
                     key={item.step}
                     className={`p-5 rounded-3xl border transition-all flex flex-col justify-between space-y-3 ${
                       activeSpeechStep === item.step
-                        ? 'bg-emerald-950/40 border-emerald-400 shadow-xl shadow-emerald-950/80 ring-2 ring-emerald-400/40'
-                        : 'bg-slate-950/60 border-slate-800 hover:border-slate-700'
+                        ? 'bg-emerald-50 border-emerald-400 shadow-xl shadow-emerald-950/80 ring-2 ring-emerald-400/40'
+                        : 'bg-white/60 border-slate-200 hover:border-slate-300'
                     }`}
                   >
                     <div className="space-y-2">
@@ -438,8 +438,8 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({ isOpen, onClose 
                           onClick={() => playSection(item.step, item.voiceText)}
                           className={`p-2 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
                             activeSpeechStep === item.step
-                              ? 'bg-emerald-500 text-slate-950 border-emerald-400 shadow-md animate-pulse'
-                              : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border-slate-700'
+                              ? 'bg-emerald-500 text-white border-emerald-400 shadow-md animate-pulse'
+                              : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-300'
                           }`}
                           title="Bu Adımı Sesli Dinle"
                         >
@@ -448,12 +448,12 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({ isOpen, onClose 
                         </button>
                       </div>
 
-                      <h3 className="text-base font-bold text-slate-100">{item.title}</h3>
-                      <p className="text-xs text-slate-300 leading-relaxed">{item.desc}</p>
+                      <h3 className="text-base font-bold text-slate-900">{item.title}</h3>
+                      <p className="text-xs text-slate-700 leading-relaxed">{item.desc}</p>
                     </div>
 
                     {item.step === 2 && (
-                      <div className="p-3 rounded-2xl bg-amber-950/40 border border-amber-500/40 text-[11px] text-amber-200 flex items-center gap-2">
+                      <div className="p-3 rounded-2xl bg-amber-50 border border-amber-500/40 text-[11px] text-amber-800 flex items-center gap-2">
                         <ShieldCheck className="w-4 h-4 text-amber-400 shrink-0" />
                         <span><strong>Akıllı Güvenlik:</strong> Cansız nesnelerin taranması engellenmiştir.</span>
                       </div>
@@ -469,18 +469,18 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({ isOpen, onClose 
             <div className="space-y-5">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <h3 className="text-lg font-bold text-slate-100 flex items-center gap-2">
+                  <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
                     <Watch className="w-5 h-5 text-emerald-400" />
                     Akıllı Saat ve Bluetooth Köprüsü (Web BLE)
                   </h3>
-                  <p className="text-xs text-slate-400">
+                  <p className="text-xs text-slate-600">
                     Uyumlu cihazı tarayıcı üzerinden eşleştirin; bağlantı desteği cihaz ve tarayıcıya göre değişebilir.
                   </p>
                 </div>
 
                 <button
                   onClick={() => playSection(201, `Akıllı saat köprüsünü kullanmak için tarayıcıda Bluetooth desteği ve uyumlu bir Bluetooth kalp atış hızı cihazı gerekir. Bağlan düğmesine basıp tarayıcının cihaz seçicisinden sensörü seçin. İzin verilmez veya cihaz desteklenmezse simülasyon seçeneğini yalnızca arayüzü denemek için kullanın. Görüntülenen veriler tıbbi ölçüm değildir.`)}
-                  className="px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+                  className="px-3.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-700 text-slate-800 border border-slate-300 text-xs font-bold flex items-center gap-1.5 cursor-pointer"
                 >
                   <Volume2 className="w-4 h-4 text-emerald-400" />
                   <span>Bu Bölümü Dinle</span>
@@ -488,35 +488,35 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({ isOpen, onClose 
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800 space-y-2">
+                <div className="p-4 rounded-2xl bg-white/60 border border-slate-200 space-y-2">
                   <div className="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 flex items-center justify-center font-bold">1</div>
-                  <h4 className="text-sm font-bold text-slate-100">Bluetooth Cihazı Eşleştirin</h4>
-                  <p className="text-xs text-slate-400 leading-relaxed">
+                  <h4 className="text-sm font-bold text-slate-900">Bluetooth Cihazı Eşleştirin</h4>
+                  <p className="text-xs text-slate-600 leading-relaxed">
                     <strong>Bluetooth cihazını bağla</strong> seçeneğine tıklayın ve tarayıcıdaki cihaz listesinden uyumlu sensörü seçin. Web Bluetooth için uyumlu tarayıcı ve güvenli bağlantı gerekir.
                   </p>
                 </div>
 
-                <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800 space-y-2">
+                <div className="p-4 rounded-2xl bg-white/60 border border-slate-200 space-y-2">
                   <div className="w-9 h-9 rounded-xl bg-teal-500/20 border border-teal-500/40 text-teal-300 flex items-center justify-center font-bold">2</div>
-                  <h4 className="text-sm font-bold text-slate-100">Bağlantı verileri</h4>
-                  <p className="text-xs text-slate-400 leading-relaxed">
+                  <h4 className="text-sm font-bold text-slate-900">Bağlantı verileri</h4>
+                  <p className="text-xs text-slate-600 leading-relaxed">
                     Bağlantı durumu ve uygulamanın sunduğu değerler ekranda görünür. Simülasyon açıksa değerler örnekseldir; sağlık kararı vermek için kullanmayın.
                   </p>
                 </div>
 
-                <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800 space-y-2">
+                <div className="p-4 rounded-2xl bg-white/60 border border-slate-200 space-y-2">
                   <div className="w-9 h-9 rounded-xl bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 flex items-center justify-center font-bold">3</div>
-                  <h4 className="text-sm font-bold text-slate-100">Dinamik Frekans Adaptasyonu</h4>
-                  <p className="text-xs text-slate-400 leading-relaxed">
+                  <h4 className="text-sm font-bold text-slate-900">Dinamik Frekans Adaptasyonu</h4>
+                  <p className="text-xs text-slate-600 leading-relaxed">
                     Otomatik uyarlama açıksa köprü ses önerilerini etkileyebilir. Özelliği kapatabilir ve oturumu dilediğiniz an durdurabilirsiniz.
                   </p>
                 </div>
               </div>
 
-              <div className="p-4 rounded-3xl bg-gradient-to-r from-slate-900 to-emerald-950/40 border border-emerald-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="p-4 rounded-3xl bg-gradient-to-r from-slate-50 to-emerald-50 border border-emerald-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div className="space-y-1">
                   <span className="text-xs font-bold text-emerald-300 uppercase tracking-wider">Bağlantı notu</span>
-                  <p className="text-xs text-slate-300">
+                  <p className="text-xs text-slate-700">
                     Cihazın Bluetooth Kalp Hızı hizmetini sunması ve tarayıcının Web Bluetooth desteklemesi gerekir. Uyum model ve tarayıcıya göre değişir; önizleme iframe’lerinde donanım izni kısıtlanabilir.
                   </p>
                 </div>
@@ -532,18 +532,18 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({ isOpen, onClose 
             <div className="space-y-5">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <h3 className="text-lg font-bold text-slate-100 flex items-center gap-2">
+                  <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
                     <Brain className="w-5 h-5 text-indigo-400" />
                     MindSpace Studio — günlük, ses ve farkındalık araçları
                   </h3>
-                  <p className="text-xs text-slate-400">
+                  <p className="text-xs text-slate-600">
                     Günlük, zaman dilimi önerileri, sesli araçlar ve rehberli içerikler tek alanda
                   </p>
                 </div>
 
                 <button
                   onClick={() => playSection(301, `MindSpace Studio içindeki günlük ve ses araçlarını kişisel notlar, odaklanma ve rehberli dinleme için kullanabilirsiniz. Biyo-ritim alanı günün saatine göre içerik önerir. Öneriler genel niteliktedir; tanı, terapi veya kişiye özel tıbbi tavsiye değildir.`)}
-                  className="px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+                  className="px-3.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-700 text-slate-800 border border-slate-300 text-xs font-bold flex items-center gap-1.5 cursor-pointer"
                 >
                   <Volume2 className="w-4 h-4 text-indigo-400" />
                   <span>Bu Bölümü Dinle</span>
@@ -551,52 +551,52 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({ isOpen, onClose 
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800 space-y-2">
+                <div className="p-4 rounded-2xl bg-white/60 border border-slate-200 space-y-2">
                   <div className="flex items-center gap-2 text-indigo-400 font-bold text-sm">
                     <Brain className="w-4 h-4" />
                     <span>1. Aura-Journal (AI Yaşam Koçu & Günlük)</span>
                   </div>
-                  <p className="text-xs text-slate-300 leading-relaxed">
+                  <p className="text-xs text-slate-700 leading-relaxed">
                     Günlük alanına düşüncelerinizi yazın veya destekleniyorsa sesli giriş kullanın. Oluşan yanıtları yazma ve öz değerlendirme desteği olarak görün; klinik değerlendirme yerine koymayın.
                   </p>
                 </div>
 
-                <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800 space-y-2">
+                <div className="p-4 rounded-2xl bg-white/60 border border-slate-200 space-y-2">
                   <div className="flex items-center gap-2 text-amber-400 font-bold text-sm">
                     <Clock className="w-4 h-4" />
                     <span>2. Biyo-Ritim & Circadian Synchronizer</span>
                   </div>
-                  <p className="text-xs text-slate-300 leading-relaxed">
+                  <p className="text-xs text-slate-700 leading-relaxed">
                     Günün saatine göre zaman dilimi ve içerik önerisi görüntüler. Bu bölüm vücut saatini, hormon düzeylerini veya organ işlevlerini ölçmez.
                   </p>
                 </div>
 
-                <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800 space-y-2">
+                <div className="p-4 rounded-2xl bg-white/60 border border-slate-200 space-y-2">
                   <div className="flex items-center gap-2 text-teal-400 font-bold text-sm">
                     <Mic className="w-4 h-4" />
                     <span>3. Sesli & Niyetli Frekans Labirenti (Forge)</span>
                   </div>
-                  <p className="text-xs text-slate-300 leading-relaxed">
+                  <p className="text-xs text-slate-700 leading-relaxed">
                     Sesli niyet aracında kısa bir metin kaydedip görsel ve sesli etkileşimi deneyin. Mikrofon kullanımı için tarayıcı izni gerekebilir; çıktı yorumlayıcıdır.
                   </p>
                 </div>
 
-                <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800 space-y-2">
+                <div className="p-4 rounded-2xl bg-white/60 border border-slate-200 space-y-2">
                   <div className="flex items-center gap-2 text-purple-400 font-bold text-sm">
                     <Moon className="w-4 h-4" />
                     <span>4. AI Rüya & Bilinçaltı Çözümleyicisi</span>
                   </div>
-                  <p className="text-xs text-slate-300 leading-relaxed">
+                  <p className="text-xs text-slate-700 leading-relaxed">
                     Rüya notlarınızı yazıp uygulamanın sunduğu yorumları gözden geçirin. Yorumlar kesin anlam, psikolojik değerlendirme veya tedavi önerisi değildir.
                   </p>
                 </div>
               </div>
 
-              <div className="p-4 rounded-2xl bg-indigo-950/30 border border-indigo-500/30 flex items-start gap-3">
+              <div className="p-4 rounded-2xl bg-indigo-50 border border-indigo-500/30 flex items-start gap-3">
                 <Users className="w-5 h-5 text-indigo-400 shrink-0 mt-0.5" />
                 <div>
-                  <h4 className="text-xs font-bold text-indigo-200">Kullanım notu</h4>
-                  <p className="text-xs text-indigo-300/80 leading-relaxed mt-0.5">
+                  <h4 className="text-xs font-bold text-indigo-800">Kullanım notu</h4>
+                  <p className="text-xs text-indigo-700 leading-relaxed mt-0.5">
                     Öneriler genel bilgilendirme ve kişisel farkındalık amaçlıdır; sağlık hizmetlerinin veya uzman değerlendirmesinin yerini tutmaz.
                   </p>
                 </div>
@@ -609,18 +609,18 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({ isOpen, onClose 
             <div className="space-y-5">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <h3 className="text-lg font-bold text-slate-100 flex items-center gap-2">
+                  <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
                     <Layers className="w-5 h-5 text-purple-400" />
                     Mandala, 7 Günlük Yolculuk ve Küresel Harita
                   </h3>
-                  <p className="text-xs text-slate-400">
+                  <p className="text-xs text-slate-600">
                     Görsel içerikleri, günlük rehberli akışı ve harita görünümünü keşfedin
                   </p>
                 </div>
 
                 <button
                   onClick={() => playSection(401, `Mandala bölümünde görsel tasarımlarla etkileşebilir, 7 günlük yolculukta sunulan rehberli adımları takip edebilir ve küresel harita ekranını inceleyebilirsiniz. Bu araçlar görsel ve kişisel kullanım içindir; sağlık sonucu vaat etmez.`)}
-                  className="px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+                  className="px-3.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-700 text-slate-800 border border-slate-300 text-xs font-bold flex items-center gap-1.5 cursor-pointer"
                 >
                   <Volume2 className="w-4 h-4 text-purple-400" />
                   <span>Bu Bölümü Dinle</span>
@@ -628,42 +628,42 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({ isOpen, onClose 
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800 space-y-2">
+                <div className="p-4 rounded-2xl bg-white/60 border border-slate-200 space-y-2">
                   <div className="text-purple-400 font-bold text-sm flex items-center gap-1.5">
                     <Sparkles className="w-4 h-4" />
                     <span>AI Kutsal Geometri Mandala</span>
                   </div>
-                  <p className="text-xs text-slate-400 leading-relaxed">
+                  <p className="text-xs text-slate-600 leading-relaxed">
                     Görsel oluşturucuda tasarımları inceleyin, kontrollerle görünümü değiştirin ve ekranda sunulan indirme seçeneğini kullanın.
                   </p>
                 </div>
 
-                <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800 space-y-2">
+                <div className="p-4 rounded-2xl bg-white/60 border border-slate-200 space-y-2">
                   <div className="text-teal-400 font-bold text-sm flex items-center gap-1.5">
                     <Compass className="w-4 h-4" />
                     <span>7 Günlük AI Bütünsel Kamplar</span>
                   </div>
-                  <p className="text-xs text-slate-400 leading-relaxed">
+                  <p className="text-xs text-slate-600 leading-relaxed">
                     Günlük rehberli içerikleri kendi temponuzda açın. Günün saatine veya adımına göre sunulan egzersizler sağlık tedavisi değildir.
                   </p>
                 </div>
 
-                <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800 space-y-2">
+                <div className="p-4 rounded-2xl bg-white/60 border border-slate-200 space-y-2">
                   <div className="text-cyan-400 font-bold text-sm flex items-center gap-1.5">
                     <Globe className="w-4 h-4" />
                     <span>Anonim Küresel Isı Haritası</span>
                   </div>
-                  <p className="text-xs text-slate-400 leading-relaxed">
+                  <p className="text-xs text-slate-600 leading-relaxed">
                     Harita görünümündeki bilgileri inceleyin. Paylaşılan konum veya etkinlik verilerinin anlamı ekranda belirtilen açıklamalara bağlıdır; bunları gerçek zamanlı sağlık verisi olarak yorumlamayın.
                   </p>
                 </div>
 
-                <div className="p-4 rounded-2xl bg-slate-950/60 border border-emerald-500/30 space-y-2 sm:col-span-2">
+                <div className="p-4 rounded-2xl bg-white/60 border border-emerald-500/30 space-y-2 sm:col-span-2">
                   <div className="text-emerald-400 font-bold text-sm flex items-center gap-1.5">
                     <Crown className="w-4 h-4" />
                     <span>Hesap ve Bayi Paneli (Monoline 7 Nefis MLM - USD)</span>
                   </div>
-                  <p className="text-xs text-slate-300 leading-relaxed">
+                  <p className="text-xs text-slate-700 leading-relaxed">
                     Bayi Back Office’te kayıt, sponsor, paket, ağ, kariyer ve cüzdan bölümlerini kullanın. Katalogda gösterilen güncel fiyat ve kredi miktarını esas alın; fiyat bölgeye göre değişebilir. Komisyonlar hemen çekilebilir olmayabilir ve gerçek sonuçlar siparişlerin, hesap aktifliğinin, kariyer koşullarının ve yürürlükteki sistem kurallarının doğrulanmasına bağlıdır.
                   </p>
                 </div>
@@ -676,18 +676,18 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({ isOpen, onClose 
             <div className="space-y-5">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <h3 className="text-lg font-bold text-slate-100 flex items-center gap-2">
+                  <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
                     <BookOpen className="w-5 h-5 text-emerald-400" />
                     🌿 Şifa Ansiklopedisi
                   </h3>
-                  <p className="text-xs text-slate-400">
+                  <p className="text-xs text-slate-600">
                     Uygulamadaki içerikleri kategori, açıklama ve ses seçeneğine göre keşfedin. İçerikler tıbbi tedavi değildir.
                   </p>
                 </div>
 
                 <button
                   onClick={() => playSection(501, `Şifa Ansiklopedisinde içerikleri kategorilere göre gözden geçirin. Bir öğeyi seçtiğinizde uygulamada sunulan açıklama ve ses seçeneklerini takip edin. Frekanslar ve içerik açıklamaları tıbbi teşhis veya tedavi değildir.`)}
-                  className="px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+                  className="px-3.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-700 text-slate-800 border border-slate-300 text-xs font-bold flex items-center gap-1.5 cursor-pointer"
                 >
                   <Volume2 className="w-4 h-4 text-emerald-400" />
                   <span>Bu Bölümü Dinle</span>
@@ -696,9 +696,9 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({ isOpen, onClose 
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
                 {HEALING_CATEGORIES.map((category) => (
-                  <div key={category.key} className="p-3.5 rounded-2xl bg-slate-950/60 border border-slate-800 space-y-1.5">
+                  <div key={category.key} className="p-3.5 rounded-2xl bg-white/60 border border-slate-200 space-y-1.5">
                     <div className="text-xs font-bold text-emerald-300">{category.title}</div>
-                    <p className="text-[11px] text-slate-400">{category.subtitle}</p>
+                    <p className="text-[11px] text-slate-600">{category.subtitle}</p>
                     <div className="text-[10px] text-slate-500 font-mono">{category.totalCount ?? 0} içerik · {category.tradition}</div>
                   </div>
                 ))}
@@ -711,27 +711,27 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({ isOpen, onClose 
             <div className="space-y-5">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <h3 className="text-lg font-bold text-slate-100 flex items-center gap-2">
+                  <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
                     <Mic className="w-5 h-5 text-cyan-400" />
                     🎙️ 10 Saniyelik Ön / Son Biyo-Akustik Tarama Motoru
                   </h3>
-                  <p className="text-xs text-slate-400">
+                  <p className="text-xs text-slate-600">
                     Mikrofonla alınan ses örneklerinin uygulama içi karşılaştırması
                   </p>
                 </div>
 
                 <button
                   onClick={() => playSection(601, `Biyo-akustik akışta mikrofon izni verin, ekrandaki yönergeye göre ön taramayı kaydedin, isterseniz bir ses oturumu yapın ve son taramayı alın. Uygulama iki ses örneğini karşılaştırır; bu işlem hücreleri veya sağlık durumunu ölçmez.`)}
-                  className="px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+                  className="px-3.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-700 text-slate-800 border border-slate-300 text-xs font-bold flex items-center gap-1.5 cursor-pointer"
                 >
                   <Volume2 className="w-4 h-4 text-cyan-400" />
                   <span>Bu Bölümü Dinle</span>
                 </button>
               </div>
 
-              <div className="p-4 rounded-3xl bg-slate-950/60 border border-slate-800 space-y-3">
-                <h4 className="text-sm font-bold text-slate-100">Nasıl Kullanılır?</h4>
-                <ol className="space-y-2 text-xs text-slate-300 list-decimal list-inside leading-relaxed">
+              <div className="p-4 rounded-3xl bg-white/60 border border-slate-200 space-y-3">
+                <h4 className="text-sm font-bold text-slate-900">Nasıl Kullanılır?</h4>
+                <ol className="space-y-2 text-xs text-slate-700 list-decimal list-inside leading-relaxed">
                   <li><strong>Mikrofon İzni:</strong> Tarayıcınızın mikrofon erişimine izin verin.</li>
                   <li><strong>Ön Tarama:</strong> Ekrandaki yönergeyi izleyerek kısa ses örneğini kaydedin; sessiz bir ortam tercih edin.</li>
                   <li><strong>İsteğe bağlı dinleme:</strong> İsterseniz ses içeriği seçip oturum başlatın; rahatsızlık hissederseniz durdurun.</li>
@@ -746,18 +746,18 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({ isOpen, onClose 
             <div className="space-y-5">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <h3 className="text-lg font-bold text-slate-100 flex items-center gap-2">
+                  <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
                     <Sparkles className="w-5 h-5 text-purple-400" />
                     Ses ve içerik kütüphanesi ({TOTAL_HEALING_COUNT} içerik)
                   </h3>
-                  <p className="text-xs text-slate-400">
+                  <p className="text-xs text-slate-600">
                     İçerikler altı kültürel ve tematik kategori altında listelenir
                   </p>
                 </div>
 
                 <button
                   onClick={() => playSection(701, `Kütüphane altı tematik kategoriden oluşur: çakra ve Solfeggio, İslami içerikler, Sufi makamları, şamanik ritimler, elementler ve Kelt içerikleri. Bir kategori seçip öğelerin açıklama ve oynatma seçeneklerini inceleyebilirsiniz. Bu içerikler tıbbi tedavi değildir.`)}
-                  className="px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+                  className="px-3.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-700 text-slate-800 border border-slate-300 text-xs font-bold flex items-center gap-1.5 cursor-pointer"
                 >
                   <Volume2 className="w-4 h-4 text-purple-400" />
                   <span>Bu Bölümü Dinle</span>
@@ -766,9 +766,9 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({ isOpen, onClose 
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
                 {HEALING_CATEGORIES.map((category) => (
-                  <div key={category.key} className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800 space-y-1">
+                  <div key={category.key} className="p-4 rounded-2xl bg-white/60 border border-slate-200 space-y-1">
                     <div className="font-bold text-emerald-300 text-xs">{category.title}</div>
-                    <p className="text-xs text-slate-400">{category.subtitle}</p>
+                    <p className="text-xs text-slate-600">{category.subtitle}</p>
                     <div className="text-[10px] text-slate-500">{category.totalCount ?? 0} içerik</div>
                   </div>
                 ))}
@@ -781,32 +781,32 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({ isOpen, onClose 
             <div className="space-y-5">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <h3 className="text-lg font-bold text-slate-100 flex items-center gap-2">
+                  <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
                     <Repeat className="w-5 h-5 text-emerald-400" />
                     10 Sekmeli Tarama Raporu ve Öncesi/Sonrası Görünümü
                   </h3>
-                  <p className="text-xs text-slate-400">
+                  <p className="text-xs text-slate-600">
                     Tarama özetini, renk görsellerini ve rehberlik sekmelerini inceleyin; raporu PDF olarak indirebilirsiniz.
                   </p>
                 </div>
 
                 <button
                   onClick={() => playSection(801, `Tarama raporunda toplam on sekme vardır: İlim Kapı, Genel Bakış, Detaylı Renk Analizi, Duygu Analizi, dört Aurik Katman, Çakra Rehberi, Letaif Nurları, Esma ve frekans seçimi, Yaşam Koçu Matrisi ve 3D görünüm. İsterseniz PDF indirebilirsiniz. Görseller ve öneriler uygulama içi rehberlik içindir; klinik ölçüm değildir.`)}
-                  className="px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+                  className="px-3.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-700 text-slate-800 border border-slate-300 text-xs font-bold flex items-center gap-1.5 cursor-pointer"
                 >
                   <Volume2 className="w-4 h-4 text-emerald-400" />
                   <span>Bu Bölümü Dinle</span>
                 </button>
               </div>
 
-              <div className="p-4 rounded-3xl bg-slate-950/60 border border-slate-800 space-y-3">
-                <h4 className="text-sm font-bold text-slate-100">Rapor sekmeleri</h4>
+              <div className="p-4 rounded-3xl bg-white/60 border border-slate-200 space-y-3">
+                <h4 className="text-sm font-bold text-slate-900">Rapor sekmeleri</h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
                   {['İlim Kapı', 'Genel Bakış', 'Detaylı Renk Analizi', 'Duygu Analizi', '4 Aurik Katman', '7 Çakra Rehberi', 'Letaif Nurları', '99 Esma & Frekans Yükle', 'Yaşam Koçu Matrisi', '3D Canlı Aura & Letaif'].map((tab, index) => (
-                    <div key={tab} className="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800"><strong>{index + 1}. {tab}</strong></div>
+                    <div key={tab} className="p-2.5 rounded-xl bg-slate-50/80 border border-slate-200"><strong>{index + 1}. {tab}</strong></div>
                   ))}
                 </div>
-                <p className="text-xs text-slate-400">Raporu PDF olarak indirebilirsiniz. Uygulama içi görselleştirmeler tıbbi teşhis veya ölçüm değildir.</p>
+                <p className="text-xs text-slate-600">Raporu PDF olarak indirebilirsiniz. Uygulama içi görselleştirmeler tıbbi teşhis veya ölçüm değildir.</p>
               </div>
             </div>
           )}
@@ -816,18 +816,18 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({ isOpen, onClose 
             <div className="space-y-5">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <h3 className="text-lg font-bold text-slate-100 flex items-center gap-2">
+                  <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
                     <Smartphone className="w-5 h-5 text-amber-400" />
                     Mobil menü ve ses araçları
                   </h3>
-                  <p className="text-xs text-slate-400">
+                  <p className="text-xs text-slate-600">
                     Mobil alt menüden ana bölümlere erişin; ses araçlarını rahatınıza göre kullanın
                   </p>
                 </div>
 
                 <button
                   onClick={() => playSection(901, `Mobil alt menüden Kamera, Şifa, Mandala, Harita ve Menü bölümlerine erişin. Menüdeki ses ve nefes araçlarını rahatlama amacıyla kullanabilirsiniz; bunlar acil servis veya tıbbi tedavi değildir.`)}
-                  className="px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+                  className="px-3.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-700 text-slate-800 border border-slate-300 text-xs font-bold flex items-center gap-1.5 cursor-pointer"
                 >
                   <Volume2 className="w-4 h-4 text-amber-400" />
                   <span>Bu Bölümü Dinle</span>
@@ -835,32 +835,32 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({ isOpen, onClose 
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800 space-y-2">
+                <div className="p-4 rounded-2xl bg-white/60 border border-slate-200 space-y-2">
                   <div className="text-amber-400 font-bold text-sm flex items-center gap-1.5">
                     <Smartphone className="w-4 h-4" />
                     <span>Başparmak Alt Navigasyonu</span>
                   </div>
-                  <p className="text-xs text-slate-400 leading-relaxed">
+                  <p className="text-xs text-slate-600 leading-relaxed">
                     Alt menüde Kamera, Şifa, Mandala, Harita ve Menü kısayolları bulunur. Diğer ekranlara Menü üzerinden geçin.
                   </p>
                 </div>
 
-                <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800 space-y-2">
+                <div className="p-4 rounded-2xl bg-white/60 border border-slate-200 space-y-2">
                   <div className="text-rose-400 font-bold text-sm flex items-center gap-1.5">
                     <LifeBuoy className="w-4 h-4" />
                     <span>🚨 SOS Rahatlama Aracı</span>
                   </div>
-                  <p className="text-xs text-slate-400 leading-relaxed">
+                  <p className="text-xs text-slate-600 leading-relaxed">
                     Uygulamadaki kısa ses ve nefes rehberini açar. Acil sağlık hizmeti değildir; acil durumda yerel acil numarayı arayın.
                   </p>
                 </div>
 
-                <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800 space-y-2">
+                <div className="p-4 rounded-2xl bg-white/60 border border-slate-200 space-y-2">
                   <div className="text-indigo-400 font-bold text-sm flex items-center gap-1.5">
                     <Moon className="w-4 h-4" />
                     <span>🌙 Uyku için ses araçları</span>
                   </div>
-                  <p className="text-xs text-slate-400 leading-relaxed">
+                  <p className="text-xs text-slate-600 leading-relaxed">
                     Uygulamada sunulan sesleri dinleyebilir ve varsa oynatıcıdaki zamanlayıcıyı kullanabilirsiniz. Bu içerikler uyku bozukluklarını tedavi etmez.
                   </p>
                 </div>
@@ -871,8 +871,8 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({ isOpen, onClose 
           {/* TAB 10: KUANTUM TEORİ */}
           {activeSection === 'theory' && (
             <div className="space-y-4">
-              <div className="flex flex-wrap items-center justify-between gap-2 p-3 bg-blue-950/30 rounded-2xl border border-blue-900/40">
-                <h3 className="text-base font-bold text-slate-100 flex items-center gap-2">
+              <div className="flex flex-wrap items-center justify-between gap-2 p-3 bg-blue-50 rounded-2xl border border-blue-200">
+                <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
                   <Layers className="w-5 h-5 text-blue-400" />
                   Kamera analizinin sınırları
                 </h3>
@@ -889,10 +889,10 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({ isOpen, onClose 
                   <span>{activeSpeechStep === 10 && isSpeaking ? 'Durdur' : 'Bu Bölümü Seslendir'}</span>
                 </button>
               </div>
-              <p className="text-xs text-slate-300 leading-relaxed">
+              <p className="text-xs text-slate-700 leading-relaxed">
                 Bu bölümdeki kuantum, aura ve renk eşleştirmeleri uygulamanın görsel anlatım modelidir. Kamera görüntüsünden sağlık durumu, hücresel işlev veya enerji alanı ölçümü çıkarılamaz.
               </p>
-              <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800 space-y-2 text-xs text-slate-400">
+              <div className="p-4 rounded-2xl bg-white/60 border border-slate-200 space-y-2 text-xs text-slate-600">
                 <div className="text-emerald-400 font-bold">Nasıl yorumlanmalı?</div>
                 <p>1. Rapor, uygulamanın kamera girdisi ve görsel modelinden oluşturduğu içerikleri gösterir.</p>
                 <p>2. Renk, aura, çakra ve benzeri görseller sembolik/rehberlik amaçlıdır; tıbbi ölçüm değildir.</p>
@@ -904,8 +904,8 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({ isOpen, onClose 
           {/* TAB 11: İPUÇLARI */}
           {activeSection === 'tips' && (
             <div className="space-y-4">
-              <div className="flex flex-wrap items-center justify-between gap-2 p-3 bg-amber-950/30 rounded-2xl border border-amber-900/40">
-                <h3 className="text-base font-bold text-slate-100 flex items-center gap-2">
+              <div className="flex flex-wrap items-center justify-between gap-2 p-3 bg-amber-50 rounded-2xl border border-amber-200">
+                <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
                   <Sun className="w-5 h-5 text-amber-400" />
                   Daha iyi kullanım için ipuçları
                 </h3>
@@ -923,21 +923,21 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({ isOpen, onClose 
                 </button>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800 space-y-1">
+                <div className="p-4 rounded-2xl bg-white/60 border border-slate-200 space-y-1">
                   <div className="font-bold text-emerald-300 text-xs">☀️ Doğal ve Dengeli Işık</div>
-                  <p className="text-xs text-slate-400">Karanlık veya aşırı parlak ortamlar yerine yüzünüzü eşit aydınlatan doğal gün ışığı tercih edin.</p>
+                  <p className="text-xs text-slate-600">Karanlık veya aşırı parlak ortamlar yerine yüzünüzü eşit aydınlatan doğal gün ışığı tercih edin.</p>
                 </div>
-                <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800 space-y-1">
+                <div className="p-4 rounded-2xl bg-white/60 border border-slate-200 space-y-1">
                   <div className="font-bold text-teal-300 text-xs">📱 Telefonu sabitleyin</div>
-                  <p className="text-xs text-slate-400">Yaklaşık 15 saniyelik tarama boyunca cihazı sabit tutup kadrajda kalın.</p>
+                  <p className="text-xs text-slate-600">Yaklaşık 15 saniyelik tarama boyunca cihazı sabit tutup kadrajda kalın.</p>
                 </div>
-                <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800 space-y-1">
+                <div className="p-4 rounded-2xl bg-white/60 border border-slate-200 space-y-1">
                   <div className="font-bold text-cyan-300 text-xs">🎧 Rahat ses seviyesi</div>
-                  <p className="text-xs text-slate-400">Sesleri düşük ve rahat bir düzeyde dinleyin; kulaklık kullanımı isteğe bağlıdır.</p>
+                  <p className="text-xs text-slate-600">Sesleri düşük ve rahat bir düzeyde dinleyin; kulaklık kullanımı isteğe bağlıdır.</p>
                 </div>
-                <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800 space-y-1">
+                <div className="p-4 rounded-2xl bg-white/60 border border-slate-200 space-y-1">
                   <div className="font-bold text-purple-300 text-xs">🔒 İzinleri kontrol edin</div>
-                  <p className="text-xs text-slate-400">Kamera, mikrofon veya Bluetooth çalışmıyorsa tarayıcı izinlerini ve cihaz desteğini kontrol edin.</p>
+                  <p className="text-xs text-slate-600">Kamera, mikrofon veya Bluetooth çalışmıyorsa tarayıcı izinlerini ve cihaz desteğini kontrol edin.</p>
                 </div>
               </div>
             </div>
@@ -945,8 +945,8 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({ isOpen, onClose 
 
           {activeSection === 'dealer_backoffice' && (
             <div className="space-y-5">
-              <div className="rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-emerald-950/60 to-slate-950 p-5">
-                <h3 className="text-lg font-black text-emerald-200">Bayi kaydı ve sponsor bağlantısı</h3>
+              <div className="rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-emerald-50 to-slate-50 p-5">
+                <h3 className="text-lg font-black text-emerald-800">Bayi kaydı ve sponsor bağlantısı</h3>
                 <ol className="mt-3 grid gap-3 sm:grid-cols-2">
                   {[
                     ['1. Başvuruyu açın', 'Giriş/Kayıt ekranından bayi kaydını başlatın. Ad-soyad, e-posta, telefon, ülke ve istenen bayi/işletme bilgilerini doğru girin. Güçlü ve en az 12 karakterli bir parola oluşturun.'],
@@ -954,17 +954,17 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({ isOpen, onClose 
                     ['3. Paket ve koşulları inceleyin', 'Ülke seçimi fiyatı etkileyebilir. Katalogdaki paket, fiyat ve kredi miktarını kontrol edin; gerekli sözleşme/onay metinlerini okuyun.'],
                     ['4. Ödeme ve hesap onayı', 'Başvurudan sonra hesap ödeme/onay bekliyor durumunda kalabilir. Ekranda sunulan ödeme adımlarını tamamlayıp hesabın etkinleştiğini panelden doğrulayın.'],
                   ].map(([title, description]) => (
-                    <li key={title} className="rounded-xl border border-slate-700 bg-slate-950/70 p-4">
-                      <h4 className="text-sm font-bold text-slate-100">{title}</h4>
-                      <p className="mt-1 text-xs leading-relaxed text-slate-300">{description}</p>
+                    <li key={title} className="rounded-xl border border-slate-300 bg-white/70 p-4">
+                      <h4 className="text-sm font-bold text-slate-900">{title}</h4>
+                      <p className="mt-1 text-xs leading-relaxed text-slate-700">{description}</p>
                     </li>
                   ))}
                 </ol>
-                <p className="mt-3 text-xs leading-relaxed text-amber-200">Sponsor adı veya kodu doğru değilse başvuruyu göndermeyin; kodu paylaşan bayi ya da destek ekibiyle doğrulayın. Kayıt tamamlandıktan sonra sponsor ilişkisinin değiştirilebileceğini varsaymayın.</p>
+                <p className="mt-3 text-xs leading-relaxed text-amber-800">Sponsor adı veya kodu doğru değilse başvuruyu göndermeyin; kodu paylaşan bayi ya da destek ekibiyle doğrulayın. Kayıt tamamlandıktan sonra sponsor ilişkisinin değiştirilebileceğini varsaymayın.</p>
               </div>
 
-              <section className="rounded-2xl border border-slate-700 bg-slate-950/60 p-5">
-                <h3 className="font-bold text-slate-100">Bayi Back Office bölümleri</h3>
+              <section className="rounded-2xl border border-slate-300 bg-white/60 p-5">
+                <h3 className="font-bold text-slate-900">Bayi Back Office bölümleri</h3>
                 <div className="mt-3 grid gap-3 sm:grid-cols-2">
                   {[
                     ['Cüzdan & Banka', 'Çekilebilir ve bekleyen bakiyeleri ayrı inceleyin. Çekim öncesinde hesap aktifliğini ve kendi adınıza kayıtlı IBAN bilgisini doğrulayın.'],
@@ -975,21 +975,21 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({ isOpen, onClose 
                     ['Kariyer Plaketi', 'Paneldeki güncel kariyer ve ilerleme bilgilerini kontrol edin. Eşikler dönemsel hacim ve ekip koşullarına bağlıdır.'],
                     ['Geri Bildirim & Dokümanlar', 'Destek/öneri gönderin; Kullanma Kılavuzu, İş Sunumu & Dijital Katalog ve paylaşılan dosyalara erişin.'],
                   ].map(([title, description]) => (
-                    <div key={title} className="rounded-xl border border-slate-700 bg-slate-900/70 p-4">
-                      <h4 className="text-sm font-bold text-slate-100">{title}</h4>
-                      <p className="mt-1 text-xs leading-relaxed text-slate-300">{description}</p>
+                    <div key={title} className="rounded-xl border border-slate-300 bg-slate-50/70 p-4">
+                      <h4 className="text-sm font-bold text-slate-900">{title}</h4>
+                      <p className="mt-1 text-xs leading-relaxed text-slate-700">{description}</p>
                     </div>
                   ))}
                 </div>
               </section>
 
-              <section className="rounded-2xl border border-amber-500/30 bg-amber-950/20 p-5">
-                <h3 className="font-bold text-amber-200">Kariyer seviyeleri: uygulama içi eşikler</h3>
-                <p className="mt-1 text-xs leading-relaxed text-slate-300">Kariyer hesaplaması aktif hesap, son 30 günlük grup hacmi, aktif doğrudan referans ve bazı seviyelerde ayrı ekip kollarındaki nitelikli bayi şartlarına bağlıdır. Eşikler gelir veya ödül garantisi değildir.</p>
+              <section className="rounded-2xl border border-amber-500/30 bg-amber-50 p-5">
+                <h3 className="font-bold text-amber-800">Kariyer seviyeleri: uygulama içi eşikler</h3>
+                <p className="mt-1 text-xs leading-relaxed text-slate-700">Kariyer hesaplaması aktif hesap, son 30 günlük grup hacmi, aktif doğrudan referans ve bazı seviyelerde ayrı ekip kollarındaki nitelikli bayi şartlarına bağlıdır. Eşikler gelir veya ödül garantisi değildir.</p>
                 <div className="mt-3 overflow-x-auto">
                   <table className="w-full min-w-[680px] border-collapse text-left text-xs">
-                    <thead><tr className="text-amber-200"><th className="border-b border-slate-700 p-2">Seviye</th><th className="border-b border-slate-700 p-2">Unvan</th><th className="border-b border-slate-700 p-2">Aktif direkt</th><th className="border-b border-slate-700 p-2">Grup hacmi</th><th className="border-b border-slate-700 p-2">Ek ekip koşulu</th></tr></thead>
-                    <tbody className="text-slate-300">
+                    <thead><tr className="text-amber-800"><th className="border-b border-slate-300 p-2">Seviye</th><th className="border-b border-slate-300 p-2">Unvan</th><th className="border-b border-slate-300 p-2">Aktif direkt</th><th className="border-b border-slate-300 p-2">Grup hacmi</th><th className="border-b border-slate-300 p-2">Ek ekip koşulu</th></tr></thead>
+                    <tbody className="text-slate-700">
                       {[
                         ['1', 'Emmâre', '0', '$0', 'Yok'],
                         ['2', 'Levvâme', '10', '$2.000', 'Yok'],
@@ -1006,13 +1006,13 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({ isOpen, onClose 
                 </div>
               </section>
 
-              <section className="rounded-2xl border border-indigo-500/30 bg-indigo-950/20 p-5">
-                <h3 className="font-bold text-indigo-200">Komisyon, bekleme ve çekim</h3>
+              <section className="rounded-2xl border border-indigo-500/30 bg-indigo-50 p-5">
+                <h3 className="font-bold text-indigo-800">Komisyon, bekleme ve çekim</h3>
                 <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                  <p className="rounded-xl bg-slate-950/70 p-4 text-xs leading-relaxed text-slate-300"><strong className="text-white">Varsayılan komisyon yapısı:</strong> Kodda doğrudan sponsor için %20; Unilevel derinliklerinde %7, %5, %4, %3 ve sonraki üç derinlikte %2 oranları tanımlıdır. Global Monoline sırası için de ayrı, toplamı %5 olan oranlar bulunur. Uygulanabilirlik; sipariş, hesap aktifliği, kariyer ve güncel yönetim kurallarına bağlıdır.</p>
-                  <p className="rounded-xl bg-slate-950/70 p-4 text-xs leading-relaxed text-slate-300"><strong className="text-white">Ödeme zamanlaması:</strong> Komisyonlar önce bekleyen bakiyede tutulabilir; kodda varsayılan bekleme süresi 14 gündür. Vade, iade/inceleme durumu ve hesap uygunluğu çekilebilir bakiyeyi etkiler. Paneldeki bekleyen tutarı çekilebilir bakiye saymayın.</p>
+                  <p className="rounded-xl bg-white/70 p-4 text-xs leading-relaxed text-slate-700"><strong className="text-slate-900">Varsayılan komisyon yapısı:</strong> Kodda doğrudan sponsor için %20; Unilevel derinliklerinde %7, %5, %4, %3 ve sonraki üç derinlikte %2 oranları tanımlıdır. Global Monoline sırası için de ayrı, toplamı %5 olan oranlar bulunur. Uygulanabilirlik; sipariş, hesap aktifliği, kariyer ve güncel yönetim kurallarına bağlıdır.</p>
+                  <p className="rounded-xl bg-white/70 p-4 text-xs leading-relaxed text-slate-700"><strong className="text-slate-900">Ödeme zamanlaması:</strong> Komisyonlar önce bekleyen bakiyede tutulabilir; kodda varsayılan bekleme süresi 14 gündür. Vade, iade/inceleme durumu ve hesap uygunluğu çekilebilir bakiyeyi etkiler. Paneldeki bekleyen tutarı çekilebilir bakiye saymayın.</p>
                 </div>
-                <p className="mt-3 text-xs leading-relaxed text-amber-200">Gösterilen oranlar varsayılan teknik kurallardır; kazanç, yatırım geri dönüşü veya ödeme garantisi değildir. Geçerli kural, bakiye ve çekim koşulları için işlem anındaki panel bilgilerini ve resmi koşulları esas alın.</p>
+                <p className="mt-3 text-xs leading-relaxed text-amber-800">Gösterilen oranlar varsayılan teknik kurallardır; kazanç, yatırım geri dönüşü veya ödeme garantisi değildir. Geçerli kural, bakiye ve çekim koşulları için işlem anındaki panel bilgilerini ve resmi koşulları esas alın.</p>
               </section>
             </div>
           )}
@@ -1020,8 +1020,8 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({ isOpen, onClose 
           {/* TAB 12: SSS */}
           {activeSection === 'faq' && (
             <div className="space-y-3.5">
-              <div className="flex flex-wrap items-center justify-between gap-2 p-3 bg-indigo-950/30 rounded-2xl border border-indigo-900/40">
-                <h3 className="text-base font-bold text-slate-100 flex items-center gap-2">
+              <div className="flex flex-wrap items-center justify-between gap-2 p-3 bg-indigo-50 rounded-2xl border border-indigo-200">
+                <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
                   <HelpCircle className="w-5 h-5 text-indigo-400" />
                   Sıkça Sorulan Sorular (SSS)
                 </h3>
@@ -1039,24 +1039,24 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({ isOpen, onClose 
                 </button>
               </div>
               
-              <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800 space-y-1">
-                <div className="font-bold text-slate-200 text-xs">Soru: AuraBio tıbbi bir teşhis cihazı mıdır?</div>
-                <p className="text-xs text-slate-400">Cevap: Hayır. Tarama görselleri ve uygulama önerileri klinik ölçüm veya teşhis değildir; sağlık kararları için nitelikli bir sağlık uzmanına başvurun.</p>
+              <div className="p-4 rounded-2xl bg-white/60 border border-slate-200 space-y-1">
+                <div className="font-bold text-slate-800 text-xs">Soru: AuraBio tıbbi bir teşhis cihazı mıdır?</div>
+                <p className="text-xs text-slate-600">Cevap: Hayır. Tarama görselleri ve uygulama önerileri klinik ölçüm veya teşhis değildir; sağlık kararları için nitelikli bir sağlık uzmanına başvurun.</p>
               </div>
 
-              <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800 space-y-1">
-                <div className="font-bold text-slate-200 text-xs">Soru: Kamera veya mikrofon açılmıyorsa ne yapmalıyım?</div>
-                <p className="text-xs text-slate-400">Cevap: Tarayıcı ayarlarında bu site için kamera veya mikrofon iznini kontrol edin. Sayfayı yeniden yüklemek veya izinleri tekrar vermek gerekebilir.</p>
+              <div className="p-4 rounded-2xl bg-white/60 border border-slate-200 space-y-1">
+                <div className="font-bold text-slate-800 text-xs">Soru: Kamera veya mikrofon açılmıyorsa ne yapmalıyım?</div>
+                <p className="text-xs text-slate-600">Cevap: Tarayıcı ayarlarında bu site için kamera veya mikrofon iznini kontrol edin. Sayfayı yeniden yüklemek veya izinleri tekrar vermek gerekebilir.</p>
               </div>
 
-              <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800 space-y-1">
-                <div className="font-bold text-slate-200 text-xs">Soru: Akıllı saat veya Bluetooth bağlantısı zorunlu mu?</div>
-                <p className="text-xs text-slate-400">Cevap: Hayır. Bluetooth köprüsü isteğe bağlıdır. Bağlantı için Web Bluetooth destekleyen tarayıcı ve uyumlu cihaz gerekir; simülasyon açıksa değerler gerçek sensör ölçümü değildir.</p>
+              <div className="p-4 rounded-2xl bg-white/60 border border-slate-200 space-y-1">
+                <div className="font-bold text-slate-800 text-xs">Soru: Akıllı saat veya Bluetooth bağlantısı zorunlu mu?</div>
+                <p className="text-xs text-slate-600">Cevap: Hayır. Bluetooth köprüsü isteğe bağlıdır. Bağlantı için Web Bluetooth destekleyen tarayıcı ve uyumlu cihaz gerekir; simülasyon açıksa değerler gerçek sensör ölçümü değildir.</p>
               </div>
 
-              <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800 space-y-1">
-                <div className="font-bold text-slate-200 text-xs">Soru: Raporu nasıl kaydedebilirim?</div>
-                <p className="text-xs text-slate-400">Cevap: Tarama raporunda PDF İndir seçeneğini kullanın. Dosyayı cihazınıza indirdikten sonra kendi dosyalarınız gibi saklayabilirsiniz.</p>
+              <div className="p-4 rounded-2xl bg-white/60 border border-slate-200 space-y-1">
+                <div className="font-bold text-slate-800 text-xs">Soru: Raporu nasıl kaydedebilirim?</div>
+                <p className="text-xs text-slate-600">Cevap: Tarama raporunda PDF İndir seçeneğini kullanın. Dosyayı cihazınıza indirdikten sonra kendi dosyalarınız gibi saklayabilirsiniz.</p>
               </div>
             </div>
           )}
@@ -1064,15 +1064,15 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({ isOpen, onClose 
         </div>
 
         {/* Modal Bottom Footer */}
-        <div className="p-4 sm:p-5 bg-slate-950 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
-          <div className="text-[11px] text-slate-400 flex items-center gap-1.5">
+        <div className="p-4 sm:p-5 bg-white border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
+          <div className="text-[11px] text-slate-600 flex items-center gap-1.5">
             <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
             <span>Bilgilendirme amaçlıdır; tıbbi teşhis veya tedavi yerine geçmez.</span>
           </div>
 
           <button
             onClick={handleClose}
-            className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold text-xs transition-colors cursor-pointer"
+            className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition-colors cursor-pointer"
           >
             Anladım, Kapat
           </button>
