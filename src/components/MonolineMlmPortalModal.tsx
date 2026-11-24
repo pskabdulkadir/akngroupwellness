@@ -32,6 +32,7 @@ import {
   WithdrawalChannel,
 } from '../types/monoline';
 import { formatUsd } from '../utils/currency';
+import type { TreatmentSelection } from './FrequencyLoadingModal';
 
 export type MonolineSubTab =
   | 'mlm_7nefis'
@@ -56,6 +57,7 @@ interface MonolineMlmPortalModalProps {
     mode?: 'login' | 'register' | 'dealer',
     sponsor?: { uid: string; resellerName: string; referralCode: string; email?: string; phone?: string }
   ) => void;
+  onSelectFrequencyForTreatment?: (selection: TreatmentSelection) => void;
 }
 
 export const MonolineMlmPortalModal: React.FC<MonolineMlmPortalModalProps> = ({
@@ -69,6 +71,7 @@ export const MonolineMlmPortalModal: React.FC<MonolineMlmPortalModalProps> = ({
   embedded = false,
   isAdminAuthenticated = false,
   onOpenAuthModal,
+  onSelectFrequencyForTreatment,
 }) => {
   const safeInitialTab: MonolineSubTab =
     !isAdminAuthenticated &&
@@ -980,6 +983,7 @@ export const MonolineMlmPortalModal: React.FC<MonolineMlmPortalModalProps> = ({
                   ['plaque', '7. Kariyer Plaketi'],
                   ['feedback', '8. Şikayet & Öneri'],
                   ['documents', '9. Dökümanlar'],
+                  ['scanHistory', 'Frekans Geçmişi'],
                 ] as const).map(([tab, label]) => (
                   <button
                     key={tab}
@@ -1527,6 +1531,8 @@ export const MonolineMlmPortalModal: React.FC<MonolineMlmPortalModalProps> = ({
                 isAdminAuthenticated={isAdminAuthenticated}
                 onOpenUserGuide={() => setIsUserGuideOpen(true)}
                 onOpenBusinessPresentation={() => setIsBusinessPresentationOpen(true)}
+                scanOwnerUid={(authenticatedUser || getActiveMemberSession())?.uid}
+                onSelectFrequencyForTreatment={onSelectFrequencyForTreatment}
               />
             )}
 

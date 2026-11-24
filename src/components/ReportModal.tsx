@@ -59,6 +59,7 @@ interface ReportModalProps {
   onClose: () => void;
   onGoBack?: () => void;
   onDeleteReport?: (id: string) => void;
+  ownerUid?: string;
   onSelectFrequencyForTreatment: (selection: TreatmentSelection) => void;
   onOpenGuide: () => void;
   onNavigateTab?: (tab: string) => void;
@@ -99,6 +100,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
   onClose,
   onGoBack,
   onDeleteReport,
+  ownerUid,
   onSelectFrequencyForTreatment,
   onOpenGuide,
   onNavigateTab,
@@ -243,7 +245,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
     setIsDeleting(true);
     try {
       soundEngine.playFrequency(432, 0.1);
-      deleteScanResult(scanResult.id, activeMember?.uid);
+      deleteScanResult(scanResult.id, ownerUid || activeMember?.uid);
       if (onDeleteReport) {
         onDeleteReport(scanResult.id);
       }

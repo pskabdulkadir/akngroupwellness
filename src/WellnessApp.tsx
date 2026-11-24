@@ -1517,6 +1517,7 @@ export default function WellnessApp({
           handleLogout();
         }}
         authenticatedUser={currentUser}
+        onSelectFrequencyForTreatment={handleSelectFrequency}
         onOpenAuthModal={(mode, sponsor) => {
           setIsMonolineModalOpen(false);
           setDealerRegistrationSponsor(sponsor || null);

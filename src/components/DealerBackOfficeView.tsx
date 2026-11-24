@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   AlertTriangle,
   ArrowDown,
@@ -25,6 +25,7 @@ import {
   RefreshCw,
   Send,
   Share2,
+  Trash2,
   ShieldCheck,
   Sparkles,
   Timer,
@@ -58,6 +59,10 @@ import {
   WithdrawalRequestRecord,
   WalletTransactionRecord,
 } from '../types/monoline';
+import type { ScanResult } from '../types';
+import type { TreatmentSelection } from './FrequencyLoadingModal';
+import { syncUserScansFromFirestore, deleteScanResult } from '../utils/storage';
+import { exportScanReportToPDF } from '../utils/pdfExport';
 import {
   getDealerMonolineDownlineTree,
   redirectToDealerRegistrationPortal,
@@ -79,6 +84,7 @@ import { DealerRegionalUsdPanel } from './DealerRegionalUsdPanel';
 import { DealerEthicsGuidelines } from './DealerEthicsGuidelines';
 import { SharedDocumentsPanel } from './SharedDocumentsPanel';
 import { UnilevelOrganizationTreePanel } from './UnilevelOrganizationTreePanel';
+import { ReportModal } from './ReportModal';
 
 export type DealerBackOfficeSubTab =
   | 'wallet'
@@ -89,7 +95,8 @@ export type DealerBackOfficeSubTab =
   | 'security'
   | 'plaque'
   | 'feedback'
-  | 'documents';
+  | 'documents'
+  | 'scanHistory';
 
 interface DealerBackOfficeViewProps {
   subTab: DealerBackOfficeSubTab;
@@ -167,6 +174,8 @@ interface DealerBackOfficeViewProps {
   isAdminAuthenticated?: boolean;
   onOpenUserGuide: () => void;
   onOpenBusinessPresentation: () => void;
+  scanOwnerUid?: string;
+  onSelectFrequencyForTreatment?: (selection: TreatmentSelection) => void;
 }
 
 // Deterministic SVG QR Matrix generator (21x21 Version 1 QR structure with finder patterns)
@@ -253,10 +262,40 @@ export const DealerBackOfficeView: React.FC<DealerBackOfficeViewProps> = ({
   isAdminAuthenticated = false,
   onOpenUserGuide,
   onOpenBusinessPresentation,
+  scanOwnerUid,
+  onSelectFrequencyForTreatment,
   feedbackTickets = [],
 }) => {
 
   const [activeRegionPanel, setActiveRegionPanel] = useState<MemberRegion | null>(null);
+  const [scanRecords, setScanRecords] = useState<ScanResult[]>([]);
+  const [scanRecordsLoading, setScanRecordsLoading] = useState(false);
+  const [selectedScanReport, setSelectedScanReport] = useState<ScanResult | null>(null);
+
+  const loadDealerScans = useCallback(async () => {
+    if (!scanOwnerUid) {
+      setScanRecords([]);
+      return;
+    }
+    setScanRecordsLoading(true);
+    try {
+      const scans = await syncUserScansFromFirestore(scanOwnerUid);
+      setScanRecords(scans.filter((scan) => scan.userUid === scanOwnerUid || scan.userId === scanOwnerUid));
+    } finally {
+      setScanRecordsLoading(false);
+    }
+  }, [scanOwnerUid]);
+
+  useEffect(() => {
+    if (subTab === 'scanHistory') void loadDealerScans();
+  }, [loadDealerScans, subTab]);
+
+  const handleDeleteScan = (scan: ScanResult) => {
+    if (!scanOwnerUid || (scan.userUid !== scanOwnerUid && scan.userId !== scanOwnerUid)) return;
+    if (!window.confirm('Bu frekans tarama raporunu silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.')) return;
+    deleteScanResult(scan.id, scanOwnerUid);
+    setScanRecords((current) => current.filter((item) => item.id !== scan.id));
+  };
 
   // 💬 Bayi Şikayetler & Öneriler Yönetimi State'leri
   const [ticketType, setTicketType] = useState<
@@ -5188,6 +5227,53 @@ Paket Alarak Aktifliği Yenile →
       )}
 
       {/* SUB-TAB: 💬 ŞİKAYETLER VE ÖNERİLER (YÖNETİCİYE DOĞRUDAN İLETİM & GERİ BİLDİRİM PANELİ) */}
+      {subTab === 'scanHistory' && !isAdminAuthenticated && (
+        <section className="space-y-5 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
+          <div className="flex flex-col gap-3 border-b border-slate-100 pb-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-lg font-bold text-slate-900">Frekans Geçmişi</h2>
+              <p className="mt-1 text-xs text-slate-500">Yalnızca bu bayi hesabına ait tarama raporları gösterilir. Raporları görüntüleyebilir, PDF indirebilir veya silebilirsiniz.</p>
+            </div>
+            <button type="button" onClick={() => void loadDealerScans()} disabled={scanRecordsLoading || !scanOwnerUid} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-slate-300 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-50">
+              <RefreshCw className={`h-3.5 w-3.5 ${scanRecordsLoading ? 'animate-spin' : ''}`} /> Yenile
+            </button>
+          </div>
+
+          {!scanOwnerUid ? (
+            <p className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs text-amber-900">Bayi hesabı doğrulanamadığı için tarama geçmişi yüklenemedi.</p>
+          ) : scanRecordsLoading ? (
+            <p className="p-8 text-center text-sm text-slate-500">Tarama raporları yükleniyor…</p>
+          ) : scanRecords.length === 0 ? (
+            <p className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-sm text-slate-500">Bu bayi hesabına ait tarama raporu bulunamadı.</p>
+          ) : (
+            <div className="grid gap-3 lg:grid-cols-2">
+              {scanRecords.map((scan) => (
+                <article key={scan.id} className="min-w-0 rounded-xl border border-slate-200 bg-slate-50 p-4">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <h3 className="truncate font-bold text-slate-900">{scan.targetName || scan.treatmentName || 'Frekans taraması'}</h3>
+                      <p className="mt-1 text-[11px] text-slate-500">{new Date(scan.timestamp).toLocaleString('tr-TR')}</p>
+                    </div>
+                    <span className="shrink-0 rounded-lg bg-violet-100 px-2.5 py-1 font-mono text-xs font-bold text-violet-800">{scan.frequencyHz} Hz</span>
+                  </div>
+                  <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                    <p className="rounded-lg bg-white p-2 text-slate-600">Biyoenerji <strong className="text-slate-900">%{scan.bioEnergyLevel}</strong></p>
+                    <p className="rounded-lg bg-white p-2 text-slate-600">Uyum <strong className="text-slate-900">%{scan.coherenceScore}</strong></p>
+                    <p className="rounded-lg bg-white p-2 text-slate-600">Aura <strong className="text-slate-900">{scan.dominantAuraColor || '—'}</strong></p>
+                    <p className="rounded-lg bg-white p-2 text-slate-600">Tür <strong className="text-slate-900">{scan.targetType || 'Kişi'}</strong></p>
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <button type="button" onClick={() => setSelectedScanReport(scan)} className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-slate-900 px-3 py-2 text-xs font-bold text-white hover:bg-slate-800"><Eye className="h-3.5 w-3.5" /> Raporu Görüntüle</button>
+                    <button type="button" onClick={() => exportScanReportToPDF(scan, scan.userName || member.full_name)} className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-800 hover:bg-emerald-100"><Download className="h-3.5 w-3.5" /> PDF İndir</button>
+                    <button type="button" onClick={() => handleDeleteScan(scan)} className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-bold text-rose-800 hover:bg-rose-100"><Trash2 className="h-3.5 w-3.5" /> Sil</button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
       {subTab === 'documents' && !isAdminAuthenticated && (
         <div className="space-y-5">
           <section className="rounded-2xl border border-indigo-200 bg-gradient-to-br from-indigo-950 via-slate-900 to-slate-950 p-5 text-white shadow-sm sm:p-6">
@@ -5588,6 +5674,19 @@ Paket Alarak Aktifliği Yenile →
             </div>
           </div>
         </div>
+      )}
+      {selectedScanReport && (
+        <ReportModal
+          scanResult={selectedScanReport}
+          ownerUid={scanOwnerUid}
+          onClose={() => setSelectedScanReport(null)}
+          onDeleteReport={(id) => {
+            setScanRecords((current) => current.filter((scan) => scan.id !== id));
+            setSelectedScanReport(null);
+          }}
+          onSelectFrequencyForTreatment={onSelectFrequencyForTreatment || (() => {})}
+          onOpenGuide={onOpenUserGuide}
+        />
       )}
     </div>
   );
