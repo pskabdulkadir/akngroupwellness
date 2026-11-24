@@ -15,7 +15,7 @@ export function downloadTechnicalReportWord(): void {
   <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
   <head>
     <meta charset='utf-8'>
-    <title>AuraBio Frekans v6.0 - İş Sunum Raporu, Katalog ve Monoline 7 Nefis MLM Sistemi</title>
+    <title>AuraBio Frekans - Teknik Bilgilendirme, İş Sunumu ve Katalog</title>
     <style>
       body {
         font-family: 'Calibri', 'Segoe UI', Arial, sans-serif;
@@ -113,60 +113,52 @@ export function downloadTechnicalReportWord(): void {
 
     <div style="text-align: center; margin-bottom: 20pt;">
       <div style="font-size: 16pt; font-weight: bold; color: #047857; letter-spacing: 1.5pt; margin-bottom: 6pt;">AKN GLOBAL GROUP LTD</div>
-      <h1 style="border: none; margin-top: 2pt; margin-bottom: 4pt; color: #064e3b;">AURABIO FREKANS BİYO-REZONANS &amp; MONOLINE 7 NEFİS MLM SİSTEMİ</h1>
-      <p style="font-size: 13pt; font-weight: bold; color: #059669; margin-top: 0;">RESMİ İŞ SUNUM RAPORU, DİJİTAL KATALOG, TEKNİK MİMARİ VE ${PACKAGE_COUNT} BAYİ PAKETİ TEKLİFİ</p>
-      <p style="font-size: 9pt; color: #64748b;">Kurumsal Üretici: AuraBio Kuantum Biyo-Rezonans &amp; Frekans Enstitüsü • Sistem Sürümü: v6.0 Enterprise</p>
+      <h1 style="border: none; margin-top: 2pt; margin-bottom: 4pt; color: #064e3b;">AURABIO FREKANS — TEKNİK BİLGİLENDİRME VE İŞ SUNUMU</h1>
+      <p style="font-size: 13pt; font-weight: bold; color: #059669; margin-top: 0;">TEKNİK BİLGİLENDİRME, İŞ SUNUMU VE ${PACKAGE_COUNT} FREKANS PAKETİ KATALOĞU</p>
+      <p style="font-size: 9pt; color: #64748b;">Kaynak kodundaki uygulama akışlarının özeti • Oluşturulma: ${new Date().toLocaleDateString('tr-TR')}</p>
     </div>
 
     <div class="highlight-box">
-      <strong>YÖNETİCİ ÖZETİ (v6.0 Enterprise):</strong> AuraBio Frekans; modern optik foton spektrometresi, <strong>3D Biyo-Aura &amp; Çakra Simülatörü</strong>, <strong>Aura-Sync Akıllı Saat Biyometrik Canlı Köprüsü (Web BLE)</strong>, <strong>MindSpace Studio (Aura-Journal, Circadian, Voice Forge, Dream Decoder, Group Sync)</strong>, <strong>AI Kutsal Geometri Mandala Üreticisi</strong>, <strong>7 Günlük Bütünsel Arınma Kampları</strong>, <strong>Anonim Küresel Frekans Haritası</strong>, <strong>50+ Hastalık Şifa Ansiklopedisi</strong>, <strong>10s Ön/Son Vokal Biyo-Akustik Tarama Motoru</strong>, <strong>8 Sekmeli Entegre Biyo-Rezonans Raporlama</strong>, Doğu-Batı sentezi <strong>${TOTAL_HEALING_COUNT}+ Kadim Şifa Frekansı</strong> ve küresel tek hatlı <strong>Monoline 7 Nefis Mertebesi MLM &amp; 15 Kredi Havuzu Paketi</strong> mimarisini tek bir dijital platformda birleştiren yeni nesil Kuantum Biyo-Rezonans ve Gelir Ortaklığı Ekosistemidir.
+      <strong>TEKNİK ÖZET:</strong> AuraBio Frekans; kamera ve mikrofon girdilerinden uygulama içi görseller üreten araçlar, Web Audio tabanlı ses içerikleri, isteğe bağlı Bluetooth bağlantısı, MindSpace, mandala ve harita ekranları, <strong>10 sekmeli uygulama raporu</strong>, <strong>${TOTAL_HEALING_COUNT} kayıtlı ses/frekans içeriği</strong> ve <strong>${PACKAGE_COUNT} frekans paketi</strong> içerir. Bu özellikler tıbbi ölçüm, tanı veya tedavi kanıtı değildir. Ödeme sağlayıcısı sandbox test ortamıdır; banka hareketleri CSV ile kullanıcı tarafından içe aktarılır. Sağlık etkinliği, canlı banka/POS bağlantısı, lisans ve mevzuat uygunluğu bu raporla doğrulanmış sayılmaz.
     </div>
 
-    <h2>1. TEMEL SİSTEM ÖZELLİKLERİ VE BİYO-REZONANS TEKNOLOJİLERİ (v6.0 Enterprise)</h2>
+    <h2>1. UYGULAMA ÖZELLİKLERİ VE TEKNİK SINIRLAR</h2>
     <ul>
-      <li><strong>📷 Canlı Optik &amp; 3D Biyo-Aura Spektrometre:</strong> Kamera üzerinden foton ve renk tayfı analiziyle 7 ana çakra, 7 aura katmanı ve 5 kalp letaifinin enerjetik durumunu 3D simülatör üzerinde canlı haritalandırır.</li>
-      <li><strong>🎙️ 10 Saniyelik Ön / Son Biyo-Akustik Tarama Motoru:</strong> Mikrofon üzerinden vokal harmonik ve temel frekans (F0) analizi. Seans öncesi (Pre-Scan) ve seans sonrası (Post-Scan) ses kayıtlarını karşılaştırarak hücrelerdeki biyo-rezonans denge artışını somut grafiklerle raporlar.</li>
-      <li><strong>🧠 MindSpace Studio &amp; Yaşam Koçu (Aura-Journal):</strong> Bütüncül terapötik perspektif ve kadim arketipler (Esma, Çakra, Element) süzgecinde sesli veya yazılı günlük analizi, duygu yoğunluk eğrileri, kişiselleştirilmiş içsel rehberlik ve frekans reçeteleri.</li>
-      <li><strong>☀️ 24 Saatlik Biyo-Ritim &amp; Circadian Synchronizer:</strong> Geleneksel Çin Tıbbı (TCM) 24 saatlik organ meridyen saatleri, biyolojik kortizol/melatonin hormon fazları ve ışık dalga boyu optimizasyonu.</li>
-      <li><strong>🎛️ Sesli &amp; Niyetli Frekans Labirenti (Voice-Intention Forge):</strong> Web Audio API çoklu osilatör mimarisi ile niyetin ses tonu üzerinden spektral analizi, taşıyıcı ve harmonik frekans sentezi, 7.83 Hz Schumann rezonansı eşliğinde interaktif labirent akortlama.</li>
-      <li><strong>🌙 Rüya &amp; Bilinçaltı Çözümleyicisi (Dream Decoder):</strong> Rüya metni veya ses kaydından Jungiyen/Kadim arketipleri, psiko-spiritüel anlamları ve bloke çakraları saptayıp gece frekansı reçetesi hazırlayan analiz motoru.</li>
-      <li><strong>👥 Kurumsal &amp; Aile Çemberi (Group Aura Sync):</strong> Çoklu cihazların sesle veya QR kodla eşleştiği, ortak HRV ve biyo-alan tutarlılık indeksi (Group Coherence) üreten kolektif frekans çemberi.</li>
-      <li><strong>⌚ Aura-Sync Akıllı Saat Köprüsü (Web BLE):</strong> Standart Bluetooth GATT Kalp Hızı Profili (UUID 0x180D) ile anlık nabız ve HRV okuma. Taşikardi veya stres anında otomatik frekans gevşeme adaptasyonu.</li>
-      <li><strong>🌌 Kutsal Geometri Mandala Üreticisi:</strong> HTML5 Canvas tabanlı Çakra ve Solfejyo frekansına göre dinamik Yaşam Çiçeği, Torus, Sri Yantra ve Metatron Küpü geometrileri. Yüksek çözünürlüklü PNG ve PDF dışa aktarma.</li>
-      <li><strong>🧭 7 Günlük Bütünsel Arınma Kampları (Holistic Journey):</strong> Kökten Taç çakraya kadar Sabah (Uyanış), Öğle (Hizalanma) ve Gece (Hücresel Detoks) mikro seanslarıyla yapılandırılmış program ve bulut ilerleme sistemi.</li>
-      <li><strong>🌍 Anonim Küresel Frekans Haritası (Heatmap):</strong> Dünya genelinde o anda aktif olan biyo-rezonans seanslarını, baskın küresel niyet dalgasını ve kıtasal enerji dağılımını canlı görselleştirme.</li>
-      <li><strong>🌿 Şifa Ansiklopedisi &amp; 50+ Hastalık Frekans Matrisi:</strong> Nörolojik, kardiyovasküler, metabolik, psikosomatik, iskelet-kas, bağışıklık ve kadim enerjetik alanlarda 50'den fazla hastalığın Solfejyo, Rife ve Sufi makam frekans reçeteleri ve 3 aşamalı iyileşme takvimleri.</li>
-      <li><strong>📊 8 Sekmeli Entegre Raporlama &amp; Dönüşüm Karşılaştırması:</strong> İlim Kapı, Genel Bakış, Duygular, Aura Katmanları, Çakralar, Letaifler, Kişisel Reçeteler ve Tüm İnovasyonlar sekmeleri. Yüklenen şifa frekansının otomatik rapora işlenmesi ve PDF/Word dışa aktarımı.</li>
-      <li><strong>Evrensel 6'lı Kadim Şifa Kütüphanesi (${TOTAL_HEALING_COUNT}+ Frekans):</strong> İslami Esma &amp; Şifa Sureleri, Uzak Doğu 7 Çakra &amp; Solfejyo Matrisi, 5 Kadim Element &amp; Schumann Rezonansı, Anadolu Sufi Mûsikîsi 25 Makam Terapisi, Şamanik Davul Teta Transı ve Keltik-İskandinav Rün Akustiği.</li>
+      <li><strong>Kamera raporu:</strong> Kamera girdisinden renk ve rehberlik görselleri üretir; çakra, aura, organ veya sağlık durumu ölçümü değildir.</li>
+      <li><strong>Mikrofon karşılaştırması:</strong> Kısa ses örneklerini uygulama içinde karşılaştırır; hücresel değişim veya klinik sonuç ölçmez.</li>
+      <li><strong>Web Audio:</strong> Tarayıcıda ses üretimi ve dinleme oturumları sunar.</li>
+      <li><strong>MindSpace:</strong> Günlük, zaman dilimi ve sesli rehberlik araçları içerir; tıbbi/psikolojik değerlendirme değildir.</li>
+      <li><strong>Bluetooth:</strong> Uyumlu tarayıcı ve cihazla nabız verisi görüntülenebilir; cihaz uyumu ve ölçüm doğruluğu ayrıca teyit edilmelidir.</li>
+      <li><strong>Mandala, harita ve rehberli içerikler:</strong> Uygulama içi görsel ve etkileşimli deneyimler sunar; sağlık etkisi veya gerçek zamanlı kapsam garanti edilmez.</li>
+      <li><strong>Frekans kütüphanesi:</strong> ${TOTAL_HEALING_COUNT} kayıtlı içerik, dinleme ve seçme arayüzlerinde sunulur; tedavi etkinliği doğrulanmış değildir.</li>
+      <li><strong>Tarama raporu:</strong> 10 sekmeden oluşur; ön tarama bulunmadığında 3D karşılaştırma örnek veri gösterebilir. Uygulama raporu PDF olarak indirilebilir.</li>
+      <li><strong>Wellness ve bayi araçları:</strong> Paket, cüzdan, komisyon ve çekim akışları ekranda sunulur. Hak ediş, bakiye ve banka ödemesi ayrı durumlar olup koşullara tabidir.</li>
+      <li><strong>Akıllı Muhasebe:</strong> Finans kayıtlarını ve kullanıcı tarafından CSV ile içe aktarılan banka ekstresi verilerini inceleme ekranlarında gösterir; canlı banka bağlantısı değildir.</li>
     </ul>
 
-    <h2>2. ÇİFT MOTORLU HİBRİT KOMİSYON MİMARİSİ &amp; 7 NEFİS MERTEBESİ MLM GELİR MODELİ</h2>
-    <p>AuraBio Frekans bayilik ekosistemi, çalışan liderleri ödüllendiren Unilevel ve pasif üyeleri sistemde tutan Küresel Monoline hattını aynı anda çalıştıran Çift Motorlu Hibrit Komisyon Mimarisi ile çalışır:</p>
+    <h2>2. BAYİ PANELİ VE GELİR HESAPLAMA VARSAYIMLARI</h2>
+    <p>Aşağıdaki oranlar kodda yer alan varsayılan hesaplama kurallarını özetler. Bunlar gelir, yatırım getirisi, komisyon hakkı veya ödeme garantisi değildir; yürürlükteki koşullar ve sipariş durumu panelden doğrulanmalıdır.</p>
     <ul>
-      <li><strong>1. Danışan Seans Geliri (Perakende Kâr):</strong> Bayiler seans kredi havuzundan $1.00 birim maliyetle kullandıkları seansları danışanlarına $30 – $70 aralığında uygulayarak yüksek perakende kâr elde eder.</li>
-      <li><strong>2. %20 Direkt Sponsor Satış Primi:</strong> Bayinin kendi referans koduyla davet ettiği üyelerin satın aldığı tüm paketlerden anında <strong>%20 Direkt Sponsor Primi</strong> Sponsor Cüzdanına yansır.</li>
-      <li><strong>3. Motor 1 — Ekip Kurma &amp; Liderlik Kazancı (Unilevel 7 Derinlik - %25):</strong> &ldquo;Kendi ekibinizi kurun, dikeyde 7 derinliğe kadar oluşan tüm cirodan %25'e varan pay alın!&rdquo; (1. Derinlik %7, 2. Derinlik %5, 3. Derinlik %4, 4. Derinlik %3, 5-7. Derinlik %2; 8. ebeveynde durur).</li>
-      <li><strong>4. Motor 2 — Küresel Sıra Pasif Teşviki (Monoline Global Line - %5):</strong> &ldquo;Sisteme erken dahil olmanın avantajını yaşayın! Arkanızdan gelen küresel sıranın ilk 7 derinliğinden %5'lik havuzdan sembolik teşvik primi kazanın.&rdquo; (1. Sıra %1.50, 2. Sıra %1.00, 3. Sıra %0.80, 4. Sıra %0.60, 5. Sıra %0.50, 6-7. Sıra %0.30).</li>
-      <li><strong>5. %5 Sistem Fonu &amp; 7 Nefis Kariyer Havuzu:</strong> Her siparişin %5'i Sistem / Kariyer Havuzuna aktarılır. 7 Nefis Mertebesine ulaşan bayiler havuzdan ek pay (%2 - %10) ve yönetici tarafından cüzdanlarına anında aktarılan Kariyer Bonusları kazanır.</li>
-      <li><strong>6. Liderlik Eşleşme Bonusu (Matching %20):</strong> Alt ekibinizdeki liderlerin kazançları üzerinden 1. Nesil %10, 2. Nesil %5 ve 3. Nesil %5 oranında doğrudan cüzdanınıza yatan liderlik primi.</li>
-      <li><strong>7. &ldquo;3 Getir Bedavaya Getir&rdquo; Fast-ROI İkramiyesi (+%15):</strong> İlk 3 direkt satışınızda %60 sponsor primine ek olarak anında +%15 Fast-ROI ikramiyesi ödenir; toplam %75 nakit iade ile paket maliyetiniz sıfırlanır.</li>
-      <li><strong>8. 48 Saatlik FOMO Kaçırma Koruması &amp; Kurtarma:</strong> Pasife düşen bayinin alt ekibinden komisyon kaçmasını engelleyen geri sayım ve tek tıkla kurtarma mekanizması.</li>
-      <li><strong>9. Bayiler Arası P2P Transfer &amp; Aktivasyon Kuponları:</strong> Bayiler kazanç bakiyelerini alt bayilerine aktarabilir veya üyelik hediye kuponları oluşturabilir.</li>
-      <li><strong>10. Esnek 30 Günlük Aktiflik Kuralı:</strong> Her ay zorunlu paket alımı yoktur; 1 paket satın alma VEYA 1 yeni üye kaydetme ile aktiflik ücretsiz korunur.</li>
+      <li><strong>Direkt sponsor:</strong> Kodda varsayılan nominal oran %20 olarak tanımlıdır.</li>
+      <li><strong>Unilevel:</strong> Varsayılan derinlik oranları %7, %5, %4, %3, %2, %2 ve %2'dir.</li>
+      <li><strong>Global Monoline:</strong> Kodda yedi sıra için toplam nominal %5 oran bulunur.</li>
+      <li><strong>Kariyer/havuz:</strong> Kariyer, aktiflik, sipariş ve diğer sistem kuralları hesaplamayı etkiler.</li>
+      <li><strong>Ödeme ve çekim:</strong> Komisyon hak edişi, çekilebilir bakiye, yönetici onayı ve banka transferi farklı durumlardır. Onay, transferin gerçekleştiğini kanıtlamaz.</li>
+      <li><strong>Simülatör:</strong> Örnek sonuçlar kullanıcı girdilerine ve basitleştirilmiş varsayımlara dayanır; gerçek kazanç veya yatırım geri dönüşü öngörüsü değildir.</li>
     </ul>
 
-    <h2>3. BDDK &amp; TCMB YASAL UYUM STANDARTLARI (3D SECURE SANAL POS &amp; RESMİ TR IBAN)</h2>
+    <h2>3. ÖDEME, BANKA VE MEVZUAT SINIRLARI</h2>
     <div class="highlight-box">
-      <strong>MEVZUAT VE GÜVENLİK GÜVENCESİ:</strong><br>
-      • <strong>256-Bit SSL 3D Secure Sanal POS:</strong> Tüm paket alımları PCI-DSS sertifikalı lisanslı Sanal POS üzerinden Kredi/Banka Kartı ile tahsil edilir; elden nakit veya kripto kabul edilmez.<br>
-      • <strong>4'lü Yasal Sözleşme Onayı (v6.0):</strong> Ön Bilgilendirme Formu, Mesafeli Satış Sözleşmesi, KVKK Aydınlatma Metni ve MLM Bayilik Sözleşmesi zaman damgası ve IP kaydıyla saklanır.<br>
-      • <strong>14 Günlük Cayma Koruması &amp; Bloke Havuzu:</strong> Yasal cayma süresince komisyonlar Pending Balance havuzunda güvende tutulur; iptallerde Clawback iadesi yapılır.<br>
-      • <strong>Resmi TR IBAN Banka Transferi:</strong> Komisyon çekimleri yalnızca bayinin kendi adına kayıtlı Türkiye Cumhuriyeti banka hesabına (TR IBAN) transfer edilir.<br>
-      • <strong>%20 Kurumsal Fatura / Stopaj İadesi:</strong> Fatura kesen şirket sahibi bayiler %20 vergi kesintisini geri alabilir.
+      <strong>DOĞRULAMA NOTU:</strong><br>
+      • Kodda varsayılan kart sağlayıcısı sandbox test ortamıdır; canlı sanal POS veya sertifikasyon doğrulanmamıştır.<br>
+      • Banka hareketleri Akıllı Muhasebe ekranına CSV ile kullanıcı tarafından aktarılır; doğrudan banka bağlantısı değildir.<br>
+      • Çekim talebinin onaylanması gerçek banka transferi anlamına gelmez; banka çıkışı ayrıca mutabakat gerektirir.<br>
+      • Vergi, stopaj, tüketici ve sağlık mevzuatına uygunluk bu teknik raporla doğrulanmış sayılmaz; yetkili uzman incelemesi gerekir.<br>
+      • Bu uygulama tıbbi cihaz veya sağlık hizmeti olarak doğrulanmamıştır; raporlar ve ses içerikleri tanı/tedavi yerine kullanılmamalıdır.
     </div>
 
-    <h2>4. ${PACKAGE_COUNT} RESMİ BAYİLİK &amp; SEANS KREDİSİ HAVUZU ALIŞVERİŞ PAKETİ</h2>
-    <p>Bayi Back-Office üzerinden satın alınabilen ${PACKAGE_COUNT} resmi paket. Paket fiyatı USD cinsindendir ve krediler 1 USD = 1 Kredi kuralıyla tanımlanır. Paket alımında ek sabit kredi bonusu uygulanmaz:</p>
+    <h2>4. ${PACKAGE_COUNT} FREKANS PAKETİ</h2>
+    <p>Bayi Back-Office üzerinden sunulan ${PACKAGE_COUNT} katalog paketi. Paket fiyatı USD cinsindendir ve krediler 1 USD = 1 Kredi kuralıyla tanımlanır. Paket alımında ek sabit kredi bonusu uygulanmaz:</p>
     <table>
       <thead>
         <tr>
@@ -176,7 +168,7 @@ export function downloadTechnicalReportWord(): void {
           <th>Seans Kredisi</th>
           <th>Birim Maliyet</th>
           <th>Paket Fiyatı</th>
-          <th>%20 Sponsor Primi</th>
+          <th>Nominal %20 hesap örneği</th>
         </tr>
       </thead>
       <tbody>
@@ -194,57 +186,10 @@ export function downloadTechnicalReportWord(): void {
       </tbody>
     </table>
 
-    <h2>4. EVRENSEL 6'LI KADİM ŞİFA EKOLÜ VE FREKANS DAĞILIMI</h2>
-    <table>
-      <thead>
-        <tr>
-          <th>Ekol / Kategori</th>
-          <th>İçerik</th>
-          <th>Frekans Aralığı</th>
-          <th>Terapötik Etki &amp; Enstrüman Karakteri</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td><strong>1. İslami Kadim Şifa</strong></td>
-          <td>52 Frekans</td>
-          <td>111 Hz – 999 Hz</td>
-          <td>Ebced tabanlı Esma-i Hüsna titreşimleri (Ya Şafi 391 Hz, Ya Vedud 432 Hz vb.), Kur'an şifa ayetleri, 4-7-8 zikir nefesi ve ney tınıları.</td>
-        </tr>
-        <tr>
-          <td><strong>2. Çakra &amp; Solfejyo</strong></td>
-          <td>50 Frekans</td>
-          <td>174 Hz – 963 Hz</td>
-          <td>7 temel çakra, antik solfejyo oktavları, Prana dolaşımı ve 7 metal alaşımlı Tibet şarkı söyleyen çanakları.</td>
-        </tr>
-        <tr>
-          <td><strong>3. 5 Element &amp; Doğa</strong></td>
-          <td>50 Frekans</td>
-          <td>194.18 Hz – 852 Hz</td>
-          <td>Toprak (194 Hz), Su (417 Hz), Ateş (528 Hz), Hava (639 Hz), Eter (741 Hz) ve Schumann 7.83 Hz yerküre rezonansı.</td>
-        </tr>
-        <tr>
-          <td><strong>4. Anadolu Sufi Mûsikîsi</strong></td>
-          <td>50 Frekans</td>
-          <td>216 Hz – 528 Hz</td>
-          <td>Selçuklu ve Osmanlı darüşşifalarında uygulanan 25 kadim makam terapisi (Rast, Hicaz, Nihavend, Buselik vb.) ve Mevlevi ney taksimleri.</td>
-        </tr>
-        <tr>
-          <td><strong>5. Şamanik Davul Transı</strong></td>
-          <td>50 Frekans</td>
-          <td>136.1 Hz – 432 Hz</td>
-          <td>Beyni 4.5 Hz derin Teta bandına indiren 120-135 BPM monoritmik davul vuruşları, Sibirya/Altay köklenme ritimleri, ateş akustiği.</td>
-        </tr>
-        <tr>
-          <td><strong>6. Kelt &amp; İskandinav</strong></td>
-          <td>50 Frekans</td>
-          <td>285 Hz – 741 Hz</td>
-          <td>13 Kutsal Kelt ağacı (Ogham takvimi), gümüş telli Keltik arp, Tagelharpa yaylısı ve Futhark rün biyo-alan koruması.</td>
-        </tr>
-      </tbody>
-    </table>
+    <h2>5. SES VE FREKANS KÜTÜPHANESİ</h2>
+    <p>Kodda ${TOTAL_HEALING_COUNT} içerik altı tematik kategori altında listelenmiştir. Kategori başlıkları ve sayımları uygulamanın kütüphane verilerinden türetilir. İçerik isimleri veya frekans değerleri tedavi etkinliği, klinik yarar ya da hastalığa özgü protokol kanıtı olarak yorumlanmamalıdır.</p>
 
-    <h2>5. BİREYSEL ÜYELİK VE SÜRELİ LİSANS PAKETLERİ</h2>
+    <h2>6. BİREYSEL ÜYELİK VE SÜRELİ LİSANS PAKETLERİ</h2>
     <table>
       <thead>
         <tr>
@@ -266,7 +211,7 @@ export function downloadTechnicalReportWord(): void {
       </tbody>
     </table>
 
-    <h2>6. RESMİ ÜRETİCİ &amp; İLETİŞİM BİLGİLERİ</h2>
+    <h2>7. ÜRETİCİ VE İLETİŞİM BİLGİLERİ</h2>
     <table>
       <tr>
         <td style="width: 30%;"><strong>Kurumsal Yapı:</strong></td>
@@ -294,7 +239,7 @@ export function downloadTechnicalReportWord(): void {
       </tr>
     </table>
 
-    <h2>7. VERİTABANI, KREDİ DEFTERİ VE İŞLEM GÜVENLİĞİ</h2>
+    <h2>8. VERİTABANI, KREDİ DEFTERİ VE İŞLEM GÜVENLİĞİ</h2>
     <ul>
       <li>Bayi paket kredileri 1 USD = 1 Kredi kuralıyla sunucu kataloğundan belirlenir; paket alımında sabit ek kredi bonusu yoktur.</li>
       <li>Yönetici kredi düzeltmeleri PostgreSQL transaction’ı içinde kullanıcı kilidi, reseller_credits bakiyesi, idempotency ve credit_ledger kaydıyla işlenir.</li>
@@ -305,8 +250,8 @@ export function downloadTechnicalReportWord(): void {
     </ul>
 
     <div class="footer-note">
-      Bu resmi iş sunum raporu ve katalog AKN GLOBAL GROUP LTD bünyesindeki AuraBio Frekans Kuantum Biyo-Rezonans ve Monoline 7 Nefis MLM Sistemi (v6.0 Enterprise) tarafından oluşturulmuştur.<br>
-      © ${new Date().getFullYear()} AKN GLOBAL GROUP LTD • AuraBio Frekans. Tüm Hakları Saklıdır.
+      Kaynak kodundaki uygulama özelliklerini özetleyen bilgilendirme belgesidir; bağımsız teknik denetim, sağlık etkinliği, gelir, ödeme veya mevzuat uygunluğu sertifikası değildir.<br>
+      © ${new Date().getFullYear()} AKN GLOBAL GROUP LTD • AuraBio Frekans.
     </div>
 
   </body>
@@ -319,7 +264,7 @@ export function downloadTechnicalReportWord(): void {
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  link.download = `AuraBio_Frekans_Is_Sunumu_ve_Katalog_v6_${new Date().toISOString().slice(0, 10)}.doc`;
+  link.download = `AuraBio_Frekans_Teknik_Rapor_ve_Katalog_${new Date().toISOString().slice(0, 10)}.doc`;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
@@ -374,7 +319,7 @@ export function downloadTechnicalReportPDF(): void {
       y = 16;
       doc.setFontSize(8);
       doc.setTextColor(120, 120, 120);
-      doc.text(clean('AuraBio Frekans - Resmi Is Sunum Raporu, Katalog & Monoline 7 Nefis MLM (v6.0)'), margin, 10);
+      doc.text(clean('AuraBio Frekans - Teknik Bilgilendirme ve Katalog'), margin, 10);
       doc.setDrawColor(200, 200, 200);
       doc.line(margin, 12, pageWidth - margin, 12);
       y = 18;
@@ -392,8 +337,8 @@ export function downloadTechnicalReportPDF(): void {
   
   doc.setFontSize(8.5);
   doc.setFont('helvetica', 'normal');
-  doc.text(clean(`Resmi Is Sunum Raporu, Biyo-Rezonans Mimarisi, ${PACKAGE_COUNT} Bayi Paketi ve Gelir Modeli`), margin + 5, y + 16);
-  doc.text(clean(`Surum: v6.0 • Tarih: ${new Date().toLocaleDateString('tr-TR')}`), pageWidth - margin - 52, y + 16);
+  doc.text(clean(`Teknik Bilgilendirme, ${PACKAGE_COUNT} Frekans Paketi ve Is Sunumu`), margin + 5, y + 16);
+  doc.text(clean(`Tarih: ${new Date().toLocaleDateString('tr-TR')}`), pageWidth - margin - 34, y + 16);
 
   y += 30;
 
@@ -401,51 +346,55 @@ export function downloadTechnicalReportPDF(): void {
   doc.setTextColor(15, 23, 42);
   doc.setFontSize(10.5);
   doc.setFont('helvetica', 'bold');
-  doc.text(clean('1. SISTEM TANIMI VE YONETICI OZETI (v6.0 ENTERPRISE)'), margin, y);
+  doc.text(clean('1. UYGULAMA OZETI VE TEKNIK SINIRLAR'), margin, y);
   y += 5;
 
   doc.setFillColor(240, 253, 244);
   doc.setDrawColor(16, 185, 129);
   doc.setLineWidth(0.4);
-  doc.roundedRect(margin, y, pageWidth - 2 * margin, 28, 2, 2, 'FD');
-
   doc.setTextColor(30, 41, 59);
   doc.setFontSize(8.2);
   doc.setFont('helvetica', 'normal');
   const summaryText = clean(
-    `AuraBio Frekans; canli optik foton spektrometresi, 3D Biyo-Aura Simulatoru, 10s On/Son Vokal Biyo-Akustik Tarama, Aura-Sync Akilli Saat Koprusu (Web BLE), MindSpace Studio, Kutsal Geometri Mandala Ureticisi, 7 Gunluk Arinma Kamplari, 50+ Hastalik Sifa Ansiklopedisi, 8 Sekmeli Raporlama, ${TOTAL_HEALING_COUNT}+ Kadim Sifa Frekansi ve Kuresel Tek Hatli Monoline 7 Nefis MLM (%20 Direkt Sponsor + %25 7 Derinlik Tek Hat + %50 Kariyer Havuzu) gelir ortakligini tek bir platformda birlestiren yeni nesil sistemdir.`
+    `AuraBio Frekans; kamera ve mikrofon girdilerinden uygulama ici gorseller, Web Audio tabanli ses icerikleri, istege bagli Bluetooth, MindSpace, mandala ve harita ekranlari, 10 sekmeli uygulama raporu, ${TOTAL_HEALING_COUNT} ses/frekans icerigi ve ${PACKAGE_COUNT} frekans paketi sunar. Gorseller tibbi olcum, tani veya tedavi kaniti degildir. Kart odemesi sandbox test ortamindadir; banka hareketleri CSV ile kullanici tarafindan aktarilir. Canli banka/POS, saglik etkinligi, lisans ve mevzuat uygunlugu bu raporla dogrulanmis sayilmaz.`
   );
-  doc.text(doc.splitTextToSize(summaryText, pageWidth - 2 * margin - 8), margin + 4, y + 5);
-  y += 33;
+  const summaryLines = doc.splitTextToSize(summaryText, pageWidth - 2 * margin - 8);
+  const summaryHeight = Math.max(30, summaryLines.length * 4 + 10);
+  doc.roundedRect(margin, y, pageWidth - 2 * margin, summaryHeight, 2, 2, 'FD');
+  doc.text(summaryLines, margin + 4, y + 5);
+  y += summaryHeight + 5;
 
-  // Section 2: Monoline 7 Nefis MLM & 4 Revenue Streams
+  // Section 2: Bayi paneli gelir hesaplama varsayımları
   doc.setTextColor(15, 23, 42);
   doc.setFontSize(10.5);
   doc.setFont('helvetica', 'bold');
-  doc.text(clean('2. MONOLINE 7 NEFIS MLM VE 4 KAPILI GELIR ORTAKLIGI MODELI'), margin, y);
+  doc.text(clean('2. BAYI PANELI GELIR HESAPLAMA VARSAYIMLARI'), margin, y);
   y += 5;
 
   const mlmItems = [
-    '1. Danisan Seans Kari: 14 kredi paketinde $1.00 birim maliyet ile $30-$70 seans uygulamasi.',
-    '2. %20 Direkt Sponsor Primi: Referans kodunuzla kaydolan uyelerin her paket alimindan aninda %20 nakit komisyon.',
-    '3. Motor 1 (%25 Unilevel 7 Derinlik): Ust 7 kademeye %7, %5, %4, %3, %2, %2, %2 seklinde sponsor agacindan dagitim.',
-    '4. Motor 2 (%5 Kuresel Monoline Tesviki): Kuresel kuyrukta ust 7 siraya %1.50, %1.00, %0.80, %0.60, %0.50, %0.30, %0.30.',
-    '5. %5 Sistem/Kariyer Fonu & Bonuslar: Nefs-i Emmare -> Nefs-i Kamile 7 mertebe havuz payi (%2-%10) ve anlik cuzdana bonus.',
-    '6. Liderlik Eslesme Bonusu (Matching %20): 1. Nesil %10, 2. Nesil %5, 3. Nesil %5 derinlik kazanci.',
-    '7. 3 Getir Bedavaya Getir (+%15 Fast-ROI): Ilk 3 direkt satista toplam %75 nakit iade ile paket maliyeti sifirlama.',
-    '8. Yasal Uyum: BDDK/TCMB 3D Secure Sanal POS, 14 Gun Cayma Blokesi, Sahsi TR IBAN ve %20 Stopaj/Fatura Iadesi.'
+    'Varsayilan nominal direkt sponsor orani: %20.',
+    'Unilevel derinlik oranlari: %7, %5, %4, %3, %2, %2 ve %2.',
+    'Yedi Global Monoline sirasi icin toplam nominal %5 oran tanimlidir.',
+    'Kariyer, aktiflik, siparis ve sistem kosullari hak edisi etkiler.',
+    'Komisyon, cekilebilir bakiye, yonetici onayi ve banka transferi farkli durumlardir.',
+    'Simulator sonuclari ornek hesaptir; gelir, ROI veya odeme garantisi degildir.',
+    'Kart odemesi sandbox test ortamidir; canli POS ve sertifikasyon dogrulanmamistir.',
+    'Banka hareketleri CSV ile kullanici tarafindan aktarilir; canli banka baglantisi yoktur.',
+    'Saglik etkinligi ve mevzuat uygunlugu bu raporla bagimsiz olarak dogrulanmamistir.'
   ];
 
   mlmItems.forEach((item) => {
-    checkPage(8);
+    const lines = doc.splitTextToSize(clean(item), pageWidth - 2 * margin - 6);
+    const rowHeight = Math.max(7, lines.length * 3.6 + 3);
+    checkPage(rowHeight + 1);
     doc.setFillColor(248, 250, 252);
     doc.setDrawColor(226, 232, 240);
-    doc.roundedRect(margin, y, pageWidth - 2 * margin, 7, 1, 1, 'FD');
+    doc.roundedRect(margin, y, pageWidth - 2 * margin, rowHeight, 1, 1, 'FD');
     doc.setFontSize(7.8);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(4, 120, 87);
-    doc.text(clean(item), margin + 3, y + 4.8);
-    y += 8.5;
+    doc.text(lines, margin + 3, y + 4.8);
+    y += rowHeight + 1.5;
   });
 
   y += 2;
@@ -455,7 +404,7 @@ export function downloadTechnicalReportPDF(): void {
   doc.setTextColor(15, 23, 42);
   doc.setFontSize(10.5);
   doc.setFont('helvetica', 'bold');
-  doc.text(clean('3. 7 NEFIS MERTEBESI KARIYER VE DERINLIK KILIDI MATRISI'), margin, y);
+  doc.text(clean('3. KARIYER VE DERINLIK KOSULLARI'), margin, y);
   y += 5;
 
   CAREER_TIERS.forEach((tier) => {
@@ -480,11 +429,11 @@ export function downloadTechnicalReportPDF(): void {
   y += 3;
   checkPage(50);
 
-  // Section 4: 15 Official Packages
+  // Section 4: Frekans paketleri
   doc.setTextColor(15, 23, 42);
   doc.setFontSize(10.5);
   doc.setFont('helvetica', 'bold');
-  doc.text(clean(`4. ${PACKAGE_COUNT} RESMI BAYILIK VE SEANS KREDISI HAVUZU ALISVERIS PAKETI`), margin, y);
+  doc.text(clean(`4. ${PACKAGE_COUNT} FREKANS PAKETI`), margin, y);
   y += 5;
 
   FREKANS_PACKAGES.forEach((pkg) => {
@@ -502,7 +451,7 @@ export function downloadTechnicalReportPDF(): void {
     );
     doc.setTextColor(4, 120, 87);
     doc.text(
-      clean(`${formatUsd(pkg.defaultPrice)}  |  Sponsor (%20): ${formatUsd(pkg.defaultPrice * 0.2)}`),
+      clean(`${formatUsd(pkg.defaultPrice)}  |  Nominal %20 hesap: ${formatUsd(pkg.defaultPrice * 0.2)}`),
       pageWidth - margin - 68,
       y + 4.4
     );
@@ -512,7 +461,7 @@ export function downloadTechnicalReportPDF(): void {
   y += 3;
   checkPage(30);
 
-  // Section 5: Official Contact & Bank Info
+  // Iletisim bilgileri
   doc.setFillColor(15, 23, 42);
   doc.roundedRect(margin, y, pageWidth - 2 * margin, 22, 2, 2, 'F');
 
@@ -531,7 +480,7 @@ export function downloadTechnicalReportPDF(): void {
   doc.setTextColor(15, 23, 42);
   doc.setFontSize(10.5);
   doc.setFont('helvetica', 'bold');
-  doc.text(clean('6. VERITABANI, KREDI DEFTERI VE ISLEM GUVENLIGI'), margin, y);
+  doc.text(clean('5. VERITABANI, KREDI DEFTERI VE ISLEM GUVENLIGI'), margin, y);
   y += 5;
   const persistenceItems = [
     'Paket kredileri sunucu katalogundaki 1 USD = 1 Kredi kuralina gore belirlenir; paket alimina sabit bonus eklenmez.',
@@ -551,5 +500,5 @@ export function downloadTechnicalReportPDF(): void {
     y += lines.length * 4 + 1.5;
   });
 
-  doc.save(`AuraBio_Frekans_Is_Sunumu_ve_Katalog_v6_${new Date().toISOString().slice(0, 10)}.pdf`);
+  doc.save(`AuraBio_Frekans_Teknik_Rapor_ve_Katalog_${new Date().toISOString().slice(0, 10)}.pdf`);
 }

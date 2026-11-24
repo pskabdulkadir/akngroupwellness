@@ -232,8 +232,8 @@ export const FrequencyLoadingModal: React.FC<FrequencyLoadingModalProps> = ({
   const progressPercent = Math.min(100, Math.max(0, ((sessionDuration - timeLeft) / sessionDuration) * 100));
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/90 backdrop-blur-xl animate-fade-in overflow-y-auto">
-      <div className="relative w-full max-w-xl bg-slate-900 border border-emerald-500/50 rounded-3xl p-6 sm:p-8 shadow-2xl shadow-emerald-950/80 space-y-6">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto overscroll-y-contain bg-slate-950/90 px-3 py-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-xl animate-fade-in sm:items-center sm:p-6">
+      <div className="relative my-auto min-h-[calc(100dvh-1.5rem)] max-h-[calc(100dvh-1.5rem)] w-full max-w-xl space-y-4 overflow-y-auto rounded-3xl border border-emerald-500/50 bg-slate-900 p-4 shadow-2xl shadow-emerald-950/80 sm:min-h-0 sm:space-y-6 sm:p-8">
         
         {/* Close Button */}
         <button
@@ -297,9 +297,9 @@ export const FrequencyLoadingModal: React.FC<FrequencyLoadingModalProps> = ({
         </div>
 
         {/* Timer & Controls Display */}
-        <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-950 border border-slate-800">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-slate-900 border border-slate-700 flex items-center justify-center font-mono text-base font-bold text-emerald-400">
+        <div className="flex flex-col gap-3 rounded-2xl border border-slate-800 bg-slate-950 p-3 sm:flex-row sm:items-center sm:justify-between sm:p-4">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-700 bg-slate-900 font-mono text-base font-bold text-emerald-400">
               {timeLeft}s
             </div>
             <div>
@@ -312,7 +312,7 @@ export const FrequencyLoadingModal: React.FC<FrequencyLoadingModalProps> = ({
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center justify-end gap-2">
             <button
               onClick={handleToggleMute}
               className={`p-2.5 rounded-xl border transition-all ${
@@ -372,7 +372,7 @@ export const FrequencyLoadingModal: React.FC<FrequencyLoadingModalProps> = ({
         </div>
 
         {/* Quick Duration Preset Selector */}
-        <div className="flex items-center justify-between pt-2 border-t border-slate-800 text-xs">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-800 pt-2 text-xs">
           <span className="text-slate-400 flex items-center gap-1 text-[11px]">
             <Clock className="w-3.5 h-3.5 text-slate-500" />
             <span>Süre Seçimi:</span>

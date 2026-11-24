@@ -22,6 +22,7 @@ import {
   Brain,
   Clock,
   Users,
+  Building2,
   Repeat,
   Crown
 } from 'lucide-react';
@@ -46,6 +47,7 @@ export type GuideTab =
   | 'theory' 
   | 'tips'
   | 'dealer_backoffice'
+  | 'accounting'
   | 'faq';
 
 export const UserGuideModal: React.FC<UserGuideModalProps> = ({ isOpen, onClose }) => {
@@ -90,7 +92,7 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({ isOpen, onClose 
   // Full Narration Script
   const playFullGuide = () => {
     voiceAssistant.unlockMobileSpeech();
-    const script = `Kullanım kılavuzuna hoş geldiniz. Başlamak için giriş yapabilir, kayıt olabilir veya varsa demo seçeneğini kullanabilirsiniz. Kamera bölümünde tarama iznini verin, yüzünüzü iyi ışıkta kadraja alın ve ekrandaki tarama düğmesine basın. Tarama yaklaşık 15 saniye sürer. Sonuç ekranında on rapor sekmesini inceleyebilir ve raporu PDF olarak indirebilirsiniz. İsterseniz şifa kütüphanesinden bir ses seçip süre belirleyerek dinleme oturumu başlatabilirsiniz. Akıllı saat, mikrofon, mandala, harita, MindSpace, günlük ve mobil araçlar isteğe bağlı bölümlerdir. Bu uygulama tıbbi teşhis veya tedavi sağlamaz; ekrandaki analizler klinik ölçüm değildir. Acil durumda sağlık hizmetlerine başvurun.`;
+    const script = `Kullanım kılavuzuna hoş geldiniz. Başlamak için giriş yapabilir, kayıt olabilir veya varsa demo seçeneğini kullanabilirsiniz. Kamera bölümünde tarayıcı izni gerekiyorsa verin ve ekrandaki yönergeleri izleyin. Sonuç ekranında on rapor sekmesini inceleyebilir ve raporu PDF olarak indirebilirsiniz. Ses kütüphanesinden bir içerik seçip dinleme oturumu başlatabilirsiniz. Akıllı saat, mikrofon, mandala, harita, MindSpace ve bayi paneli isteğe bağlı bölümlerdir. Akıllı Muhasebe ekranında finans kayıtlarını, inceleme kuyruğunu, yevmiye ve gider pusulalarını görüntüleyebilir; banka ekstresini CSV ile içe aktarabilirsiniz. CSV aktarımı banka bağlantısı değildir. Bu uygulama tıbbi teşhis veya tedavi sağlamaz; ekrandaki görseller klinik ölçüm değildir. Acil durumda sağlık hizmetlerine başvurun.`;
 
     setActiveSpeechStep(-1);
     voiceAssistant.speak(script, true);
@@ -135,12 +137,12 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({ isOpen, onClose 
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-5 bg-white/85 backdrop-blur-xl animate-fade-in overflow-y-auto">
-      <div className="relative w-full max-w-4xl max-h-[92vh] bg-white border border-slate-200 rounded-3xl shadow-2xl flex flex-col overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto overscroll-y-contain bg-white/85 p-2 pt-[max(0.5rem,env(safe-area-inset-top))] backdrop-blur-xl animate-fade-in sm:items-center sm:p-5">
+      <div className="relative my-auto flex max-h-[calc(100dvh-1rem)] w-full max-w-4xl flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl sm:max-h-[92vh]">
         
         {/* Modal Top Header */}
-        <div className="p-4 sm:p-6 bg-white border-b border-slate-200 flex items-center justify-between gap-4 shrink-0">
-          <div className="flex items-center gap-3">
+        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-slate-200 bg-white p-3 sm:gap-4 sm:p-6">
+          <div className="flex min-w-0 items-center gap-2 sm:gap-3">
             <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-emerald-500/20 via-teal-500/20 to-indigo-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shadow-inner">
               <BookOpen className="w-6 h-6" />
             </div>
@@ -247,7 +249,7 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({ isOpen, onClose 
         </div>
 
         {/* Tab Navigation Bar */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 items-stretch px-3 sm:px-6 pt-2.5 bg-white/50 border-b border-slate-200 gap-1 overflow-y-auto scrollbar-none shrink-0">
+        <div className="grid max-h-[30dvh] grid-cols-2 items-stretch gap-1 overflow-y-auto border-b border-slate-200 bg-white/50 px-3 pt-2.5 scrollbar-none shrink-0 sm:max-h-none sm:grid-cols-3 sm:px-6 lg:grid-cols-4">
           <button
             onClick={() => setActiveSection('steps')}
             className={`min-w-0 px-2 sm:px-3 py-2 sm:py-2.5 rounded-t-2xl text-xs sm:text-sm font-bold flex items-center gap-1.5 border-b-2 transition-all whitespace-normal break-words text-left cursor-pointer ${
@@ -390,6 +392,18 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({ isOpen, onClose 
           >
             <BookOpen className="w-4 h-4" />
             <span>Bayi Back Office</span>
+          </button>
+
+          <button
+            onClick={() => setActiveSection('accounting')}
+            className={`min-w-0 px-2 sm:px-3 py-2 sm:py-2.5 rounded-t-2xl text-xs sm:text-sm font-bold flex items-center gap-1.5 border-b-2 transition-all whitespace-normal break-words text-left cursor-pointer ${
+              activeSection === 'accounting'
+                ? 'bg-slate-50 text-teal-400 border-teal-400 shadow-sm'
+                : 'text-slate-600 hover:text-slate-800 border-transparent'
+            }`}
+          >
+            <Building2 className="w-4 h-4 text-teal-500" />
+            <span>Akıllı Muhasebe</span>
           </button>
 
           <button
@@ -1017,7 +1031,46 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({ isOpen, onClose 
             </div>
           )}
 
-          {/* TAB 12: SSS */}
+          {activeSection === 'accounting' && (
+            <div className="space-y-5">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h3 className="flex items-center gap-2 text-lg font-bold text-slate-900">
+                    <Building2 className="h-5 w-5 text-teal-600" />
+                    Akıllı Muhasebe Paneli
+                  </h3>
+                  <p className="text-xs text-slate-600">Finans kayıtları için inceleme ekranı</p>
+                </div>
+                <button
+                  onClick={() => playSection(1201, 'Akıllı Muhasebe ekranında verileri yenileyin; gelir ve gider özetlerini, inceleme kuyruğunu, yevmiye kayıtlarını ve banka CSV ekstrelerini kontrol edin. Banka ekstreleri kullanıcı tarafından yüklenir ve banka bağlantısı olarak doğrulanmış sayılmaz. Vergi ve stopaj sınıflandırmasını mali müşavirle teyit edin.')}
+                  className="flex items-center gap-1.5 rounded-xl border border-slate-300 bg-slate-100 px-3.5 py-1.5 text-xs font-bold text-slate-800 cursor-pointer"
+                >
+                  <Volume2 className="h-4 w-4 text-teal-600" />
+                  <span>Bu Bölümü Dinle</span>
+                </button>
+              </div>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {[
+                  ['Özet ve yenileme', 'Gelir, gider pusulası toplamı, net denge ve bekleyen çekim toplamını gözden geçirin. Verileri Yenile ile sunucudan tekrar alın.'],
+                  ['İnceleme kuyruğu', 'Bayi siparişleri ve kayıtları mali müşavir incelemesine kadar ayrı gösterilir; bunlar otomatik olarak yevmiye veya gelir toplamına dahil edilmez. Demo/test kayıtlarını silmeden önce seçiminizi dikkatle kontrol edin.'],
+                  ['Belgeler ve yevmiye', 'Yüklenen vergi iadesi faturalarını inceleyin, yevmiye satırlarını ve gider pusulalarını görüntüleyin. Taslak veya bekleyen kayıt resmi onay anlamına gelmez.'],
+                  ['Banka ekstresi', 'Banka ekranında CSV dosyasını içe aktarın, banka ve hesap etiketini girin, tarih/açıklama/tutar sütunlarını eşleyip dosyayı doğrulayın. CSV kullanıcı tarafından sağlanır; otomatik banka bağlantısı değildir.'],
+                  ['Vergi ve stopaj', 'Vergi, stopaj ve beyan görünümlerindeki değerleri ön hesaplama olarak değerlendirin. Oranları, resmî yükümlülükleri ve beyanları mali müşavirle teyit edin.'],
+                  ['Çekim durumu', 'Yönetici çekim onayı ile gerçek banka transferi ayrı durumlardır. Banka çıkışı dekont veya sağlayıcı referansı ile ayrıca doğrulanmalıdır.'],
+                ].map(([title, description]) => (
+                  <article key={title} className="space-y-1 rounded-2xl border border-slate-200 bg-white/60 p-4">
+                    <h4 className="text-sm font-bold text-slate-900">{title}</h4>
+                    <p className="text-xs leading-relaxed text-slate-600">{description}</p>
+                  </article>
+                ))}
+              </div>
+              <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-xs leading-relaxed text-amber-900">
+                Banka entegrasyonu yoktur; CSV aktarımı banka tarafından doğrulanmış hareket oluşturmaz. Bu panel muhasebe veya vergi danışmanlığının yerine geçmez.
+              </div>
+            </div>
+          )}
+
+          {/* TAB 14: SSS */}
           {activeSection === 'faq' && (
             <div className="space-y-3.5">
               <div className="flex flex-wrap items-center justify-between gap-2 p-3 bg-indigo-50 rounded-2xl border border-indigo-200">

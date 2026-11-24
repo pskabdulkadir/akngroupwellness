@@ -57,6 +57,7 @@ import {
   detectAndSaveReferralCodeFromUrl 
 } from '../utils/resellerManager';
 import { CAREER_TIERS, FREKANS_PACKAGES, MONOLINE_DEPTH_RATES } from '../types/monoline';
+import { HEALING_CATEGORIES, TOTAL_HEALING_COUNT } from '../data/healingLibrary';
 import { downloadTechnicalReportWord, downloadTechnicalReportPDF } from '../utils/technicalReportExport';
 
 interface BusinessPresentationModalProps {
@@ -229,22 +230,22 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
 
   // WhatsApp Share Message
   const waShareText = encodeURIComponent(
-    `🌟 AuraBio Kuantum Biyo-Rezonans & Monoline 7 Nefis MLM İş Sunum Raporu (v6.0 Enterprise)\n\n` +
-    `Canlı optik & 3D biyo-aura spektrometresi, 10s vokal biyo-akustik analiz, Web BLE akıllı saat nabız köprüsü, 302+ kadim şifa frekansı, 50+ hastalık ansiklopedisi, MindSpace Studio, ${packageCount} resmi bayilik kredi paketi ve %20 Direkt Sponsor + %25 Monoline 7 Derinlik Tek Hat + %5 Sistem / Kariyer Fonu gelir modelini inceleyin:\n\n` +
-    `📊 Resmi Dijital Katalog & İnteraktif İş Sunumu:\n${fullShareUrl}\n\n` +
-    `🎁 Yetkili Bayi Referans Kodu: ${activeReferralCode}`
+    `AuraBio iş sunumu ve dijital katalog\n\n` +
+    `Kamera raporu, ses içerikleri, MindSpace araçları, ${packageCount} kredi paketi ve koşullu gelir simülasyonunu inceleyin. Uygulama tıbbi teşhis veya tedavi sunmaz; kazanç garantisi yoktur. Kart ödemesi sandbox test ortamındadır.\n\n` +
+    `Sunum bağlantısı: ${fullShareUrl}\n\n` +
+    `Referans kodu: ${activeReferralCode}`
   );
   const waShareLink = `https://wa.me/?text=${waShareText}`;
 
   // Telegram Share Link
-  const tgShareLink = `https://t.me/share/url?url=${encodeURIComponent(fullShareUrl)}&text=${encodeURIComponent('AuraBio Frekans & Monoline 7 Nefis MLM Dijital İş Sunumu ve Tanıtım Kataloğu (v6.0 Enterprise)')}`;
+  const tgShareLink = `https://t.me/share/url?url=${encodeURIComponent(fullShareUrl)}&text=${encodeURIComponent('AuraBio Frekans iş sunumu ve dijital katalog')}`;
 
   const selectedCalculatorPackage =
     FREKANS_PACKAGES.find((pkg) => pkg.defaultPrice === calcAvgPackagePrice) || FREKANS_PACKAGES[0];
   const unitSessionCost =
     selectedCalculatorPackage.defaultPrice / selectedCalculatorPackage.sessionCredits;
 
-  // Multi-Way Earnings Calculations (v6.0 Enterprise)
+  // Gelir simülatörü varsayımları
   const monthlySessionRevenue = calcClientsPerMonth * calcPricePerSession;
   const monthlySessionCost = calcClientsPerMonth * unitSessionCost;
   const monthlySessionProfit = monthlySessionRevenue - monthlySessionCost;
@@ -311,22 +312,22 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
   });
 
   return (
-    <div className="fixed inset-0 z-[60] flex h-[100dvh] w-screen items-stretch justify-stretch bg-slate-100 text-slate-800 animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[60] flex h-[100dvh] w-full items-stretch justify-stretch bg-slate-100 text-slate-800 animate-in fade-in duration-200">
       <div className="relative flex h-full w-full flex-col overflow-hidden bg-[radial-gradient(ellipse_at_top_left,_rgba(16,185,129,0.10),_transparent_36%),radial-gradient(ellipse_at_bottom_right,_rgba(99,102,241,0.08),_transparent_38%),#f8fafc]">
         
         {/* Top Header Bar */}
-        <div className="px-5 py-4 bg-gradient-to-r from-white via-slate-50 to-emerald-50 border-b border-slate-200 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500/30 to-teal-500/20 border border-emerald-500/50 flex items-center justify-center text-emerald-700 shadow-inner">
+        <div className="flex shrink-0 items-center justify-between gap-2 border-b border-slate-200 bg-gradient-to-r from-white via-slate-50 to-emerald-50 px-3 py-3 sm:px-5 sm:py-4">
+          <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-emerald-500/50 bg-gradient-to-br from-emerald-500/30 to-teal-500/20 text-emerald-700 shadow-inner sm:h-12 sm:w-12">
               <BookOpen className="w-6 h-6 text-emerald-400" />
             </div>
             <div>
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex flex-wrap items-center gap-1.5">
                 <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-700 font-black text-[11px] border border-emerald-500/30 tracking-wider">
-                  AuraBio Frekans v6.0 Enterprise
+                  AuraBio Frekans
                 </span>
                 <span className="px-2 py-0.5 rounded-md bg-indigo-500/20 text-indigo-700 font-bold text-[10px] border border-indigo-500/40">
-                  Resmi İş Sunum Raporu &amp; Dijital Tanıtım Kataloğu
+                  İş Sunumu &amp; Dijital Katalog
                 </span>
                 <span className="px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-700 font-bold text-[10px] border border-amber-500/40">
                   {packageCount} Kredi Paketi · Monoline 7 Nefis MLM
@@ -338,8 +339,8 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
                   </span>
                 )}
               </div>
-              <h2 className="text-base sm:text-lg font-black text-slate-900 mt-1">
-                Kuantum Biyo-Rezonans, 16 Bütüncül Teknoloji, {packageCount} Bayi Paketi &amp; Monoline 7 Nefis MLM Kataloğu
+              <h2 className="mt-1 break-words text-sm font-black text-slate-900 sm:text-lg">
+                Uygulama özellikleri, {packageCount} paket ve Monoline gelir modeli
               </h2>
             </div>
           </div>
@@ -385,8 +386,8 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
               {
                 id: 'what_it_is' as TabSection,
                 num: '1',
-                title: '1. 16 Bütüncül Teknoloji & Modül',
-                short: '16 Bütüncül Modül',
+                title: '1. Uygulama Özellikleri',
+                short: 'Uygulama Özellikleri',
                 icon: Activity,
                 color: 'emerald',
               },
@@ -417,7 +418,7 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
               {
                 id: 'packages' as TabSection,
                 num: '5',
-                title: `5. ${packageCount} Resmi Bayilik Paketi`,
+                title: `5. ${packageCount} Bayilik Paketi`,
                 short: `${packageCount} Bayilik Paketi`,
                 icon: Coins,
                 color: 'purple',
@@ -425,8 +426,8 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
               {
                 id: 'compliance' as TabSection,
                 num: '6',
-                title: '6. Yasal Uyum & Güvenlik Standartları',
-                short: 'Yasal Uyum & Standartlar',
+                title: '6. Ödeme ve Ürün Sınırları',
+                short: 'Ödeme ve Sınırlar',
                 icon: ShieldCheck,
                 color: 'cyan',
               },
@@ -546,13 +547,13 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
               <div className="p-6 rounded-3xl bg-gradient-to-br from-emerald-50 via-white to-teal-50 border border-emerald-500/40 shadow-xl space-y-3">
                 <div className="flex items-center gap-2 text-emerald-400 text-xs font-bold uppercase tracking-wider">
                   <Sparkles className="w-4 h-4" />
-                  <span>Kuantum Biyo-Rezonans, Optik Spektrometre &amp; Akustik Titreşim Mimarisi (v6.0)</span>
+                  <span>Kamera görselleştirmeleri, ses araçları ve frekans kütüphanesi</span>
                 </div>
                 <h3 className="text-xl sm:text-2xl font-black text-slate-900 leading-tight">
-                  İnsan Enerji Alanlarını Optik, Vokal ve Biyometrik Olarak Tarayan, Dengeleyen ve 8 Sekmeli Raporlayan Tam Donanımlı Klinik Ekosistem
+                  Kamera tabanlı görseller, ses araçları ve 10 sekmeli rapor sunan dijital platform
                 </h3>
                 <p className="text-xs sm:text-sm text-slate-700 leading-relaxed max-w-4xl">
-                  AuraBio Frekans; web kamerası üzerinden canlı foton/PPG analizi, mikrofon üzerinden <strong>10s Öncesi/Sonrası Vokal Biyo-Akustik Spektrometre</strong> ve <strong>Web BLE Akıllı Saat Nabız/HRV Canlı Köprüsü</strong> ile danışanın biyolojik ve enerjetik durumunu ölçer. <strong>302+ Kadim Şifa Frekansı</strong>, <strong>50+ Hastalık Şifa Ansiklopedisi</strong>, <strong>MindSpace Nöro-Akustik Stüdyosu</strong>, <strong>Dinamik Kutsal Geometri Mandala</strong> ve <strong>8 Sekmeli Öncesi/Sonrası Klinik Raporlama</strong> ile danışanlarınıza eşsiz bir deneyim yaşatır.
+                  AuraBio; kamera raporu, isteğe bağlı mikrofon ve uyumlu Bluetooth cihazı, ses kütüphanesi, MindSpace ve mandala araçlarını bir araya getirir. Rapor ve görseller sembolik veya uygulama içi yorumlardır; sağlık, enerji alanı ya da hücresel durum ölçümü, tıbbi teşhis veya tedavi değildir.
                 </p>
 
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 text-center text-xs">
@@ -561,21 +562,21 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
                     <div className="text-[10px] text-slate-600">Entegre Biyo-Sistem</div>
                   </div>
                   <div className="p-2.5 rounded-xl bg-slate-50/90 border border-slate-200">
-                    <div className="text-amber-400 font-mono font-black text-lg">302+ Frekans</div>
-                    <div className="text-[10px] text-slate-600">Kadim Şifa Kütüphanesi</div>
+                    <div className="text-amber-400 font-mono font-black text-lg">{TOTAL_HEALING_COUNT} içerik</div>
+                    <div className="text-[10px] text-slate-600">Ses ve frekans kütüphanesi</div>
                   </div>
                   <div className="p-2.5 rounded-xl bg-slate-50/90 border border-slate-200">
-                    <div className="text-cyan-400 font-mono font-black text-lg">50+ Hastalık</div>
-                    <div className="text-[10px] text-slate-600">Rezonans Ansiklopedisi</div>
+                    <div className="text-cyan-400 font-mono font-black text-lg">{HEALING_CATEGORIES.length} kategori</div>
+                    <div className="text-[10px] text-slate-600">Kütüphane sınıflandırması</div>
                   </div>
                   <div className="p-2.5 rounded-xl bg-slate-50/90 border border-slate-200">
-                    <div className="text-purple-400 font-mono font-black text-lg">8 Sekmeli</div>
-                    <div className="text-[10px] text-slate-600">Ön/Son Klinik Rapor</div>
+                    <div className="text-purple-400 font-mono font-black text-lg">10 Sekmeli</div>
+                    <div className="text-[10px] text-slate-600">Uygulama içi rapor</div>
                   </div>
                 </div>
               </div>
 
-              {/* 16 Comprehensive Technology Cards Grouped by Domain */}
+              {/* Uygulama özellikleri */}
               <div className="space-y-4">
                 
                 {/* Domain 1: Biyometrik Tarama & 3D Spektrometre */}
@@ -594,7 +595,7 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
                         <span>1. Canlı Optik Spektrometre &amp; Biyo-Aura Taraması</span>
                       </div>
                       <p className="text-xs text-slate-600 leading-relaxed">
-                        Kamera üzerinden foton ve elektromanyetik renk tayfı analiziyle 7 ana çakra (Kök, Sakral, Solar, Kalp, Boğaz, Alın, Tepe), 7 aura katmanı ve 5 kalp letaifinin enerjetik blokajlarını gerçek zamanlı olarak tarar ve hizalar.
+                        Kamera girdisinden sembolik renk ve rehberlik görselleri oluşturur. Enerji alanlarını veya sağlık durumunu ölçmez ve blokajları gidermez.
                       </p>
                     </div>
 
@@ -606,7 +607,7 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
                         <span>2. 3D İnteraktif Kuantum Biyo-Aura Simülatörü</span>
                       </div>
                       <p className="text-xs text-slate-600 leading-relaxed">
-                        WebGL / Three.js tabanlı 3D toroidal enerji alanı simülatörü. Danışanın aurik katman kalınlığını, renk polarizasyonunu ve 7 çakrasının dönme yönü ile hızını canlı 360 derece döndürülebilir model üzerinde görselleştirir.
+                        Döndürülebilir 3D model, rapordaki sembolik değerleri görselleştirir; enerji alanı veya çakra ölçümü değildir. Önceki tarama yoksa karşılaştırma örnek veriler kullanabilir.
                       </p>
                     </div>
 
@@ -618,7 +619,7 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
                         <span>3. 10s Ön / Son Vokal Biyo-Akustik &amp; F0 Harmonik Analiz</span>
                       </div>
                       <p className="text-xs text-slate-600 leading-relaxed">
-                        Mikrofon üzerinden seans öncesi ve sonrası 10 saniyelik ses kaydı alarak temel vokal frekans (F0) ve harmonik dağılımını ölçer; hücresel rezonans gelişimini somut matematiksel delta (%) değerleriyle raporlar.
+                        Mikrofon izniyle kısa öncesi ve sonrası ses örneklerini uygulama içinde karşılaştırır. Bu karşılaştırma hücresel değişim veya sağlık ölçümü değildir.
                       </p>
                     </div>
 
@@ -630,7 +631,7 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
                         <span>4. Web BLE Akıllı Saat Nabız &amp; HRV Canlı Köprüsü</span>
                       </div>
                       <p className="text-xs text-slate-600 leading-relaxed">
-                        Standart Bluetooth GATT Kalp Hızı Profili (UUID 0x180D) ile Apple Watch, Galaxy Watch, Fitbit ve nabız bantlarından anlık BPM ve HRV okur; taşikardi veya stres anında otomatik frekans yatıştırması devreye girer.
+                        Web Bluetooth destekleyen tarayıcı ve uyumlu kalp hızı hizmeti sunan cihaz gerektirir. Cihaz desteği değişir; simülasyon verileri gerçek sensör ölçümü değildir ve sağlık kararlarında kullanılmamalıdır.
                       </p>
                     </div>
                   </div>
@@ -649,7 +650,7 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
                         <div className="p-2 rounded-xl bg-amber-500/20 border border-amber-500/40">
                           <Flame className="w-4 h-4" />
                         </div>
-                        <span>5. 302+ Kadim Şifa &amp; Solfejyo Frekans Kütüphanesi</span>
+                        <span>5. {TOTAL_HEALING_COUNT} içerikli ses ve frekans kütüphanesi</span>
                       </div>
                       <p className="text-xs text-slate-600 leading-relaxed">
                         99 Esma-ül Hüsna titreşimleri (Ya Şafi 391Hz vb.), 25 Anadolu Sufi Makamı (Rast, Hicaz, Nihavend), Antik Solfejyo (174Hz, 285Hz, 396Hz, 417Hz, 528Hz, 639Hz, 741Hz, 852Hz, 963Hz), Rife, Tesla 3-6-9 ve Nogier rezonansları.
@@ -661,10 +662,10 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
                         <div className="p-2 rounded-xl bg-rose-500/20 border border-rose-500/40">
                           <FileText className="w-4 h-4" />
                         </div>
-                        <span>6. 50+ Holistik Hastalık &amp; Patoloji Ansiklopedisi</span>
+                        <span>6. Kategorilere ayrılmış içerik ansiklopedisi</span>
                       </div>
                       <p className="text-xs text-slate-600 leading-relaxed">
-                        Nörolojik, kardiyovasküler, metabolik, psikosomatik, iskelet-kas ve bağışıklık kategorilerinde 50'den fazla rahatsızlık için 3 aşamalı (Detoks, Dengeleme, Hücresel Yenilenme) kanıta dayalı frekans ve meridyen protokolleri.
+                        Ansiklopedideki açıklamalar ve ses seçenekleri bilgilendirme amaçlıdır; kanıta dayalı tedavi veya hastalık protokolü olarak değerlendirilmemelidir.
                       </p>
                     </div>
 
@@ -722,7 +723,7 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
                         <span>10. Kadim Arketip Rüya &amp; Bilinçaltı Çözümleyicisi</span>
                       </div>
                       <p className="text-xs text-slate-600 leading-relaxed">
-                        Rüya metinlerini Jungiyen arketipler ve kadim Doğu sembolizmi süzgecinde analiz ederek bilinçaltı blokajlarını tespit eder; danışana özel gece psiko-akustik dinleme protokolü önerir.
+                        Rüya notları için sembolik yorumlar ve ses önerileri sunar; bilinçaltı blokajı tespit etmez ve psikolojik değerlendirme değildir.
                       </p>
                     </div>
 
@@ -734,7 +735,7 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
                         <span>11. 24 Saatlik Sirkadiyen Biyo-Ritim Senkronizatörü</span>
                       </div>
                       <p className="text-xs text-slate-600 leading-relaxed">
-                        Geleneksel Çin Tıbbı (TCM) 24 saatlik organ meridyen saatleri ile biyolojik kortizol/melatonin hormon fazlarını eşzamanlayarak günün saatine uygun organ frekanslarını otomatik aktive eder.
+                        Günün saatine göre içerik önerileri gösterir; hormonları, organ işlevlerini veya biyolojik ritmi ölçmez ya da eşzamanladığını kanıtlamaz.
                       </p>
                     </div>
 
@@ -746,17 +747,17 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
                         <span>12. Gece Uyku &amp; Epifiz Melatonin Protokolü</span>
                       </div>
                       <p className="text-xs text-slate-600 leading-relaxed">
-                        Derin NREM uyku fazına geçişi hızlandıran 0.5 - 2.5 Hz Delta vuruşları, epifiz bezi melatonin stimülasyonu ve otomatik kapanma zamanlayıcısı ile gece hücresel yenilenme sağlar.
+                        Dinleme ve zamanlayıcı seçenekleri sunar; uyku evrelerini, melatonini veya hücresel yenilenmeyi etkilediği doğrulanmamıştır ve uyku bozukluklarını tedavi etmez.
                       </p>
                     </div>
                   </div>
                 </div>
 
-                {/* Domain 4: Bütüncül Denge, Grup Şifası & Klinik Raporlama */}
+                {/* Uygulama raporu, grup ve rehberli araçlar */}
                 <div className="space-y-3 pt-2">
                   <div className="flex items-center gap-2 text-xs font-black uppercase text-cyan-400 tracking-wider">
                     <ShieldCheck className="w-4 h-4" />
-                    <span>D. Bütüncül Denge, Grup Şifası &amp; Klinik Çıktılar</span>
+                    <span>D. Grup ve rehberli uygulama araçları</span>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -768,7 +769,7 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
                         <span>13. Acil Durum Hızlı Denge SOS Modu</span>
                       </div>
                       <p className="text-xs text-slate-600 leading-relaxed">
-                        Akut panik, anksiyete, taşikardi veya duygu durum krizlerinde tek tıkla 528Hz DNA onarımı ve 7.83Hz Schumann topraklama rezonansını başlatarak danışanın otonom sinir sistemini dakikalar içinde dengeler.
+                        Kısa ses ve nefes rehberi sunar; acil sağlık hizmeti veya tedavi değildir. Acil durumda yerel acil servisleri arayın.
                       </p>
                     </div>
 
@@ -780,7 +781,7 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
                         <span>14. Kurumsal &amp; Aile Çemberi (Group Aura Sync)</span>
                       </div>
                       <p className="text-xs text-slate-600 leading-relaxed">
-                        Çoklu cihazların QR kod veya sesli senkronizasyonla bağlandığı, grup içi kalp tutarlılığı (Group Coherence Index) üreten kolektif şifa ve meditasyon çemberi.
+                        Grup oturumu ve senkronizasyon arayüzünü sunar. Gösterilen grup değerleri tıbbi kalp ölçümü veya şifa kanıtı değildir.
                       </p>
                     </div>
 
@@ -789,10 +790,10 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
                         <div className="p-2 rounded-xl bg-emerald-500/20 border border-emerald-500/40">
                           <Activity className="w-4 h-4" />
                         </div>
-                        <span>15. Aura Günlüğü &amp; 21 Günlük Dönüşüm Kampları</span>
+                        <span>15. Günlük ve 7 günlük rehberli içerikler</span>
                       </div>
                       <p className="text-xs text-slate-600 leading-relaxed">
-                        Kökten Taç çakraya kadar Sabah (Uyanış), Öğle (Hizalanma) ve Gece (Hücresel Detoks) mikro seanslarıyla yapılandırılmış rehberli 21 günlük program ve bulut ilerleme takip sistemi.
+                        Uygulamada sunulan rehberli içerikler yedi günlük akışta listelenir. Bunlar hücresel detoks veya sağlık etkisi kanıtı değildir.
                       </p>
                     </div>
 
@@ -801,10 +802,10 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
                         <div className="p-2 rounded-xl bg-amber-500/20 border border-amber-500/40">
                           <FileText className="w-4 h-4" />
                         </div>
-                        <span>16. 8 Sekmeli Klinik Öncesi/Sonrası Rapor &amp; Dünya Haritası</span>
+                        <span>16. 10 sekmeli uygulama raporu ve harita görünümü</span>
                       </div>
                       <p className="text-xs text-slate-600 leading-relaxed">
-                        İlim Kapı, Çakralar, Letaifler, Aura Katmanları, Vokal Frekans ve Organ Rezonansını içeren 8 sekmeli kapsamlı klinik raporu tek tıkla resmi PDF ve Word olarak hazırlar; Küresel Şifa Isı Haritası ile canlı frekans akışını gösterir.
+                        İlim Kapı, Genel Bakış, renk ve duygu görünümleri, aurik katmanlar, çakra rehberi, letaif, Esma/frekans, yaşam koçu ve 3D görünümden oluşan 10 sekmeli uygulama raporunu ve ayrı harita ekranını sunar. Rapor PDF olarak indirilebilir; görseller klinik ölçüm değildir.
                       </p>
                     </div>
                   </div>
@@ -994,10 +995,10 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
                   </div>
                   <h4 className="text-sm font-black text-slate-900">2. %20 Direkt Sponsor Satış Primi</h4>
                   <p className="text-xs text-slate-600 leading-relaxed">
-                    Kendi özel referans kodunuzla davet ettiğiniz her yeni bayi veya üyenin satın aldığı tüm paketlerden <strong>anında %20 Direkt Sponsor Primi</strong> Sponsor Cüzdanınıza yansır.
+                    Kendi özel referans kodunuzla davet ettiğiniz her yeni bayi veya üyenin satın aldığı tüm paketlerden <strong>nominal %20 direkt sponsor oranı</strong> hesaplanabilir; hak ediş ve kullanılabilir bakiye sipariş, hesap ve sistem kurallarına bağlıdır.
                   </p>
                   <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-500/30 text-[11px] font-bold text-emerald-700">
-                    Örn: $603 Paket Satışı = Anında $121 Direkt Sponsor Primi
+                    Örnek hesap: $603 x %20 = yaklaşık $121 brüt nominal komisyon; ödeme garantisi değildir.
                   </div>
                 </div>
 
@@ -1048,10 +1049,10 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
                   </div>
                   <h4 className="text-sm font-black text-slate-900">5. 7 Nefis Kariyer Havuzu &amp; Cüzdan Bonusları</h4>
                   <p className="text-xs text-slate-600 leading-relaxed">
-                    Her siparişin <strong>%5'i Sistem ve Kariyer Fonuna</strong> aktarılır. Nefs-i Emmâre'den Nefs-i Kâmile'ye 7 basamağa ulaşan bayiler havuzdan <strong>%2 ile %10 arasında ek kâr payı</strong> ve cüzdana nakit bonuslar kazanır.
+                    Sistem, yapılandırılmış oranları ve kariyer koşullarını kullanarak komisyon/havuz hesaplamaları sunar. Gerçek hak ediş, kullanılabilir bakiye veya ödeme bu ekrandaki simülasyonla garanti edilmez; güncel kurallar panelden doğrulanmalıdır.
                   </p>
                   <div className="p-2.5 rounded-xl bg-purple-50 border border-purple-500/30 text-[11px] font-bold text-purple-700">
-                    7 Nefis Mertebesi Havuz Payı (%2 – %10) · Anlık Nakit Bonuslar
+                    Kariyer ve aktiflik koşullarına bağlı hesaplama; garanti edilmiş gelir değildir
                   </div>
                 </div>
 
@@ -1066,7 +1067,7 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
                   </div>
                   <h4 className="text-sm font-black text-slate-900">5. Liderlik Eşleşme Bonusu (Matching %20)</h4>
                   <p className="text-xs text-slate-600 leading-relaxed">
-                    Alt ekibinizde yetiştirdiğiniz liderlerin kazançları üzerinden <strong>1. Nesil %10</strong>, <strong>2. Nesil %5</strong> ve <strong>3. Nesil %5</strong> olmak üzere toplamda %20 Liderlik Eşleşme Bonusu doğrudan cüzdanınıza yansır.
+                    Kodda liderlik eşleşmesi için kariyer seviyesine göre oranlar tanımlıdır. Hak ediş ve cüzdanda kullanılabilir bakiye; sistem koşulları ve onaylı işlemlere bağlıdır.
                   </p>
                   <div className="p-2.5 rounded-xl bg-indigo-50 border border-indigo-500/30 text-[11px] font-bold text-indigo-700">
                     1. Nesil %10 (Mülhime+) · 2. Nesil %5 (Râzıye+) · 3. Nesil %5 (Mardıyye+)
@@ -1079,15 +1080,15 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
                       <Zap className="w-5 h-5" />
                     </div>
                     <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-700 text-[10px] font-black border border-emerald-500/30">
-                      6. FAST-ROI (%75 İADE)
+                      6. ÖRNEK BONUS SENARYOSU
                     </span>
                   </div>
                   <h4 className="text-sm font-black text-slate-900">6. &ldquo;3 Getir Bedavaya Getir&rdquo; Fast-ROI İkramiyesi</h4>
                   <p className="text-xs text-slate-600 leading-relaxed">
-                    İlk 3 direkt satışınızın her birinden aldığınız %20 Direkt Sponsor Primine (3×%20 = %60) ek olarak, 3. satışta <strong>+%15 Fast-ROI Hızlı Amortisman İkramiyesi</strong> ödenir. Toplam %75 iade ile paket maliyetiniz sıfırlanır!
+                    Simülatör, belirli kullanıcı girdileriyle bu örnek bonus senaryosunu hesaplar. Gerçek hak ediş; onaylı sipariş, aktiflik, kariyer ve güncel kurallara bağlıdır; paket maliyetinin geri kazanılacağı veya ödeme yapılacağı garanti edilmez.
                   </p>
                   <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-500/30 text-[11px] font-bold text-emerald-700">
-                    %60 Direkt Sponsor + %15 Fast-ROI = Toplam %75 Nakit İade
+                    Varsayımsal hesaplama; gelir ve iade garantisi değildir
                   </div>
                 </div>
 
@@ -1187,13 +1188,13 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
               <div className="p-6 rounded-3xl bg-gradient-to-br from-teal-50 via-white to-slate-50 border border-teal-500/40 shadow-xl space-y-2">
                 <div className="flex items-center gap-2 text-teal-700 text-xs font-bold uppercase tracking-wider">
                   <Compass className="w-4 h-4" />
-                  <span>Uygulama, Seans &amp; Back-Office İşleyiş Yol Haritası</span>
+                  <span>Uygulama ve Bayi Paneli Kullanım Özeti</span>
                 </div>
                 <h3 className="text-xl sm:text-2xl font-black text-slate-900 leading-tight">
-                  Kayıttan Danışan Raporlamasına ve Monoline Komisyon Çekimine 6 Kolay Adım
+                  Kayıttan uygulama raporuna ve bayi paneline 6 adım
                 </h3>
                 <p className="text-xs sm:text-sm text-slate-700 leading-relaxed">
-                  AuraBio Frekans sistemini kullanmak, danışanlarınıza klinik ve holistik seanslar uygulamak ve Bayi Back-Office üzerinden kazançlarınızı yönetmek tamamen otomatize edilmiş adımlardan oluşur.
+                  Bu özet, Wellness özelliklerini ve bayi panelindeki temel akışları açıklar. Ekranlarda sunulan içerikler tıbbi hizmet değildir; ödeme, komisyon ve çekim durumlarını ilgili panelden ayrıca doğrulayın.
                 </p>
               </div>
 
@@ -1207,7 +1208,7 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
                   <div className="space-y-1">
                     <h4 className="text-sm font-bold text-slate-900">Referans Kodu İle Kaydolun &amp; Küresel Tek Hatta (Monoline) Yerleşin</h4>
                     <p className="text-xs text-slate-600 leading-relaxed">
-                      Sponsor bayinizin referans linki ile kaydolarak hesabınızı açın. Kayıt anında küresel tek hatta (Global Single Line) kronolojik sıranız otomatik tanımlanır ve sizden sonra katılan herkes alt sıranıza dökülür (spillover).
+                      Sponsor bayinizin referans linki ile kaydolarak hesabınızı açın. Kayıt sırasında yönlendirme ve ağ yerleşimi, uygulamadaki güncel kayıt akışında gösterilen kurallara göre yapılır; sonuç veya komisyon garantisi verilmez.
                     </p>
                   </div>
                 </div>
@@ -1217,9 +1218,9 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
                     2
                   </div>
                   <div className="space-y-1">
-                    <h4 className="text-sm font-bold text-slate-900">{packageCount} Resmi Paketten Seçim Yapın &amp; Seans Kredisi Yükleyin</h4>
+                    <h4 className="text-sm font-bold text-slate-900">{packageCount} katalog paketini inceleyin</h4>
                     <p className="text-xs text-slate-600 leading-relaxed">
-                      Bayi Back-Office içerisindeki <strong>{packageCount} Resmi Alışveriş Paketi</strong> sekmesinden bütçenize uygun paketi seçin. Paket fiyatı USD cinsindendir ve 1 USD = 1 Kredi kuralı uygulanır; ek paket bonusu yoktur. Desteklenen ödeme yöntemlerinden biriyle ödemenizi tamamlayın; ödenmiş sipariş kredileri sunucu tarafından kredi defterine kaydedilir.
+                      Bayi Back-Office içindeki paket kataloğunda fiyatı ve kredi miktarını kontrol edin. Kart ödeme sağlayıcısı varsayılan olarak sandbox test ortamıdır; canlı ödeme yöntemi bağlı olmayabilir. Kredi, yalnızca sunucuda onaylanan siparişe göre işlenir.
                     </p>
                   </div>
                 </div>
@@ -1231,7 +1232,7 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
                   <div className="space-y-1">
                     <h4 className="text-sm font-bold text-slate-900">Canlı Optik Spektrometre, 10s Akustik Ses &amp; Akıllı Saat Taraması Başlatın</h4>
                     <p className="text-xs text-slate-600 leading-relaxed">
-                      Kamera, mikrofon ve Bluetooth akıllı saat sensörlerini devreye sokarak danışanınızın 7 çakrasını, 5 letaif noktasını, vokal harmonik frekans spektrumunu ve nabız/HRV stres değerlerini eşzamanlı olarak ölçün.
+                      İzin verirseniz kamera ve mikrofon özelliklerini deneyin; uyumlu tarayıcı ve Bluetooth cihazında nabız verisi görüntülenebilir. Renk, ses ve rapor çıktıları uygulama içi görselleştirmelerdir; çakra, letaif, stres veya sağlık durumu ölçümü değildir.
                     </p>
                   </div>
                 </div>
@@ -1241,9 +1242,9 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
                     4
                   </div>
                   <div className="space-y-1">
-                    <h4 className="text-sm font-bold text-slate-900">302+ Kadim Şifa veya 50+ Hastalık Protokolünü Uygulayın</h4>
+                    <h4 className="text-sm font-bold text-slate-900">Kütüphanedeki içerikleri keşfedin</h4>
                     <p className="text-xs text-slate-600 leading-relaxed">
-                      Biyometrik analiz sonucuna göre sistemin önerdiği Esma-ül Hüsna, Solfejyo, Sufi Makamı veya Şifa Ansiklopedisi protokolünü başlatın. Seans tamamlandığında kredi havuzunuzdan otomatik olarak 1 seans kredisi düşülür.
+                      Şifa ve ses kütüphanesindeki kategorileri inceleyip sunulan dinleme seçeneklerini kullanın. İçerikler tedavi protokolü değildir; kredi kullanımı ve varsa ücret paneldeki güncel koşullara bağlıdır.
                     </p>
                   </div>
                 </div>
@@ -1253,9 +1254,9 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
                     5
                   </div>
                   <div className="space-y-1">
-                    <h4 className="text-sm font-bold text-slate-900">8 Sekmeli Öncesi/Sonrası Raporu PDF ve Word Olarak Teslim Edin</h4>
+                    <h4 className="text-sm font-bold text-slate-900">10 sekmeli uygulama raporunu inceleyin</h4>
                     <p className="text-xs text-slate-600 leading-relaxed">
-                      Seans öncesi ve sonrasındaki hücresel titreşim artışını gösteren 8 sekmeli karşılaştırmalı klinik raporu tek tıkla PDF veya Word (.doc) olarak indirin; danışanınıza WhatsApp veya e-posta üzerinden iletin.
+                      Tarama ekranındaki 10 sekmeli uygulama raporunu inceleyin ve sunulan PDF dışa aktarma seçeneğini kullanın. Rapor kamera girdisinden üretilen uygulama içi görsellerdir; hücresel değişim veya klinik sonuç ölçmez.
                     </p>
                   </div>
                 </div>
@@ -1267,7 +1268,7 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
                   <div className="space-y-1">
                     <h4 className="text-sm font-bold text-slate-900">Bayi Back-Office'ten Monoline Ağacınızı ve Cüzdanınızı Yönetin</h4>
                     <p className="text-xs text-slate-600 leading-relaxed">
-                      Bayi Back-Office ekranında küresel tek hat ağacınızı, alt ekip siparişlerinizi ve cüzdan hareketlerinizi izleyin; biriken %20 Direkt Sponsor, %25 Monoline ve %5 Sistem / Kariyer Fonu gelirlerinizi resmi TR IBAN hesabınıza nakit olarak çekin.
+                      Bayi Back-Office ekranında ağ, sipariş, kariyer ve cüzdan bilgilerinizi inceleyin. Çekim talebi oluşturulabilmesi ve banka transferinin gerçekleşmesi ayrı adımlardır; onay, ödemenin bankaya gönderildiğini tek başına göstermez.
                     </p>
                   </div>
                 </div>
@@ -1508,7 +1509,7 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
                 <div className="space-y-1.5">
                   <div className="flex items-center gap-2 text-purple-700 text-xs font-bold uppercase tracking-wider">
                     <Coins className="w-4 h-4" />
-                    <span>Resmi Bayilik Seans Kredisi Havuzu &amp; Monoline Alışveriş Paketleri</span>
+                    <span>Bayi seans kredisi ve Monoline paketleri</span>
                   </div>
                   <h3 className="text-xl sm:text-2xl font-black text-slate-900 leading-tight">
                     {minPackageCredits.toLocaleString('tr-TR')} Seans Kredisinden {maxPackageCredits.toLocaleString('tr-TR')} Seans Kredisine {packageCount} Resmi Paket
@@ -1660,13 +1661,13 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
               <div className="p-6 rounded-3xl bg-gradient-to-br from-cyan-50 via-white to-slate-50 border border-cyan-500/40 shadow-xl space-y-2">
                 <div className="flex items-center gap-2 text-cyan-700 text-xs font-bold uppercase tracking-wider">
                   <ShieldCheck className="w-4 h-4" />
-                  <span>Mevzuat, Finans &amp; Hukuki Güvenlik Standartları (v6.0 Enterprise)</span>
+                  <span>Ödeme, veri ve sağlık beyanlarının kapsamı</span>
                 </div>
                 <h3 className="text-xl sm:text-2xl font-black text-slate-900 leading-tight">
-                  BDDK / TCMB 3D Sanal POS, Resmi TR IBAN, E-Fatura &amp; CE Sınıf I Wellness Uyum Güvencesi
+                  Test ödeme ortamı, CSV banka içe aktarımı ve ürün sınırları
                 </h3>
                 <p className="text-xs sm:text-sm text-slate-700 leading-relaxed">
-                  AuraBio Frekans sistemi; finansal işlemler, bayi hakları, tüketici koruması ve sağlık mevzuatı bakımından ulusal ve uluslararası standartlara tam uyumlu olarak yapılandırılmıştır.
+                  Bu sunum yasal uygunluk, lisans, sertifikasyon veya canlı banka bağlantısını doğrulamaz. Ödeme sağlayıcısı ve mevzuat gereklilikleri canlıya geçmeden önce yetkili uzmanlarca ayrıca teyit edilmelidir.
                 </p>
               </div>
 
@@ -1678,10 +1679,10 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
                     <div className="p-2 rounded-xl bg-cyan-500/20 border border-cyan-500/40">
                       <CreditCard className="w-4 h-4" />
                     </div>
-                    <span>1. BDDK &amp; TCMB Uyumlu 256-Bit SSL 3D Secure Sanal POS</span>
+                    <span>1. Kart ödeme sağlayıcısı</span>
                   </div>
                   <p className="text-xs text-slate-600 leading-relaxed">
-                    Tüm paket ödemeleri doğrudan PCI-DSS Seviye 1 sertifikalı lisanslı Sanal POS altyapısı üzerinden Kredi / Banka Kartı ve 3D Secure SMS doğrulaması ile alınır. Sistemde elden nakit veya kayıt dışı ödeme kabul edilmez.
+                    Kodda varsayılan sağlayıcı sandbox test sağlayıcısıdır; canlı POS, PCI-DSS sertifikasyonu veya BDDK/TCMB uygunluğu bu belgede doğrulanmamıştır. Canlı ödeme yöntemi ve durumu satın alma ekranında kontrol edilmelidir.
                   </p>
                 </div>
 
@@ -1714,10 +1715,10 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
                     <div className="p-2 rounded-xl bg-indigo-500/20 border border-indigo-500/40">
                       <Building2 className="w-4 h-4" />
                     </div>
-                    <span>4. Resmi TR IBAN Çekimi &amp; Çapraz Ad-Soyad Eşleşmesi</span>
+                    <span>4. Çekim talebi ve banka mutabakatı</span>
                   </div>
                   <p className="text-xs text-slate-600 leading-relaxed">
-                    Hak edilen tüm komisyon ve bonus ödemeleri yalnızca bayinin kendi adına kayıtlı Türkiye Cumhuriyeti banka hesabına (TR IBAN) transfer edilir. 3. şahıslara veya sahte hesaplara kesinlikle ödeme yapılmaz.
+                    Yönetici çekim onayı ile gerçek banka transferi ayrı durumlardır. Banka çıkışı, dekont veya payout referansı ile ayrıca teyit edilmelidir; bu sunum bir ödeme taahhüdü değildir.
                   </p>
                 </div>
 
@@ -1729,7 +1730,7 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
                     <span>5. %100 USD Bazlı Şeffaf Cüzdan ve Küresel Çekim Güvencesi</span>
                   </div>
                   <p className="text-xs text-slate-600 leading-relaxed">
-                    Tüm kazançlar, komisyonlar ve bonuslar doğrudan ABD Doları (USD) olarak şeffaf şekilde cüzdanınıza yansıtılır. Bayilerimiz hak edişlerini resmi banka TR IBAN hesaplarına kur kaybı yaşamadan güvenle çekebilir.
+                    Panelde gösterilen cüzdan para birimi, çekilebilir bakiye ve kur bilgisi işlem anındaki kayıtlara bağlıdır. Çekim onayı banka transferinin gerçekleştiği anlamına gelmez; banka çıkışı ayrıca doğrulanmalıdır.
                   </p>
                 </div>
 
@@ -1738,10 +1739,10 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
                     <div className="p-2 rounded-xl bg-teal-500/20 border border-teal-500/40">
                       <HeartPulse className="w-4 h-4" />
                     </div>
-                    <span>6. Tıbbi Sorumluluk Beyanı &amp; CE Sınıf I / Wellness Standartları</span>
+                    <span>6. Tıbbi kullanım sınırı</span>
                   </div>
                   <p className="text-xs text-slate-600 leading-relaxed">
-                    AuraBio Frekans; tıbbi teşhis ve tedavi cihazı olmayıp, tamamlayıcı sağlıklı yaşam, biyo-rezonans enerji dengesi ve biyo-akustik uyum yazılımıdır. Tüm raporlar ve bilgilendirmeler tıbbi tedavi tavsiyesi niteliği taşımadığı beyanıyla sunulur.
+                    Bu uygulama tıbbi cihaz olarak doğrulanmamıştır. Kamera, ses, Bluetooth ve rapor görselleri tanı, tedavi veya klinik ölçüm yerine kullanılmamalıdır. Sağlık kararları için sağlık uzmanına başvurun.
                   </p>
                 </div>
 
@@ -1757,13 +1758,13 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
               <div className="p-6 rounded-3xl bg-gradient-to-br from-emerald-50 via-white to-teal-50 border border-emerald-500/50 shadow-xl space-y-3">
                 <div className="flex items-center gap-2 text-emerald-700 text-xs font-bold uppercase tracking-wider">
                   <Share2 className="w-4 h-4" />
-                  <span>Özel Referanslı Paylaşım, Canlı QR Kod &amp; Resmi Kurumsal Belgeler</span>
+                  <span>Referans bağlantısı, QR kod ve belge indirme</span>
                 </div>
                 <h3 className="text-xl sm:text-2xl font-black text-slate-900 leading-tight">
-                  Tek Tuşla WhatsApp ve Sosyal Ağlarda Paylaşın • Canlı QR Kod Gösterin • Resmi Word ve PDF İndirin
+                  WhatsApp ve sosyal ağlarda paylaşın • QR kod gösterin • Word ve PDF indirin
                 </h3>
                 <p className="text-xs sm:text-sm text-slate-700 leading-relaxed max-w-3xl">
-                  Bu dijital sunum ve kataloğu danışanlarınıza, hekimlere, kliniklere ve iş ortaklarınıza gönderdiğinizde; ziyaretçiler sizin referans kodunuzla kaydedilir, küresel tek hatta bağlanır ve yaptıkları her işlemden anında komisyon kazanırsınız.
+                  Paylaşım bağlantısı referans kodunu içerebilir. Kayıt, sipariş, komisyon hak edişi ve ödeme ilgili sistem koşullarına bağlıdır; her işlem için gelir garantisi verilmez.
                 </p>
               </div>
 
@@ -1852,23 +1853,20 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2 text-slate-900 font-bold text-sm">
                         <FileText className="w-4 h-4 text-emerald-400" />
-                        <span>Resmi Kurumsal Katalog &amp; Rapor İndir</span>
+                        <span>İş sunumu, katalog ve teknik raporu indir</span>
                       </div>
-                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-500/30">
-                        v6.0 Enterprise
-                      </span>
-                    </div>
+                                          </div>
                     <p className="text-xs text-slate-600 leading-relaxed">
-                      Kurumlara, kliniklere veya ortaklarınıza fiziki sunum yapabilmeniz için sistemin en güncel 16 modülünü, {packageCount} resmi kredi paketini ve Monoline 7 Nefis MLM gelir modelini içeren resmi Word (.doc) ve vektör PDF kataloğunu indirebilirsiniz.
+                      Uygulama özellikleri, {packageCount} frekans paketi ve gelir modeli varsayımlarının özetlendiği Word uyumlu (.doc) veya PDF çıktısını indirebilirsiniz. Bu belgeler yasal uygunluk, sağlık etkisi ya da kazanç garantisi değildir.
                     </p>
                     <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-[11px] text-slate-700 space-y-1.5">
-                      <div className="font-bold text-emerald-700">Belge İçeriği (v6.0 Enterprise):</div>
-                      <div>• AKN Global Group Ltd Şirket Heyet Onayı &amp; Teknik Mimari</div>
-                      <div>• 16 Bütüncül Biyo-Rezonans &amp; Spektrometre Teknolojisi</div>
-                      <div>• 302+ Kadim Şifa Frekansı &amp; 50+ Hastalık Protokolü Matrisi</div>
-                      <div>• Monoline 7 Nefis MLM (%20 Sponsor • %25 Tek Hat • %5 Sistem Fonu)</div>
-                      <div>• {packageCount} Resmi Alışveriş Paketi Fiyatlandırma &amp; Birim Maliyet Tabloları</div>
-                      <div>• BDDK / TCMB 3D Secure Sanal POS &amp; Yasal Uyum Beyanları</div>
+                      <div className="font-bold text-emerald-700">Belge İçeriği:</div>
+                      <div>• Uygulama özellikleri ve 10 sekmeli raporun kapsamı</div>
+                      <div>• {TOTAL_HEALING_COUNT} ses/frekans içeriği ve tematik kategoriler</div>
+                      <div>• {packageCount} frekans paketi ve katalogdaki fiyat/kredi bilgileri</div>
+                      <div>• Komisyon oranları ve örnek hesaplama varsayımları</div>
+                      <div>• Sandbox ödeme sağlayıcısı ve banka içe aktarma sınırları</div>
+                      <div>• Tıbbi, finansal ve mevzuat doğrulama uyarıları</div>
                     </div>
                   </div>
 
@@ -1930,7 +1928,7 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
         <div className="px-5 py-3.5 bg-white border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
           <div className="flex items-center gap-2 text-xs text-slate-600">
             <ShieldCheck className="w-4 h-4 text-emerald-400" />
-            <span>AuraBio Frekans v6.0 Enterprise • Kuantum Biyo-Rezonans &amp; Monoline 7 Nefis MLM Sistemi</span>
+            <span>AuraBio Frekans • Wellness ve bayi araçları</span>
           </div>
 
           <div className="flex w-full flex-col gap-2 sm:w-auto">

@@ -305,15 +305,15 @@ export const Header: React.FC<HeaderProps> = ({
       
       {/* Clean & Elegant Top Header Bar */}
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-14 sm:h-16 gap-2">
+        <div className="flex min-w-0 items-center justify-between gap-1 sm:h-16 sm:gap-2">
           
           {/* Left: Brand Identity & Current Screen Badge */}
-          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          <div className="flex min-w-0 items-center gap-1 sm:gap-3">
             
             {/* Logo */}
             <div 
               onClick={() => onGoHome ? onGoHome() : setActiveTab('camera')} 
-              className="flex items-center gap-2 cursor-pointer group shrink-0"
+              className="flex min-w-0 items-center gap-1.5 cursor-pointer group"
               title="AuraBio Ana Sayfa"
             >
               <div className="relative flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-gradient-to-br from-emerald-500/20 via-teal-500/20 to-indigo-500/20 border border-emerald-500/40 shadow-inner group-hover:border-emerald-400 transition-all group-hover:scale-105">
@@ -330,7 +330,7 @@ export const Header: React.FC<HeaderProps> = ({
                   <span className="text-sm sm:text-base md:text-lg font-black tracking-tight bg-gradient-to-r from-emerald-300 via-teal-200 to-indigo-200 bg-clip-text text-transparent">
                     AuraBio
                   </span>
-                  <span className="text-sm sm:text-base md:text-lg font-black text-slate-100">
+                  <span className="hidden text-sm font-black text-slate-100 sm:inline sm:text-base md:text-lg">
                     Frekans
                   </span>
                   <span className="hidden sm:inline-block px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
@@ -347,7 +347,7 @@ export const Header: React.FC<HeaderProps> = ({
             {(canGoBack || activeTab !== 'camera') && onGoBack && (
               <button
                 onClick={onGoBack}
-                className="flex items-center gap-1 px-2.5 py-1 sm:py-1.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-700/80 hover:border-slate-600 text-slate-200 text-xs font-bold transition-all shadow-sm group active:scale-95 cursor-pointer"
+                className="flex items-center gap-1 p-2 sm:px-2.5 sm:py-1.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-700/80 hover:border-slate-600 text-slate-200 text-xs font-bold transition-all shadow-sm group active:scale-95 cursor-pointer"
                 title="Önceki Sayfaya Geri Dön"
               >
                 <ArrowLeft className="w-3.5 h-3.5 text-emerald-400 group-hover:-translate-x-0.5 transition-transform" />
@@ -366,7 +366,7 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Center: Real-Time Audio Playing Pill */}
           {isAudioPlaying && (
-            <div className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-full bg-rose-950/80 border border-rose-500/50 text-rose-300 shadow-md shadow-rose-950 animate-pulse shrink-0">
+            <div className="hidden items-center gap-1.5 px-2.5 py-1 rounded-full bg-rose-950/80 border border-rose-500/50 text-rose-300 shadow-md shadow-rose-950 animate-pulse shrink-0 sm:flex">
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
@@ -383,12 +383,12 @@ export const Header: React.FC<HeaderProps> = ({
           )}
 
           {/* Right: The Prominent Menu Button (Üç Çizgi Menü Butonu) */}
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-1 sm:gap-2">
             {/* Kampanyalar & Fırsatlar Button */}
             {onOpenCampaignsModal && (
               <button
                 onClick={onOpenCampaignsModal}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500/20 via-orange-500/20 to-amber-500/20 hover:from-amber-500/30 hover:to-orange-500/30 border border-amber-500/50 hover:border-amber-400 text-amber-300 hover:text-amber-200 text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer animate-pulse"
+                className="flex items-center gap-1.5 p-2 sm:px-3 sm:py-1.5 rounded-xl bg-gradient-to-r from-amber-500/20 via-orange-500/20 to-amber-500/20 hover:from-amber-500/30 hover:to-orange-500/30 border border-amber-500/50 hover:border-amber-400 text-amber-300 hover:text-amber-200 text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer animate-pulse"
                 title="Güncel Kampanyalar, İndirimler ve Fırsatlar"
               >
                 <Gift className="w-3.5 h-3.5 text-amber-400" />
@@ -405,7 +405,7 @@ export const Header: React.FC<HeaderProps> = ({
                 onClick={() => {
                   onOpenAuthModal('login');
                 }}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500/15 via-orange-500/15 to-amber-500/15 hover:from-amber-500/25 hover:to-orange-500/25 border border-amber-500/40 hover:border-amber-400 text-amber-300 hover:text-amber-200 text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer"
+                className="flex items-center gap-1.5 p-2 sm:px-3 sm:py-1.5 rounded-xl bg-gradient-to-r from-amber-500/15 via-orange-500/15 to-amber-500/15 hover:from-amber-500/25 hover:to-orange-500/25 border border-amber-500/40 hover:border-amber-400 text-amber-300 hover:text-amber-200 text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer"
                 title="AuraBio Bayilik ve Danışman Girişi"
               >
                 <Briefcase className="w-3.5 h-3.5 text-amber-400" />
@@ -432,7 +432,7 @@ export const Header: React.FC<HeaderProps> = ({
                   <span className="text-[11px] font-semibold text-slate-200 max-w-[80px] truncate group-hover:text-amber-300 transition-colors">
                     {shortName}
                   </span>
-                  <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30">
+                  <span className="hidden text-[9px] px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30 sm:inline">
                     Bayi Paneli
                   </span>
                 </button>
@@ -454,7 +454,7 @@ export const Header: React.FC<HeaderProps> = ({
             {/* The 3-Lines (Hamburger) Master Menu Button */}
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className={`flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold border transition-all cursor-pointer shrink-0 active:scale-95 shadow-md ${
+              className={`flex items-center gap-1.5 p-2 sm:gap-2 sm:px-4 sm:py-2 rounded-xl text-xs sm:text-sm font-bold border transition-all cursor-pointer shrink-0 active:scale-95 shadow-md ${
                 isMobileMenuOpen 
                   ? 'bg-rose-500/20 border-rose-500/50 text-rose-300 shadow-rose-950/40' 
                   : 'bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-600 hover:from-emerald-500 hover:to-teal-500 text-white border-emerald-400/50 shadow-emerald-950/70'

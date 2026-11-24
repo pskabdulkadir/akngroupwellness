@@ -28,6 +28,7 @@ import {
   Crown
 } from 'lucide-react';
 import { MEMBERSHIP_PACKAGES, BANK_INFO, ADMIN_PHONE, ADMIN_EMAILS } from '../utils/authManager';
+import { FREKANS_PACKAGES } from '../types/monoline';
 import { TOTAL_HEALING_COUNT } from '../data/healingLibrary';
 import { downloadTechnicalReportWord, downloadTechnicalReportPDF } from '../utils/technicalReportExport';
 
@@ -73,8 +74,8 @@ export const TechnicalReportModal: React.FC<TechnicalReportModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-6 bg-slate-950/85 backdrop-blur-md overflow-y-auto animate-in fade-in duration-200">
-      <div className="relative w-full max-w-4xl bg-slate-900 border border-slate-700/80 rounded-3xl shadow-2xl overflow-hidden my-auto max-h-[92vh] flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto overscroll-y-contain bg-slate-950/85 p-2 pt-[max(0.5rem,env(safe-area-inset-top))] backdrop-blur-md animate-in fade-in duration-200 sm:items-center sm:p-6">
+      <div className="relative my-auto flex max-h-[calc(100dvh-1rem)] w-full max-w-4xl flex-col overflow-hidden rounded-3xl border border-slate-700/80 bg-slate-900 shadow-2xl sm:max-h-[92vh]">
         
         {/* Modal Header */}
         <div className="p-4 sm:p-6 bg-gradient-to-r from-slate-950 via-slate-900 to-emerald-950/60 border-b border-slate-800 flex items-center justify-between shrink-0">
@@ -88,14 +89,14 @@ export const TechnicalReportModal: React.FC<TechnicalReportModalProps> = ({
                   AKN GLOBAL GROUP LTD
                 </span>
                 <span className="px-2 py-0.5 rounded-md bg-indigo-500/20 text-indigo-300 font-bold text-[10px] border border-indigo-500/40">
-                  v6.0 Enterprise &amp; Monoline MLM
+                  Teknik rapor &amp; Monoline
                 </span>
                 <h2 className="text-lg sm:text-xl font-bold text-slate-100">
                   Kurumsal İş Sunumu, Katalog &amp; Teknik Sistem Raporu
                 </h2>
               </div>
               <p className="text-xs text-slate-400 mt-0.5">
-                Kurumlara, kliniklere, bayilere ve danışanlara sunum için hazır resmi Word (.doc) ve PDF teknik iş teklif ve Monoline 7 Nefis MLM katalog belgesi
+                Kaynak koduna dayalı bilgilendirme; Word uyumlu HTML (.doc) ve PDF çıktıları. Canlı işlemler ve mevzuat uygunluğu ayrıca doğrulanmalıdır.
               </p>
             </div>
           </div>
@@ -112,7 +113,7 @@ export const TechnicalReportModal: React.FC<TechnicalReportModalProps> = ({
         <div className="p-3.5 sm:p-4 bg-slate-950/90 border-b border-slate-800/80 flex flex-wrap items-center justify-between gap-3 shrink-0">
           <div className="text-xs text-slate-300 flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-emerald-400 shrink-0" />
-            <span>AKN GLOBAL GROUP LTD resmi teknik iş teklifi ve sistem raporunu <strong>Word (.doc)</strong> veya <strong>PDF</strong> formatında indirin:</span>
+            <span>Teknik sistem raporunu <strong>Word uyumlu HTML (.doc)</strong> veya <strong>PDF</strong> olarak indirin:</span>
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5">
@@ -147,7 +148,7 @@ export const TechnicalReportModal: React.FC<TechnicalReportModalProps> = ({
                 YÖNETİCİ ÖZETİ & TEKNİK KİMLİK
               </span>
               <button
-                onClick={() => handleCopyText("AuraBio Frekans Kuantum Biyo-Rezonans & Şifa Sistemi Teknik Raporu v5.5 Enterprise", "summary")}
+                onClick={() => handleCopyText("AuraBio Frekans teknik raporu: 10 rapor sekmesi ve 14 bayi paketi. POS sandbox'tır; banka hareketleri CSV ile aktarılır. Sağlık etkileri ve mevzuat uygunluğu doğrulanmış değildir.", "summary")}
                 className="text-slate-400 hover:text-slate-200 flex items-center gap-1 text-[11px] cursor-pointer"
               >
                 {copiedSection === "summary" ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
@@ -156,16 +157,16 @@ export const TechnicalReportModal: React.FC<TechnicalReportModalProps> = ({
             </div>
             
             <p className="text-slate-200 leading-relaxed">
-              <strong>AuraBio Frekans;</strong> modern optik foton spektrometresi, Kirlian biyo-plazma modellemesi, <strong>Aura-Sync Akıllı Saat Canlı Biyometrik Köprüsü (Web BLE)</strong>, <strong>MindSpace Studio (Aura-Journal, Circadian, Voice Forge, Dream Decoder, Group Sync)</strong>, <strong>AI Kutsal Geometri Mandala Üreticisi</strong>, <strong>7 Günlük AI Bütünsel Arınma Kampları</strong>, <strong>Anonim Küresel Huzur Isı Haritası</strong>, <strong>50+ Hastalık Şifa Ansiklopedisi</strong>, <strong>10s Ön/Son Biyo-Akustik Tarama Motoru</strong>, <strong>8 Sekmeli Entegre Raporlama</strong> ve <strong>{TOTAL_HEALING_COUNT}+ Kadim Şifa Frekansını</strong> tek bir dijital platformda birleştiren yeni nesil Kuantum Biyo-Rezonans ve Frekans Terapi Sistemidir. Özel elektrot veya hantal donanıma ihtiyaç duymadan standart kamera, mikrofon ve Bluetooth cihazlar üzerinden canlı tarama ve Web Audio ses sentezi gerçekleştirir.
+              <strong>AuraBio Frekans</strong>, kamera ve mikrofon tabanlı görselleştirmeler, Web Audio ses üretimi, MindSpace araçları, <strong>10 sekmeli rapor</strong> ve {TOTAL_HEALING_COUNT} kayıtlı frekans içeriği sunan bir yazılım platformudur. 3D karşılaştırmada ön tarama yoksa örnek veriler üretilir. Bu göstergeler tıbbi ölçüm, tanı veya tedavi kanıtı değildir; klinik etki ve sertifikasyon bu raporda doğrulanmamıştır. Sağlık kararları için yetkili sağlık uzmanına başvurulmalıdır.
             </p>
           </div>
 
-          {/* Section 1: Core System Architecture & Features */}
+          {/* Uygulama özellikleri */}
           <div className="space-y-4">
             <div className="flex items-center gap-2 border-b border-slate-800 pb-2">
               <Activity className="w-5 h-5 text-emerald-400" />
               <h3 className="text-base sm:text-lg font-bold text-slate-100">
-                1. Temel Sistem Özellikleri ve Teknolojik Mimarisi (v5.5 Enterprise)
+                1. Temel Sistem Özellikleri ve Teknolojik Mimarisi
               </h3>
             </div>
 
@@ -176,7 +177,7 @@ export const TechnicalReportModal: React.FC<TechnicalReportModalProps> = ({
                   <span>1. Aura-Sync Akıllı Saat Köprüsü (Web BLE)</span>
                 </div>
                 <p className="text-xs text-slate-400">
-                  Standart Bluetooth GATT Kalp Hızı Profili (UUID 0x180D) ile anlık nabız ve HRV okuma. Taşikardi veya stres anında otomatik frekans gevşeme adaptasyonu.
+                  Uyumlu tarayıcı ve Bluetooth cihaz gerektiren kalp hızı bağlantısı arayüzü. Ölçümlerin doğruluğu ve klinik kullanımı ayrıca doğrulanmalıdır.
                 </p>
               </div>
 
@@ -186,7 +187,7 @@ export const TechnicalReportModal: React.FC<TechnicalReportModalProps> = ({
                   <span>2. AI Yaşam Koçu & Günlük (Aura-Journal)</span>
                 </div>
                 <p className="text-xs text-slate-400">
-                  Bütüncül terapötik perspektifle yazılı/sesli günlük analizi, duygu eğrisi, içsel rehberlik ve kişiye özel frekans protokolü.
+                  Yazılı veya sesli günlük içeriği, duygu görselleştirmesi ve kişisel rehberlik arayüzü; sonuçlar tıbbi değerlendirme değildir.
                 </p>
               </div>
 
@@ -196,7 +197,7 @@ export const TechnicalReportModal: React.FC<TechnicalReportModalProps> = ({
                   <span>3. Biyo-Ritim & Circadian Synchronizer</span>
                 </div>
                 <p className="text-xs text-slate-400">
-                  24 saatlik Geleneksel Çin Tıbbı (TCM) organ saati, biyolojik kortizol/melatonin hormon fazları ve ışık dalga boyu optimizasyonu.
+                  Geleneksel organ saati ve sirkadiyen temalı gösterimler; hormon ölçümü veya klinik optimizasyon olarak değerlendirilmemelidir.
                 </p>
               </div>
 
@@ -216,7 +217,7 @@ export const TechnicalReportModal: React.FC<TechnicalReportModalProps> = ({
                   <span>5. AI Rüya & Bilinçaltı Çözümleyicisi</span>
                 </div>
                 <p className="text-xs text-slate-400">
-                  Rüya metni veya sesinden Jungiyen/Kadim arketipleri, psiko-spiritüel anlamları ve bloke çakraları saptayıp gece frekans reçetesi sunma.
+                  Rüya içeriğini arketip temalarıyla yorumlamaya yönelik arayüz; psikolojik tanı veya çakra blokajı tespiti değildir.
                 </p>
               </div>
 
@@ -226,7 +227,7 @@ export const TechnicalReportModal: React.FC<TechnicalReportModalProps> = ({
                   <span>6. Kurumsal & Aile Çemberi (Group Aura Sync)</span>
                 </div>
                 <p className="text-xs text-slate-400">
-                  Çoklu cihazların sesle veya QR ile eşleştiği, ortak HRV ve kolektif aura tutarlılık indeksi (Group Coherence) üreten rezonans ağı.
+                  Grup eşleşmesi ve ortak oturum göstergeleri için tasarlanmış arayüz. Göstergelerin fizyolojik veya klinik geçerliliği doğrulanmamıştır.
                 </p>
               </div>
 
@@ -246,7 +247,7 @@ export const TechnicalReportModal: React.FC<TechnicalReportModalProps> = ({
                   <span>8. 7 Günlük AI Bütünsel Arınma Kampları</span>
                 </div>
                 <p className="text-xs text-slate-400">
-                  Kökten Taç çakraya kadar Sabah (Uyanış), Öğle (Hizalanma) ve Gece (Hücresel Detoks) mikro seanslarıyla yapılandırılmış program ve bulut ilerleme sistemi.
+                  Sabah, öğle ve gece oturumlarıyla yapılandırılmış yedi günlük program. Hücresel detoks veya sağlık yararı kanıtı olarak sunulmaz.
                 </p>
               </div>
 
@@ -256,17 +257,17 @@ export const TechnicalReportModal: React.FC<TechnicalReportModalProps> = ({
                   <span>9. Anonim Küresel Frekans Haritası (Heatmap)</span>
                 </div>
                 <p className="text-xs text-slate-400">
-                  Dünya genelinde o anda aktif olan biyo-rezonans seanslarını, baskın küresel niyet dalgasını ve kıtasal enerji dağılımını canlı görselleştirme.
+                  Küresel oturum ve niyet temalı harita görselleştirmesi; gerçek zamanlı kapsamı ve veri kaynağı ayrıca doğrulanmalıdır.
                 </p>
               </div>
 
               <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800 space-y-1.5">
                 <div className="font-bold text-emerald-300 text-xs flex items-center gap-1.5">
                   <BookOpen className="w-4 h-4 text-emerald-400" />
-                  <span>10. 🌿 Şifa Ansiklopedisi (50+ Hastalık)</span>
+                  <span>10. Frekans içerikleri ansiklopedisi</span>
                 </div>
                 <p className="text-xs text-slate-400">
-                  Nörolojik, kardiyovasküler, metabolik, psikosomatik ve kas-iskelet rahatsızlıkları için kanıta dayalı frekans protokolleri ve 3 aşamalı iyileşme takvimleri.
+                  Sağlık konularına ilişkin frekans içerikleri bulunur; bunların etkinliği, hastalık tedavisi veya iyileşme takvimi bu incelemeyle doğrulanmamıştır.
                 </p>
               </div>
 
@@ -276,17 +277,17 @@ export const TechnicalReportModal: React.FC<TechnicalReportModalProps> = ({
                   <span>11. 🎙️ 10s Ön / Son Biyo-Akustik Tarama</span>
                 </div>
                 <p className="text-xs text-slate-400">
-                  Mikrofon üzerinden vokal spektrometre analizi ile seans öncesi ve sonrası hücresel titreşim harmoniklerini karşılaştırıp somut puanlama üretme.
+                  Mikrofon girdilerinden önce/sonra ses göstergeleri sunar; hücresel titreşim veya iyileşme ölçümü olarak doğrulanmış değildir.
                 </p>
               </div>
 
               <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800 space-y-1.5">
                 <div className="font-bold text-indigo-300 text-xs flex items-center gap-1.5">
                   <Repeat className="w-4 h-4 text-indigo-400" />
-                  <span>12. 📊 8 Sekmeli Rapor &amp; Karşılaştırma</span>
+                  <span>12. 10 Sekmeli Rapor &amp; 3D Karşılaştırma</span>
                 </div>
                 <p className="text-xs text-slate-400">
-                  İlim Kapı, Genel Bakış, Duygular, Katmanlar, Çakralar, Letaifler, Reçeteler ve İnovasyonlar. Yüklenen şifa frekansının otomatik teyidi ve PDF/Word dışa aktarımı.
+                  İlim Kapı, Genel Bakış, Detaylı Renk Analizi, Duygu Analizi, Aurik Katmanlar, Çakra Rehberi, Letaif, Esma ve Frekans, Yaşam Koçu Matrisi ve 3D karşılaştırma. Ön tarama yoksa 3D örnek verilerle gösterilir; tarama raporunda PDF dışa aktarımı bulunur.
                 </p>
               </div>
 
@@ -296,17 +297,17 @@ export const TechnicalReportModal: React.FC<TechnicalReportModalProps> = ({
                   <span>13. 💎 Monoline 7 Nefis MLM &amp; Komisyon Motoru</span>
                 </div>
                 <p className="text-xs text-slate-400">
-                  Küresel Tek Hat (Global Single Line) üzerinde %20 Direkt Sponsor Primi, %25 7 Derinlik Tek Hat Primi (%7-%5-%4-%3-%2-%2-%2) ve %5 Sistem / Kariyer Havuzu / Anlık Bonus sistemi.
+                  Varsayılan oranlar: %20 direkt sponsor, sponsor ağacında toplam nominal %25 Unilevel, küresel sırada toplam nominal %5 Monoline ve %5 sistem fonu. Hak ediş aktiflik ve kariyer gibi koşullara bağlıdır; gelir veya anında ödeme garantisi değildir.
                 </p>
               </div>
 
               <div className="p-4 rounded-2xl bg-slate-950/60 border border-amber-500/40 space-y-1.5">
                 <div className="font-bold text-amber-300 text-xs flex items-center gap-1.5">
                   <Crown className="w-4 h-4 text-amber-400" />
-                  <span>14. 🏢 Bayi Back-Office &amp; 14 Kredi Havuzu Paketi</span>
+                  <span>14. 🏢 Bayi Back-Office &amp; {FREKANS_PACKAGES.length} Katalog Paketi</span>
                 </div>
                 <p className="text-xs text-slate-400">
-                  96 Seans Kredisinden 15.000 Enterprise Seans Kredisine kadar 14 resmi alışveriş paketi, Nefs-i Emmâre’den Nefs-i Kâmile’ye 7 kariyer mertebesi ve IBAN çekim yönetimi.
+                  Katalogda {FREKANS_PACKAGES.length} paket, yedi kariyer mertebesi ve çekim talebi yönetimi bulunur. Paket fiyatı ve kredi miktarı katalogdan kontrol edilmelidir. Çekim onayı banka ödemesinin gerçekleştiği anlamına gelmez.
                 </p>
               </div>
             </div>
@@ -325,9 +326,9 @@ export const TechnicalReportModal: React.FC<TechnicalReportModalProps> = ({
               <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800 flex items-start gap-3">
                 <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
                 <div>
-                  <h4 className="text-xs font-bold text-slate-100">Bütüncül Tıp, Klinikler & Tamamlayıcı Sağlık Merkezleri</h4>
+                  <h4 className="text-xs font-bold text-slate-100">Wellness ve kişisel farkındalık ortamları</h4>
                   <p className="text-xs text-slate-400 mt-0.5">
-                    Hacamat, akupunktur, ozon tedavisi ve biyo-rezonans seansları öncesinde ve sonrasında danışanın enerji değişimini ölçümleme, akıllı saat nabzıyla doğrulanmış fotoğraflı PDF rapor sunma.
+                    Wellness ortamlarında uygulama raporu, ses kütüphanesi ve görselleştirmeler sunulur; bunlar enerji, nabız doğrulaması veya klinik sonuç ölçümü değildir.
                   </p>
                 </div>
               </div>
@@ -337,7 +338,7 @@ export const TechnicalReportModal: React.FC<TechnicalReportModalProps> = ({
                 <div>
                   <h4 className="text-xs font-bold text-slate-100">Spa, Termal Tesisler & Sağlıklı Yaşam (Wellness / Resort) Otelleri</h4>
                   <p className="text-xs text-slate-400 mt-0.5">
-                    VIP check-in sırasında 3 dakikalık biyo-alan analizi ve sonuca göre kişiselleştirilmiş 6 ekol masaj & frekans odası yönlendirmesi.
+                    Ses ve görsel içerikleri isteğe bağlı dijital wellness deneyimi olarak keşfetme; biyo-alan analizi veya sağlık yönlendirmesi değildir.
                   </p>
                 </div>
               </div>
@@ -347,7 +348,7 @@ export const TechnicalReportModal: React.FC<TechnicalReportModalProps> = ({
                 <div>
                   <h4 className="text-xs font-bold text-slate-100">Kurumsal Şirketler & İK Departmanları (Corporate Wellness)</h4>
                   <p className="text-xs text-slate-400 mt-0.5">
-                    Çalışan tükenmişliğini (burnout) önleme, zihinsel odaklanma ve stres seviyesini düşürmek için 10 dakikalık MindSpace Alfa seansları ve 7 günlük kamplar.
+                    MindSpace ve rehberli içerikleri kişisel farkındalık amacıyla kullanma; tükenmişlik, odaklanma veya stres düzeyini ölçtüğü ya da tedavi ettiği iddia edilmez.
                   </p>
                 </div>
               </div>
@@ -359,7 +360,7 @@ export const TechnicalReportModal: React.FC<TechnicalReportModalProps> = ({
             <div className="flex items-center gap-2 border-b border-slate-800 pb-2">
               <TrendingUp className="w-5 h-5 text-amber-400" />
               <h3 className="text-base sm:text-lg font-bold text-slate-100">
-                3. Sistem İçerisindeki Resmi Üyelik ve Lisans Paketleri
+                3. Sistem İçerisindeki Üyelik ve Lisans Paketleri
               </h3>
             </div>
 
@@ -423,7 +424,7 @@ export const TechnicalReportModal: React.FC<TechnicalReportModalProps> = ({
           <div className="p-5 rounded-3xl bg-slate-950 border border-slate-800 space-y-3 shadow-lg">
             <div className="flex items-center gap-2 text-slate-100 font-bold text-sm">
               <ShieldCheck className="w-5 h-5 text-emerald-400" />
-              <span>Resmi Üretici & İletişim Bilgileri</span>
+              <span>Üretici ve iletişim bilgileri</span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
@@ -457,7 +458,7 @@ export const TechnicalReportModal: React.FC<TechnicalReportModalProps> = ({
         <div className="p-4 sm:p-5 bg-slate-950 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
           <div className="text-[11px] text-slate-400 flex items-center gap-1.5">
             <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-            <span>AKN GLOBAL GROUP LTD • Resmi Kurumsal ve Teknik Sunum Dokümanı</span>
+            <span>AKN GLOBAL GROUP LTD • Kurumsal ve teknik bilgilendirme</span>
           </div>
 
           <div className="flex items-center gap-2 w-full sm:w-auto">

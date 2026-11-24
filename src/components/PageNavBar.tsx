@@ -19,8 +19,8 @@ export const PageNavBar: React.FC<PageNavBarProps> = ({
   onGoHome,
 }) => {
   return (
-    <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-900/80 border border-slate-800 backdrop-blur-md">
-      <div className="flex items-center gap-3">
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-800 bg-slate-900/80 p-3 backdrop-blur-md sm:p-4">
+      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2 sm:gap-3">
         {onGoBack && (
           <button
             onClick={onGoBack}
@@ -41,13 +41,13 @@ export const PageNavBar: React.FC<PageNavBarProps> = ({
             <span className="hidden sm:inline">Ana Sayfa</span>
           </button>
         )}
-        <div className="flex items-center gap-2.5">
-          {icon && <div className="p-2 rounded-xl bg-slate-800 border border-slate-700">{icon}</div>}
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-sm sm:text-base font-bold text-white leading-tight">{title}</h2>
+        <div className="flex min-w-0 flex-1 items-center gap-2.5">
+          {icon && <div className="shrink-0 rounded-xl border border-slate-700 bg-slate-800 p-2">{icon}</div>}
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="min-w-0 break-words text-sm font-bold leading-tight text-white sm:text-base">{title}</h2>
               {badge && (
-                <span className="px-2 py-0.5 text-[10px] font-semibold bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 rounded-full">
+                <span className="max-w-full break-words rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-300">
                   {badge}
                 </span>
               )}

@@ -190,8 +190,8 @@ export const FrequencyPanel: React.FC<FrequencyPanelProps> = ({
                 </div>
 
                 {/* Bottom Footer Action */}
-                <div className="flex items-center justify-between pt-3 border-t border-slate-800/80">
-                  <div className="flex items-center gap-1.5 font-mono text-xs text-amber-300">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-800/80 pt-3">
+                  <div className="flex min-w-0 flex-wrap items-center gap-1.5 font-mono text-xs text-amber-300">
                     <Radio className="w-3.5 h-3.5 text-amber-400" />
                     <span className="font-bold">{freq} Hz</span>
                     <span className="text-[10px] text-slate-500">(Ebced: {ebced})</span>
@@ -206,7 +206,7 @@ export const FrequencyPanel: React.FC<FrequencyPanelProps> = ({
                         details: esma,
                       });
                     }}
-                    className="flex min-h-11 items-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shadow-md shadow-amber-500/20 transition-all hover:scale-105"
+                    className="flex min-h-11 shrink-0 items-center gap-1.5 rounded-xl bg-amber-500 px-3 py-2 text-xs font-bold text-slate-950 shadow-md shadow-amber-500/20 transition-all hover:scale-105 hover:bg-amber-400"
                   >
                     <Play className="w-3.5 h-3.5 fill-current" />
                     <span>Frekans Yükle</span>
@@ -273,8 +273,8 @@ export const FrequencyPanel: React.FC<FrequencyPanelProps> = ({
                 </div>
 
                 {/* Bottom Action */}
-                <div className="flex items-center justify-between pt-3 border-t border-slate-800/80">
-                  <div className="flex items-center gap-1.5 text-xs text-slate-400">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-800/80 pt-3">
+                  <div className="min-w-0 flex flex-wrap items-center gap-1.5 text-xs text-slate-400">
                     <Sparkles className="w-3.5 h-3.5 text-teal-400" />
                     <span>Solfeggio & Biyo-Rezonans Dalgaları</span>
                   </div>
@@ -288,7 +288,7 @@ export const FrequencyPanel: React.FC<FrequencyPanelProps> = ({
                         details: ayet,
                       });
                     }}
-                    className="flex min-h-11 items-center gap-1.5 px-4 py-2 rounded-xl bg-teal-500 hover:bg-teal-400 text-slate-950 font-bold text-xs shadow-md shadow-teal-500/20 transition-all hover:scale-105"
+                    className="flex min-h-11 shrink-0 items-center gap-1.5 rounded-xl bg-teal-500 px-3 py-2 text-xs font-bold text-slate-950 shadow-md shadow-teal-500/20 transition-all hover:scale-105 hover:bg-teal-400"
                   >
                     <Play className="w-3.5 h-3.5 fill-current" />
                     <span>Frekansı Yükle</span>
