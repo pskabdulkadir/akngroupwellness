@@ -68,6 +68,7 @@ interface HeaderProps {
   onOpenAuthModal: (mode?: 'login' | 'register' | 'dealer') => void;
   onOpenDealerModal?: () => void;
   onOpenEncyclopedia?: () => void;
+  onOpenBerhetiyye?: () => void;
   onOpenParanormalArchive?: () => void;
   onOpenSOSModal?: () => void;
   onOpenSleepModal?: () => void;
@@ -102,6 +103,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenAuthModal,
   onOpenDealerModal,
   onOpenEncyclopedia,
+  onOpenBerhetiyye,
   onOpenParanormalArchive,
   onOpenSOSModal,
   onOpenSleepModal,
@@ -259,6 +261,15 @@ export const Header: React.FC<HeaderProps> = ({
       color: 'text-amber-400',
       activeGradient: 'bg-amber-500/20 text-amber-300 border-amber-500/40 shadow-amber-950/40',
       description: '99 Esma-ül Hüsna & Şifa Ayetleri'
+    },
+    {
+      id: 'berhetiyye',
+      label: 'Berhetiyye',
+      shortLabel: 'Berhetiyye',
+      icon: Sparkles,
+      color: 'text-violet-400',
+      activeGradient: 'bg-violet-500/20 text-violet-300 border-violet-500/40 shadow-violet-950/40',
+      description: '28 maddelik tertip ve sesli odak rehberi'
     },
     {
       id: 'eastern',
@@ -672,7 +683,7 @@ export const Header: React.FC<HeaderProps> = ({
             <div className="space-y-2">
               <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400 px-1 flex items-center justify-between">
                 <span>1. Temel Modüller & Ekranlar</span>
-                <span className="text-[10px] text-emerald-400 font-mono">10 Modül</span>
+                <span className="text-[10px] text-emerald-400 font-mono">12 Modül</span>
               </div>
               <div className="space-y-1.5">
                 {mainTabs
@@ -827,6 +838,25 @@ export const Header: React.FC<HeaderProps> = ({
                       </div>
                     </div>
                     <ChevronRight className="w-4 h-4 text-emerald-400 shrink-0" />
+                  </button>
+                )}
+
+                {onOpenBerhetiyye && (!menuSearchQuery || 'berhetiyye berhetiye tertip frekans okuma'.includes(menuSearchQuery.toLocaleLowerCase('tr'))) && (
+                  <button
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      onOpenBerhetiyye();
+                    }}
+                    className={`w-full flex items-center justify-between p-3 rounded-2xl border text-left transition-all active:scale-[0.99] shadow-md ${activeTab === 'berhetiyye' ? 'bg-gradient-to-r from-violet-950 via-slate-900 to-slate-900 border-violet-400/70 ring-1 ring-violet-400/30' : 'bg-gradient-to-r from-violet-950/50 via-slate-900 to-slate-900 border-violet-500/40'}`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="p-2.5 rounded-xl bg-violet-500/20 border border-violet-500/40 shrink-0"><Sparkles className="w-4 h-4 text-violet-300" /></div>
+                      <div>
+                        <div className="text-xs font-bold text-violet-200">Berhetiyye</div>
+                        <div className="text-[11px] text-slate-400 mt-0.5">Sıralı okuma ve sesli odak rehberi</div>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-violet-400 shrink-0" />
                   </button>
                 )}
 

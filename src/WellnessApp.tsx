@@ -8,6 +8,7 @@ import { Header } from './components/Header';
 import { CameraView } from './components/CameraView';
 import { ReportModal } from './components/ReportModal';
 import { FrequencyPanel } from './components/FrequencyPanel';
+import { BerhetiyyePanel } from './components/BerhetiyyePanel';
 import { EasternPanel } from './components/EasternPanel';
 import { GuideView } from './components/GuideModal';
 import { HistoryView } from './components/HistoryDrawer';
@@ -960,6 +961,7 @@ export default function WellnessApp({
           }
         }}
         onOpenEncyclopedia={() => setIsEncyclopediaOpen(true)}
+        onOpenBerhetiyye={() => handleNavigate('berhetiyye')}
         onOpenParanormalArchive={() => setIsParanormalArchiveOpen(true)}
         onOpenSOSModal={() => setIsSOSModalOpen(true)}
         onOpenSleepModal={() => setIsSleepModalOpen(true)}
@@ -1081,6 +1083,10 @@ export default function WellnessApp({
             onGoBack={handleGoBack}
             onGoHome={handleGoHome}
           />
+        )}
+
+        {activeTab === 'berhetiyye' && (
+          <BerhetiyyePanel onGoBack={handleGoBack} onGoHome={handleGoHome} />
         )}
 
         {activeTab === 'eastern' && (
