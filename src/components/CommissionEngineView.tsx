@@ -4,6 +4,7 @@ import { getMemberRegionalPendingUsd, getMemberRegionalUsdBalance, getMonolineOn
 import {
   ActivationVoucherRecord,
   BullMqJobRecord,
+  CAREER_TIERS,
   CommissionTransaction,
   DAILY_WITHDRAWAL_LIMITS_BY_CAREER,
   FomoCountdownAlertRecord,
@@ -2527,8 +2528,8 @@ const worker = new Worker('commission-processing', async (job) => {
                         <th className="py-2 px-2.5">id / Üye</th>
                         <th className="py-2 px-2.5">reward_type &amp; Kariyer</th>
                         <th className="py-2 px-2.5">reward_description</th>
-                        <th className="py-2 px-2.5 text-right">cash_value</th>
-                        <th className="py-2 px-2.5 text-right">is_delivered</th>
+                        <th className="py-2 px-2.5 text-right">Ödül değeri (USD)</th>
+                        <th className="py-2 px-2.5 text-right">Teslim durumu</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-200">
@@ -2555,7 +2556,7 @@ const worker = new Worker('commission-processing', async (job) => {
                                     : 'bg-indigo-100 text-indigo-800'
                                 }`}
                               >
-                                {rw.reward_type} (L{rw.career_level})
+                                {rw.reward_type === 'FAST_START' ? 'Hızlı Başlangıç' : `${rw.career_level}. Kariyer · ${CAREER_TIERS.find((tier) => tier.level === rw.career_level)?.title || 'Kariyer Ödülü'}`}
                               </span>
                             </td>
                             <td className="py-2 px-2.5 font-sans text-[10px] text-slate-700">
@@ -2570,18 +2571,21 @@ const worker = new Worker('commission-processing', async (job) => {
                                   ✓ TESLİM EDİLDİ
                                 </span>
                               ) : (
-                                <button
-                                  type="button"
-                                  onClick={async () => {
-                                    await fetch(`/api/v1/admin/rewards/${rw.id}/deliver`, {
-                                      method: 'POST',
-                                    });
-                                    if (onRefreshState) await onRefreshState();
-                                  }}
-                                  className="px-2 py-0.5 bg-emerald-700 text-white rounded text-[10px] font-sans font-bold cursor-pointer"
-                                >
-                                  Teslim Et &amp; Cüzdana Yatır
-                                </button>
+                                <div className="flex flex-col items-end gap-1">
+                                  <span className="text-amber-700 font-bold text-[10px]">Teslim edilmedi · cüzdana aktarılmadı</span>
+                                  <button
+                                    type="button"
+                                    onClick={async () => {
+                                      await fetch(`/api/v1/admin/rewards/${rw.id}/deliver`, {
+                                        method: 'POST',
+                                      });
+                                      if (onRefreshState) await onRefreshState();
+                                    }}
+                                    className="px-2 py-0.5 bg-emerald-700 text-white rounded text-[10px] font-sans font-bold cursor-pointer"
+                                  >
+                                    Teslim Et &amp; Cüzdana Yatır
+                                  </button>
+                                </div>
                               )}
                             </td>
                           </tr>

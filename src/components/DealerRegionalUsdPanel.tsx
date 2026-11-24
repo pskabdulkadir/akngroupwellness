@@ -230,7 +230,7 @@ export const DealerRegionalUsdPanel: React.FC<DealerRegionalUsdPanelProps> = ({
           </span>
         </div>
         <p className="text-xs text-slate-600">
-          Talep yönetici paneline düşer. Yönetici onayladığında ödeme, yönetici tarafından bu IBAN hesabına manuel banka transferiyle yapılır ve talep onaylanır. Reddedilen tutar bu bölgenin cüzdanına iade edilir.
+          Talep yönetici paneline düşer. Onaylanan ödeme, yönetici tarafından bu IBAN hesabına manuel banka transferiyle yapılır. Reddedilen tutar bu bölgenin cüzdanına iade edilir. Sunucu talep kaydında stopajı 0, net tutarı brüt tutarla aynı kaydeder; stopaj tutarı mali incelemeye bırakılır.
         </p>
 
         <form onSubmit={handleRegionalWithdrawal} className="space-y-3 text-xs">
@@ -318,13 +318,10 @@ export const DealerRegionalUsdPanel: React.FC<DealerRegionalUsdPanelProps> = ({
 
           <div className="p-3 rounded-lg bg-slate-900 text-white font-mono space-y-1">
             <div className="flex justify-between text-slate-300">
-              <span>%20 Vergi Kesintisi</span>
-              <span>-{formatUsd(withdrawAmount * 0.2, 2)}</span>
+              <span>Talep edilen brüt tutar</span>
+              <span>{formatUsd(withdrawAmount, 2)}</span>
             </div>
-            <div className="flex justify-between text-emerald-300 font-bold">
-              <span>Net Ödenecek</span>
-              <span>{formatUsd(withdrawAmount * 0.8, 2)}</span>
-            </div>
+            <p className="text-[11px] leading-relaxed text-amber-200">Bu çekim talebi kaydında stopaj kesintisi yoktur; stopaj mali inceleme tamamlanana kadar kesinleşmez.</p>
           </div>
 
           {(amountError || (normalizedIban && payoutError)) && (

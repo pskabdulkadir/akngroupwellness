@@ -197,7 +197,11 @@ export const UnilevelOrganizationTreePanel: React.FC<UnilevelOrganizationTreePan
         (activeMem?.uid && mList.find((m) => m.user_id === activeMem.uid)?.user_id) ||
         mList[0]?.user_id;
       setRootUserId(targetId);
-      setExpandedNodes(collectSubtreeIds(mList, targetId));
+      setExpandedNodes(
+        window.matchMedia('(max-width: 767px)').matches
+          ? new Set()
+          : collectSubtreeIds(mList, targetId)
+      );
     } else {
       // Admin defaults to system root (USR-ADMIN or first member)
       const adminMember = mList.find((m) => m.user_id === 'USR-ADMIN') || mList[0];
@@ -1063,15 +1067,16 @@ export const UnilevelOrganizationTreePanel: React.FC<UnilevelOrganizationTreePan
 
       {/* TAB 1: INTERACTIVE UNILEVEL TREE */}
       {activeTab === 'UNILEVEL_TREE' && (
-        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
-            <div>
+        <div className="min-w-0 bg-white border border-slate-200 rounded-2xl p-3 sm:p-5 shadow-sm space-y-4">
+          <div className="flex min-w-0 flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+            <div className="min-w-0">
               <h3 className="text-sm font-bold text-slate-900">
                 Hiyerarşik Unilevel Ağaç Görünümü
               </h3>
               <p className="text-xs text-slate-500">
                 Kök Bayi: <strong className="text-slate-800">{memberMap.get(rootUserId)?.full_name || rootUserId}</strong> ({rootUserId})
               </p>
+              {mode === 'dealer' && <p className="mt-1 text-[11px] text-emerald-700">Mobil görünümde ağı dar tutmak için alt ekipler kapalı başlar; görmek istediğiniz dalı açın.</p>}
             </div>
 
             {mode === 'dealer' && (
@@ -1116,7 +1121,7 @@ export const UnilevelOrganizationTreePanel: React.FC<UnilevelOrganizationTreePan
           </div>
 
           {/* Tree Structure Output */}
-          <div className="overflow-x-auto p-2">
+          <div className="min-w-0 max-w-full overflow-x-auto overscroll-x-contain p-2">
             {rootUserId &&
               (mode === 'dealer' && dealerViewStyle === 'chart'
                 ? renderChartNode(rootUserId)

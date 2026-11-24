@@ -1358,42 +1358,42 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                   {/* Total Sales Volume */}
                   <div className="p-4 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-2">
                     <div className="flex items-center justify-between text-slate-400">
-                      <span className="text-xs font-medium">Toplam Oluşturulan Ciro</span>
+                      <span className="text-xs font-medium">Toplam Oluşturulan Ciro · Bayi Profili</span>
                       <TrendingUp className="w-4 h-4 text-emerald-400" />
                     </div>
                     <div className="text-xl sm:text-2xl font-bold text-slate-100 font-mono">
                       {formatUsd(activeReseller.totalSalesAmount || 0)}
                     </div>
                     <div className="text-[10px] text-slate-500">
-                      Yönlendirilen üye cirosu
+                      Profildeki yönlendirme toplamı · USD biçiminde; kaynak para birimi sipariş kaydında belirlenir.
                     </div>
                   </div>
 
                   {/* Total Earned Commission */}
                   <div className="p-4 rounded-2xl bg-emerald-950/40 border border-emerald-500/40 space-y-2">
                     <div className="flex items-center justify-between text-emerald-300">
-                      <span className="text-xs font-bold">Kazanılan Komisyon</span>
+                      <span className="text-xs font-bold">Toplam Komisyon · Bayi Profili</span>
                       <Award className="w-4 h-4 text-emerald-400" />
                     </div>
                     <div className="text-xl sm:text-2xl font-bold text-emerald-300 font-mono">
                       {formatUsd(activeReseller.totalEarnings || 0)}
                     </div>
                     <div className="text-[10px] text-emerald-400/70 font-medium">
-                      %{activeReseller.commissionRate || 20} hak ediş oranı
+                      %{activeReseller.commissionRate || 20} profil oranı · USD biçimi; çekilebilir cüzdan bakiyesi değildir.
                     </div>
                   </div>
 
                   {/* Paid Commission */}
                   <div className="p-4 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-2">
                     <div className="flex items-center justify-between text-teal-400">
-                      <span className="text-xs font-medium">Ödenen Komisyon</span>
+                      <span className="text-xs font-medium">Ödenen Toplam · Bayi Profili</span>
                       <CheckCircle2 className="w-4 h-4 text-teal-400" />
                     </div>
                     <div className="text-xl sm:text-2xl font-bold text-teal-300 font-mono">
                       {formatUsd(activeReseller.paidEarnings || 0)}
                     </div>
                     <div className="text-[10px] text-slate-500">
-                      Hesaba aktarılan tutar
+                      Profilde USD biçiminde gösterilir; banka transferi kaynağı ayrıca doğrulanmalıdır.
                     </div>
                   </div>
 
@@ -1406,7 +1406,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                       {formatUsd(liveMonolineMember ? getMemberRegionalUsdBalance(liveMonolineMember) : 0)}
                     </div>
                     <div className="text-[10px] text-emerald-400/80">
-                      Cüzdana aktarılmış tutar
+                      Kaynak: Monoline bölgesel USD cüzdanı
                     </div>
                   </div>
 
@@ -1419,7 +1419,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                       {formatUsd(activeReseller.pendingEarnings || 0)}
                     </div>
                     <div className="text-[10px] text-amber-400/80">
-                      Sponsor, Unilevel ve Monoline kazançları 14 gün bekler
+                      Kaynak: Monoline bölgesel bekleyen cüzdanları · USD
                     </div>
                   </div>
                 </div>
@@ -2636,6 +2636,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                       <h4 className="text-base font-extrabold text-slate-100 mt-0.5">
                         Danışan Seansı + {FREKANS_PACKAGES.length} Paket + Monoline 7 Nefis MLM Tahmini Kazanç
                       </h4>
+                      <p className="mt-1 text-[11px] leading-relaxed text-amber-300">Tahmini senaryo · tutarlar USD biçiminde gösterilir; gerçekleşmiş komisyon, çekilebilir bakiye veya garanti edilmiş gelir değildir.</p>
                     </div>
                     {onOpenBusinessPresentation && (
                       <button
@@ -2804,13 +2805,13 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
 
                       <div className="p-3.5 rounded-xl bg-emerald-950/80 border border-emerald-500/50 text-center space-y-1">
                         <div className="text-[10px] font-bold uppercase tracking-wider text-emerald-300">
-                          Aylık Net Kazanç Potansiyeli
+                          Tahmini Aylık Kazanç Potansiyeli (USD biçimi)
                         </div>
                         <div className="text-2xl font-black text-white font-mono">
                           {formatUsd(presTotalMonthlyEarnings)}
                         </div>
                         <div className="text-[10px] text-emerald-300/80 font-mono">
-                          Yıllık: <strong>{formatUsd(presYearlyEarnings)}</strong>
+                          Tahmini yıllık: <strong>{formatUsd(presYearlyEarnings)}</strong>
                         </div>
                       </div>
                     </div>
@@ -3009,6 +3010,8 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                     <span className="font-bold">{purchaseSuccessMsg}</span>
                   </div>
                 )}
+
+                <p className="text-[11px] leading-relaxed text-slate-400">Paket tutarları sunucudan bölgesel fiyat olarak alınır ve USD biçiminde gösterilir. Yurt dışı fiyatında taban tutara 3× çarpan uygulanır; bu etiket tek başına ödeme kaydındaki para birimini belirtmez.</p>
 
                 {/* Packages Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
@@ -3501,6 +3504,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
             {/* TAB 3: COMMISSIONS & TRANSACTIONS TABLE */}
             {activeTab === 'commissions' && (
               <div className="space-y-4 animate-fade-in">
+                <p className="rounded-xl border border-amber-500/30 bg-amber-950/20 p-3 text-[11px] leading-relaxed text-amber-200">Bu eski listeye aktarılan Monoline kayıtları “Aktarıldı” olarak gösterilir. Bu etiket, 14 günlük beklemenin tamamlandığını veya tutarın çekilebilir olduğunu göstermez; çekilebilir tutarı bölgesel cüzdanınızdan kontrol edin.</p>
                 {/* Search & Filter Bar */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-slate-950/80 rounded-2xl border border-slate-800">
                   <div className="relative w-full sm:flex-1 min-w-0">
@@ -3527,7 +3531,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                       >
                         {st === 'all' && 'Tümü'}
                         {st === 'pending' && 'Bekleyenler'}
-                        {st === 'approved' && 'Onaylananlar'}
+                        {st === 'approved' && 'Aktarılan / Onaylanan'}
                         {st === 'paid' && 'Ödenenler'}
                       </button>
                     ))}
@@ -3543,8 +3547,8 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                           <th className="py-3 px-4 whitespace-nowrap">İşlem ID</th>
                           <th className="py-3 px-4 whitespace-nowrap">Maskeli Üye</th>
                           <th className="py-3 px-4 whitespace-nowrap">Satın Alınan Paket</th>
-                          <th className="py-3 px-4 whitespace-nowrap text-right">Satış Tutarı</th>
-                          <th className="py-3 px-4 whitespace-nowrap text-right">Komisyon Tutarı</th>
+                          <th className="py-3 px-4 whitespace-nowrap text-right">Satış Tutarı (USD biçimi)</th>
+                          <th className="py-3 px-4 whitespace-nowrap text-right">Komisyon Tutarı (USD biçimi)</th>
                           <th className="py-3 px-4 whitespace-nowrap text-center">Durum</th>
                           <th className="py-3 px-4 whitespace-nowrap text-right">Tarih</th>
                         </tr>
@@ -3583,8 +3587,8 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                                   </span>
                                 )}
                                 {c.status === 'approved' && (
-                                  <span className="px-2.5 py-1 rounded-full bg-teal-500/20 text-teal-300 border border-teal-500/40 text-[10px] font-bold">
-                                    ● Onaylandı
+                                  <span className="px-2.5 py-1 rounded-full bg-teal-500/20 text-teal-300 border border-teal-500/40 text-[10px] font-bold" title={c.transactionId.startsWith('MLM-') ? 'Bu eski listeye aktarım statüsüdür; Monoline bekleme ve çekilebilirlik durumunu göstermez.' : undefined}>
+                                    {c.transactionId.startsWith('MLM-') ? 'Aktarıldı · cüzdanı kontrol edin' : 'Onaylandı'}
                                   </span>
                                 )}
                                 {c.status === 'pending' && (

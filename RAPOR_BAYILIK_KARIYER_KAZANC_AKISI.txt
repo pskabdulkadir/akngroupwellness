@@ -1,0 +1,176 @@
+BAYİLİK KAYDINDAN KÂMİLE KARİYERİNE KADAR SİSTEM AKIŞI
+Kazançlar, primler, komisyonlar, yurt dışı işlemleri ve doğrulanabilirlik raporu
+
+KAPSAM VE OKUMA NOTU
+
+Bu rapor, repodaki istemci arayüzlerini, sunucu kodunu ve ilgili iş mantığını inceleyerek hazırlanmıştır. Kodda tanımlanmış bir hesaplama akışı, gerçek ortamda ödeme yapıldığı veya bu rapordaki tutarların kazanıldığı anlamına gelmez. Canlı veritabanına, gerçek bayi hesaplarına, ödeme sağlayıcı paneline, banka kayıtlarına ve muhasebe belgelerine bu inceleme sırasında erişilmemiştir. Bu nedenle rapor “kodda tanımlı”, “arayüzde gösterilen”, “simüle edilen” ve “gerçek dış ödeme/ödeme kaydı” kavramlarını birbirinden ayırır.
+
+Başlıca kaynaklar: server.ts; server/db.ts; server/paymentProviders.ts; src/components/AuthModal.tsx; src/components/PaymentModal.tsx; src/utils/authManager.ts; src/types/monoline.ts; src/config/businessRules.ts; src/utils/walletRegion.ts; src/utils/monolineSyncBridge.ts; src/utils/resellerManager.ts; src/components/ResellerDashboardModal.tsx; src/components/CareerMatrixView.tsx; src/components/DealerRegionalUsdPanel.tsx; src/services/taxEngine.ts; src/components/views/SalesSimulatorView.tsx; src/components/views/InternationalOssView.tsx.
+
+1. YÖNETİCİ ÖZETİ
+
+• Bayi başvurusu ve sponsor seçimi için istemci arayüzü; bekleyen kayıt, sipariş ve komisyon hesaplamak için sunucu akışı mevcuttur.
+• Sunucu tarafında sipariş tutarına göre doğrudan sponsor, Unilevel ve Monoline payları, sistem fonu, koşullu matching ve Fast-Start ödülleri hesaplanmaktadır. Hesapların kaydı ile gerçek banka ödemesi aynı şey değildir.
+• Kariyerler yedi seviyeden oluşur ve aktif direkt sayısı, grup hacmi, alt ekip kariyerleri ve bazı seviyelerde kol dengesi koşullarına bağlanmıştır.
+• Kodda görülen yurt dışı ayrımı ülke bazında ayrıntılı fiyat tarifesi değildir: Türkiye dışındaki bütün ülkeler “international” sayılır; paket/aktivasyon fiyatı 3 kat çarpılır.
+• Yurt dışı çekim ekranı SWIFT/SEPA seçeneklerini gösterir; sunucu bir çekim talebi açar ve yönetici onayı bekler. Otomatik banka transferi kanıtı yoktur.
+• Üretim ortamında mevcut POS/3DS akışları sandbox olduğu için kapatılmıştır; canlı ödeme sağlayıcısı bu repoda uygulanmış görünmemektedir. Checkout endpoint’i sağlayıcı kurulmadığını belirterek 503 döndürür.
+• Birden fazla ayrı gelir modeli vardır: ana Monoline sunucu defteri, eski Frekans bayi komisyon sistemi, bayi panelindeki kazanç tahminleri ve Smart Accounting satış/vergi simülatörü. Aynı oran ve bakiye gibi değerlendirilmemelidir.
+• Para birimi, kariyerin dönemsel aktifliği, paneldeki komisyon statüleri, ödül tutarı/teslimi ve ekrandaki vergi kesintisiyle ilgili kod uyuşmazlıkları vardır. Gerçek hesaplara geçmeden önce iş ve muhasebe kurallarıyla uzlaştırılmaları gerekir.
+
+2. BAYİ KAYDI: İLK BAŞVURUDAN AKTİF ÜYELİĞE
+
+2.1. Başvuru ve sponsor
+AuthModal kayıt ekranı bayi kayıt modunu URL parametrelerinden açabilir; davet/referans kodunu alır, doğrular ve sponsor bilgisini başvuruya ekler (src/components/AuthModal.tsx:107–123, 199–311, 861–983). Formda sol/sağ/otomatik yerleşim tercihi de bulunur. UI sponsor kodunu zorunlu tutsa da sunucu, sponsor bulunmayan bazı kayıt isteklerinde son global sıradaki üyenin altına otomatik yerleştirme yolu içerir (server.ts:8290–8317). Bu nedenle arayüz zorunluluğu ile API davranışı aynı değildir.
+
+2.2. Başlangıç durumu
+Kayıt fonksiyonu başvuruyu bayi ve ödeme bekliyor olarak işaretler; kredi bakiyesi sıfır, üyelik onayı/erişimi kapalı, ödeme durumu PENDING ve bayi durumu pending hazırlanır (src/utils/authManager.ts:1013–1036, 1082–1142). Bu aşamada normal reseller profilinin ve başlangıç kredilerinin oluşturulması ödeme sonrasına bırakılmıştır (authManager.ts:1144–1198). İstemci kayıt bilgilerini /api/v1/members uç noktasına sponsor, ülke, paket ve assigned_leg alanlarıyla iletir (authManager.ts:1248–1274).
+
+Sunucu yeni üye, cüzdan ve PENDING sipariş kaydı hazırlar; üyeyi pasif/kilitli bırakır ve veritabanı transaction’ında uygulama durumunu kaydeder (server.ts:8174–8215, 8326–8459, 8465–8559). Dolayısıyla ilk başvuru, tamamlanmış ücretli ve aktif bayi olarak ele alınmamalıdır.
+
+2.3. Ödeme onayıyla aktivasyon
+PaymentModal ödeme başlatma/3DS akışını kullanır; başarılı ödeme sonrası sipariş komisyon uç noktasına gönderilir ve bayi sözleşme onaylarıyla birlikte settlement işlemine alınır (src/components/PaymentModal.tsx:305–465; server.ts:7412–7645). ORD-KAYIT- türündeki sipariş, başarılı settlement sırasında bayi kredilerini ve üyelik aktifliğini işler (server.ts:1880–1882, 1944–1950, 7618–7643). Ödeme sonrasında istemci tarafında reseller profilini tamamlayan ayrı bir işlev de vardır (src/utils/authManager.ts:630–724).
+
+Önemli doğrulama: authManager kayıt formundaki parola ipucu “en az 4 karakter” derken kayıt fonksiyonu 12 karakter altını kabul etmez (AuthModal.tsx:851–857; authManager.ts:1030–1036).
+
+2.4. Ödeme altyapısının canlılık sınırı
+server/paymentProviders.ts içindeki sağlayıcı SANDBOX_TEST_POS test sağlayıcısıdır; tanınmayan diğer sağlayıcı adlarında entegrasyonun bağlı olmadığı hatası verilir (server/paymentProviders.ts:78–181). Sunucu VPOS/3DS endpoint’lerini NODE_ENV production iken sandbox olarak kapatır (server.ts:11837–11862, 11940–11944). Eski checkout endpoint’i de canlı ödeme sağlayıcısı kurulmadığını belirterek 503 döndürür (server.ts:8666–8672). Bu nedenle mevcut kod, geliştirme/test ortamında simüle edilmiş ödeme doğrulaması ve settlement yapabilse de bu inceleme canlı kart tahsilatını veya banka mutabakatını doğrulamaz.
+
+3. SPONSOR AĞACI VE GLOBAL SIRA
+
+Üye ağacında iki farklı ilişki birlikte kullanılır:
+
+1) Sponsor ilişkisi (`sponsor_id`): direkt tavsiye ve sponsor zincirindeki Unilevel payları için kullanılır.
+2) Global sıra (`global_line_id`): kayıt sıralamasını ve Monoline öncül sırası paylarını belirler.
+
+Kayıt sırasında sponsor ve global sıra ayrı alanlar olarak belirlenir (server.ts:8280–8373; src/types/monoline.ts:1108–1129). Formdaki `assigned_leg` sol/sağ/otomatik seçimini saklar; otomatikte sponsorun mevcut sol/sağ çocuk sayılarına bakılır (server.ts:8337–8348). Ancak kariyer değerlendirmesi sponsorun direkt çocuklarının alt ağaçlarını ayrı kollar olarak hesaplar; kariyer koşulundaki “farklı kollar” ile kayıt formundaki ikili sol/sağ seçimin aynı mekanizma olduğuna dair uygulama kanıtı yoktur (src/types/monoline.ts:799–852, 867–885).
+
+4. KARİYERLER VE YÜKSELME KOŞULLARI
+
+Kariyer hesaplama kuralları src/types/monoline.ts içindeki INITIAL_CAREER_TIERS’ta tanımlıdır. Sunucu son 30 günlük hacimleri hesaplar, aşağıdan yukarıya çok geçişli kariyer değerlendirmesi yapar ve üyelerin kariyer/derinlik alanlarını günceller (server.ts:1165–1284). Sipariş komisyonu dağıtılmadan önce kariyer yeniden hesaplanabilir (server.ts:2003–2006). Ayrıca yönetici ve cron tetikleyicileri bulunur (server.ts:7268–7271).
+
+Seviye | Unvan | Aktif direkt | Minimum ekip hacmi | İlave şart | Açılan Unilevel derinliği | Havuz pay oranı
+1 | Emmâre | 0 | $0 | Başlangıç/aktif hesap | 1 | %2
+2 | Levvâme | 10 | $2.000 | Yok | 2 | %3
+3 | Mülhime | 20 | $5.000 | Yok | 3 | %4
+4 | Mutmainne | 50 | $10.000 | Direkt kollardan en az 1 Levvâme | 4 | %5
+5 | Râziye | 100 | $50.000 | Farklı kollarda 2 Mülhime | 5 | %6
+6 | Marziyye | 500 | $350.000 | Farklı kollarda 2 Mutmainne ve 1 Mülhime | 6 | %8
+7 | Kâmile | 1.000 | $1.000.000 | Farklı kollarda 2 Râziye ve 2 Mutmainne | 7 | %10
+
+Kaynak: src/types/monoline.ts:426–637. Seviye 4 ve üzeri için tek kolun ekip hacmine katkısı en fazla %50 ile sınırlandırılır. Her seviyenin derinlik komisyonu sırasıyla %7, %5, %4, %3, %2, %2, %2’dir. Pool oranı, her satışın doğrudan aynı oranda üyeye ödeneceği anlamına gelmez; kariyer fonundan yönetici dağıtımı endpoint’i ayrıca çalıştırılır.
+
+Kariyer sistemindeki dikkat çeken uygulama farkları:
+• Her kariyer kuralında `minPackageRank` 1 iken kariyer motoru paket uygunluğunu yalnız aktiflikten türetir; üst paket satın alma şartı backend’de görünmüyor (monoline.ts:971–980).
+• `active_career_level` dönemsel performansı temsil ettiği açıklansa da sunucu `Math.max(prevMaxLevel, evalResult.level)` değerinden türetir; aktif üye için bu tarihî maksimum seviyeyi korur (server.ts:1203–1227). Bu, dönemsel hak ediş/gerileme beklentisi varsa çelişebilir.
+• Kariyer seviye yükseltme ödülünde iki ayrı tutar seti vardır. Tier alanındaki `fixedCareerBonusAmount` ile `RANK_UP_REWARDS_BY_CAREER` değerleri aynı olmayabilir; yükselme fonksiyonunun ödül kaydı `is_delivered: false` olur. Bu kayıt otomatik nakit cüzdan ödemesi değildir (monoline.ts:1191–1220; server.ts:862–894).
+• Kariyer fonu havuzu, liderlik puanları ve üyeye uygun tier oranları üzerinden `/api/v1/career-pool/distribute` ile yönetici tarafından dağıtılır (server.ts:9762–9888). Sipariş başına otomatik kazanç olarak kabul edilmemelidir.
+
+5. SİPARİŞ BAŞINA ANA PRİM VE KOMİSYON AKIŞI
+
+Ana sunucu işleyicisi `processOrderCommission()` sipariş ve üye kontrollerinden sonra tutarı dağıtır (server.ts:1699–). Çift motor: sponsor ağacı Unilevel ve global sıra Monoline. Tanımlı temel oranlar businessRules’ta bulunur (src/config/businessRules.ts:19–32; server.ts:2015–2041, 2045–2156, 2376–2397).
+
+Kalem | Oran | Baz ve yön
+Direkt sponsor | %20 | Sipariş tutarı; sponsor aktif ve kilitsizse sponsor cüzdanına
+Unilevel | Toplam %25 | Sponsor zincirindeki ilk 7 kademe: %7, %5, %4, %3, %2, %2, %2
+Monoline | Toplam %5 | Global sıradaki 7 önceki üye: %1,50, %1,00, %0,80, %0,60, %0,50, %0,30, %0,30
+Sistem fonu | %5 | Sipariş tutarı; sistem havuzuna
+
+Bu dört ana kalemin nominal toplamı sipariş tutarının %55’idir. Örneğin 1.000 birimlik bir sipariş için nominal dağılım: 200 direkt sponsor, 250 Unilevel, 50 Monoline ve 50 sistem fonu. Bu örnek, bütün payların hak sahibine ödeneceğini, para biriminin doğru çevrildiğini veya toplam şirket kârını göstermez. Komisyonun alıcıya ulaşmaması halinde uygun olmayan/paylaştırılamayan tutar havuzda birikebilir.
+
+Direkt sponsor aktif ve kilitsiz değilse %20 pay üyeye yazılmaz; devredilmemiş komisyon havuzuna aktarılır (server.ts:2053–2134). Unilevel komisyonu sponsor ağacında yukarı doğru yedi derinlik boyunca hesaplanır; derinlik hakkı/aktiflik/kilit şartı sağlanmayan paylar havuza aktarılabilir (server.ts:2143–2369). Dinamik sıkıştırma ayarı varsayılan kapalıdır (src/config/businessRules.ts:31–32). Monoline sponsor ağacından bağımsız olarak `global_line_id` sırasına bakar; sıradaki uygun olmayan üyelerin payı havuza aktarılabilir (server.ts:2376–2547).
+
+Komisyonlar standart akışta 14 günlük clawback/bekleme korumasıyla PENDING_14D statüsünde kaydedilir; release zamanı loglanır (server.ts:2007–2012, 2057–2075, 2246–2270, 2451–2468). Kodda vadesi gelen bakiyeyi serbest bırakma işlemi yer alır; gerçek ortamda zamanlayıcının/işletim planının çalıştığı ayrıca doğrulanmamıştır. Fraud durumundaki kayıtlar FRAUD_REVIEW olarak da tutulabilir.
+
+Koşullu ek kazançlar:
+• Matching bonus: kariyer 3’ten itibaren, doğrudan alt üyenin aynı siparişte kazandığı uygun Unilevel/Monoline komisyonuna %10–%25 oranla ek eşleşme (src/types/monoline.ts:1054–1062; server.ts:2554–2613). Satış tutarının %10–%25’i değildir.
+• Fast-Start/Fast-ROI: belirlenen ilk dönem içinde en az üç aktif direktin her birinde 5.000 kişisel hacim koşuluna göre %15 hesaplama (server.ts:896–955). Ayar, zaman aralığı ve hacim birimi doğrulanmalıdır; bu şartın paket tutarlarıyla uyumu belirsizdir.
+• Kariyer atlama ödülleri: kullanıcı ödül kaydı oluşturulabilir fakat `is_delivered: false` işareti teslim/ödeme yapılmadığını gösterir (server.ts:862–894).
+• Kariyer havuzu: tanımlı havuz payları yönetici dağıtımında liderlik puanına göre tahsis edilir; garanti veya otomatik per-sipariş ödeme değildir (server.ts:9762–9888).
+• Yönetici bonus/ödemeleri: admin endpoint’leri ayrı yetkilendirme ve işlem olarak cüzdanı değiştirebilir; normal komisyon yüzdesiyle karıştırılmamalıdır.
+
+6. CÜZDAN, KOMİSYON DEFTERİ, SERBEST BAKİYE VE ÇEKİM
+
+Sunucu komisyon kayıtlarını, sipariş/cüzdan toplamlarını ve havuzları uygulama state’ine yazar; PostgreSQL yazma/senkronizasyon katmanı server.ts ve server/db.ts’te bulunur. `server/db.ts` PostgreSQL’i zorunlu kabul eder ve `monoline_schema.sql` dosyasını yalnız dosya mevcutsa uygular (server/db.ts:66–105). Bu repoda kök dizinde `monoline_schema.sql` bulunmadı; dolayısıyla tablo kurulumunun canlı veritabanında nasıl yapıldığı, şemanın mevcut olup olmadığı ve gerçek hesap bakiyeleri bu kod incelemesiyle doğrulanamaz. Kariyer/komisyon hesabı SQL stored procedure yerine TypeScript sunucu fonksiyonlarında yürütülüyor.
+
+Kullanıcı çekiminde sunucu kullanılabilir bölgesel bakiyeyi ve tutarı doğrular, payout bilgilerini kontrol eder, tutarı cüzdandan düşüp PENDING çekim talebi oluşturur (server.ts:6672–6870). UI minimum $50 gösterir; backend ayrıca kariyer seviyesine göre günlük limit uygulayabilir. IBAN, hesap sahibi ve ülke/kanala göre SWIFT/BIC kontrolleri yapılır (server.ts:6690–6870; src/utils/withdrawalPayout.ts:17–64).
+
+Çekim talebinin onayı banka transferi yapıldığı anlamına gelmez. Yönetici onayı ve ödeme kanıtı akışı vardır; arayüz uluslararası çekim için SWIFT/SEPA, Türkiye için havale/EFT sunar (src/components/DealerRegionalUsdPanel.tsx:225–234, 267–293). Kodda otomatik bankaya gönderim entegrasyonu doğrulanmadı; arayüz manuel banka transferi/onay akışı tarif eder.
+
+Vergi/stopaj uyuşmazlığı: DealerRegionalUsdPanel çekim tutarından %20 kesinti ve %80 net ödeme hesaplar (DealerRegionalUsdPanel.tsx:319–327). Fakat sunucudaki çekim kaydı `taxDeduction = 0`, `netAmount = grossAmount` yapar ve stopajın mali müşavir incelemesi öncesinde kesinleşmediğini söyler (server.ts:6770–6774, 6836–6861). Bu nedenle panelde görünen %20 kesinti backend’in uyguladığı gerçek kesinti değildir.
+
+7. YURT DIŞI FİYAT, GELİR VE PARA BİRİMİ
+
+`resolveMemberRegion()` boş ülke kodu ve TR’yi yurt içi; TR dışındaki her iki harfli ülkeyi yurt dışı olarak sınıflandırır (src/utils/walletRegion.ts:3–9). Ülke bazında ayrı fiyat tablosu, kur veya ülkeye özel komisyon oranı bu temel fonksiyonda bulunmaz.
+
+• Yurt dışı paket fiyatı = taban fiyat × 3; yurt içi fiyat, taban fiyat olarak bırakılır (walletRegion.ts:24–29).
+• Aktivasyon bedeli yurt içinde 100 USD, yurt dışında 300 USD olarak tanımlanır (walletRegion.ts:34–39).
+• Kredi adedi bölgeye göre değişmez (walletRegion.ts:31–32).
+• Cüzdan anahtarları domestic/international olarak ayrılır; bekleyen bakiye de ayrı bölgesel alanlarda izlenir (walletRegion.ts:11–17, 41–55).
+• Komisyon yazımında bölge alıcı/sipariş bölgesinden geçirilebilir. Farklı ülkedeki sponsora yazılan komisyonun bölgesi bu nedenle sponsorun kendi ülkesinden farklı olabilir (server.ts:1819–1821, 2057–2060, 2256–2258, 2455–2458).
+
+Para birimi açısından yüksek öncelikli doğrulama ihtiyacı: paket fiyatları USD tabanlı tanımlanırken bazı iç sipariş/çekim yolları TRY olarak etiketleniyor; komisyon çevrim fonksiyonu yurt içi tutarı TRY varsayıp USD/TRY kuru ile bölebiliyor (src/config/dealerPackages.ts; src/utils/walletRegion.ts:19–29; server.ts:1287–1303, 8578–8585). Ham `total_earnings` benzeri alanların panelde dolar olarak biçimlendirildiği, bölgesel USD bakiyelerinin ise ayrı gösterildiği örnekler vardır (ResellerDashboardModal.tsx:1358–1423). Sistemde kullanılan fiyatın ve `amount` değerinin para birimi her katmanda açıkça taşınmadan bu alanlar karşılaştırılmamalıdır. Türkiye paketi 101 gibi taban tutarın TRY mi USD mi olduğu netleştirilmeden gerçek komisyon örneği vermek güvenli değildir.
+
+8. BAYİ PANELİNDEKİ DİĞER GELİR/KOMİSYON AKIŞLARI
+
+8.1. ResellerDashboard kazanç tahmini
+ResellerDashboardModal içindeki sunum/tahmin ekranı kullanıcı/paket/kariyer varsayımlarından aylık ve yıllık potansiyel kazanç üretir (ResellerDashboardModal.tsx:283–299). Bu hesap `processOrderCommission` ledger kayıtlarından oluşan gerçekleşmiş kazanç değildir. Ekrandaki toplam satış, kazanç, ödenen ve bekleyen kartlar farklı kaynakların birleşiminden gelebilir (ResellerDashboardModal.tsx:1358–1423).
+
+8.2. Eski Frekans resellerManager komisyonu
+Ayrı bir istemci tarafı akışı `resellerManager.ts` içinde sipariş tutarına varsayılan %20 reseller oranı uygular; komisyonu localStorage/Firestore’a yazmaya ve bayi toplamlarını artırmaya çalışır (src/utils/resellerManager.ts:2655–2736). Bu, sunucu Monoline siparişindeki %20 sponsor + diğer havuzların aynısı değildir. Ayrıca Monoline kayıtlarının eski komisyon listesine aynalandığı köprü vardır; bazı aynalanan loglar durum eşlemesinde `approved` olur ve PENDING_14D ayrımı kaybolabilir (src/utils/monolineSyncBridge.ts:732–779). Bu nedenle bayi ekranında “approved” görünen satırın çekilebilir bakiye olduğu tek başına varsayılamaz.
+
+8.3. Kazanç gösteriminde veri sahipliği
+Uygulamada PostgreSQL sunucu state’i yanında reseller/local/Firestore kaynakları ve senkronizasyon köprüsü vardır. Her dashboard metriğinin hangi kaynağa ve hangi statü dönüşümüne dayandığı tek bir ortak gelir defteri gibi kabul edilmemelidir. Kayıt, settlement, komisyon logu, aynalanmış liste ve bankaya ödenen tutar ayrı aşamalardır.
+
+9. YURT DIŞI VERGİ, OSS VE SATIŞ SİMÜLATÖRLERİ
+
+Smart Accounting tarafındaki `taxEngine.ts`, ülke vergisi ve distribütör seviyesine göre ayrı hesap yapan bir modüldür; ana Monoline komisyon defterinden farklıdır. Kapsamında belirli AB ülkeleri için OSS KDV oranları, AB B2B’de reverse charge senaryosu, AB B2C KDV’si, AB dışına ihracat yaklaşımı ve Türkiye için varsayılan KDV hesabı bulunur (src/services/taxEngine.ts:28–37, 108–184). Aynı modülde distribütör seviyelerine göre %15, %7, %3 ve %2 komisyon oranları ile şahıs/şirket stopaj senaryoları vardır (:255–311). Bu oranlar ana backend’in %20 sponsor, %25 Unilevel, %5 Monoline dağıtım oranları değildir.
+
+Bu modüle bağlı ekranlardaki tüm işlemler canlı dış entegrasyon olarak doğrulanmamıştır:
+• SalesSimulatorView satış/3DS adımlarını `setTimeout` ile ilerletip istemci fonksiyonları çağırır; gerçek POS tahsilatı göstermez (src/components/views/SalesSimulatorView.tsx:158–227).
+• InternationalOssView VIES doğrulaması dış VIES servisine sorgu göndermek yerine DE/FR öneklerine göre sabit örnek sonuç üretir (src/components/views/InternationalOssView.tsx:43–59).
+• GİB/UBL dosyası üretme kodu belge içeriği oluşturabilir; bu tek başına e-faturanın GİB’e iletildiğini veya imzalandığını kanıtlamaz.
+• Smart Accounting kur servisi ve Monoline USD/TRY ayarı birbirinden farklı uygulamalardır; kullanılan kur kaynağının ve kaydın finansal etkisinin aynı olduğu varsayılmamalıdır.
+
+10. VERİTABANI, İŞLEM KAYDI VE TEKNİK SINIRLAR
+
+Sunucu PostgreSQL bağlantı katmanı, transaction/idempotency yaklaşımı ve state senkronizasyonu sağlar (server/db.ts:18–34, 66–105; server.ts:425–497, 561–608). Ancak monoline_schema.sql dosyası repo kökünde yoktur; init fonksiyonu schema’yı yalnız dosyayı bulursa yükler. Canlı DB’nin mevcut tabloları ve geçmiş siparişleri bu raporda sorgulanmadı. Ayrıca komisyon ve kariyer formüllerinin uygulama kodunda bulunması, veritabanına yazılan rakamların mutabık veya dış ödeme sağlayıcısı tarafından ödenmiş olduğunu kanıtlamaz.
+
+Doğrulanması gereken operasyonel zincir:
+1. Başvurunun kullanıcı/sponsor/ülke/leg kaydı.
+2. Sipariş tutarı ve para birimi.
+3. Ödeme sağlayıcıdan doğrulanmış ödeme referansı.
+4. Settlement idempotency kaydı ve üyenin aktifliği.
+5. Komisyon satırları ve her satırın statüsü/region/currency.
+6. 14 günlük beklemeden serbest bakiyeye geçiş.
+7. Çekim talebi, yönetici kararı ve ödeme kanıtı.
+8. Banka ekstresi/muhasebe kaydı ile ledger mutabakatı.
+
+Bu zincirin son üç halkasında gerçek banka ödeme kanıtı ve muhasebe mutabakatı, repodaki istemci/sunucu kodunu okumakla tek başına doğrulanamaz.
+
+11. ÖNCELİKLİ UYUŞMAZLIK VE RİSK LİSTESİ
+
+1) TRY/USD birimlerinin her endpoint, sipariş, paket, cüzdan ve raporda açıkça taşınması gerekir. Bölgesel fiyatlama ve komisyon dönüşümü mevcut haliyle birim karışıklığı riski taşır.
+2) Üretim POS sağlayıcısı bu kodda bağlı görünmüyor; sandbox production’da kapalı ve checkout 503 yanıtlıyor. Gerçek tahsilat iddiası sağlayıcı sözleşmesi, ödeme referansı ve banka mutabakatıyla ayrıca doğrulanmalı.
+3) Dönemsel aktif kariyer, tarihî maksimum kariyerden türetiliyor. Aylık/rolling şartlar kaybedildiğinde derinlik hakkının düşmesi bekleniyorsa mevcut hesapla karşılaştırılmalı.
+4) Paket kariyer şartları UI/metaveride görünse de backend kariyer kontrolü paket sıralamasını yalnız aktiflik olarak kabul ediyor.
+5) Sol/sağ leg seçimi kayıt ediliyor; kariyerin farklı kol hesabı sponsor alt ağaçlarına dayanıyor. Kuralın nasıl tanımlandığı tek modele indirgenmeli.
+6) Tier’de yazılı kariyer bonus tutarı ile rank-up ödül tablosu farklı olabilir; teslim edilmeyen ödül nakit kazanç gibi sunulmamalı.
+7) Çekim paneli %20 stopaj gösterirken backend sıfır kesinti ve brüt=net kaydediyor. Vergi kuralı mali müşavir ve hukukla netleştirilmeden tek doğru tutar olarak gösterilmemeli.
+8) Eski bayi komisyon listesinde 14 günlük bekleyen backend kayıtları `approved` görünebilir. Statüler PENDING_14D, RELEASED, PAID, REJECTED gibi anlamları koruyacak şekilde eşleştirilmeli.
+9) Kazanç simülatörleri ve satış/VIES/GİB ekranları gerçekleşmiş satış/gelir/harici doğrulama olarak değerlendirilmemeli.
+10) Fast-Start için 5.000 hacim eşiğinin para birimi, paket değerleri ve hak ediş koşullarıyla tutarlılığı incelenmeli.
+11) Aynı kişinin reseller profili, PostgreSQL monoline hesabı ve istemci/Firestore komisyon kaydı farklı zamanlarda oluşabiliyor. Tekil kaynak ve uzlaştırma süreci belirlenmeli.
+12) Repo kökünde otomatik uygulandığı açıklanan monoline_schema.sql yok. Gerçek DB migration ve şema versiyonlama yöntemi ayrıca belgelenmeli.
+
+12. SONUÇ: “KAZANÇ” AŞAMALARINI AYIRMA
+
+A. Potansiyel kazanç: dashboard/satış simülatörü varsayımları; gerçekleşmiş gelir değildir.
+B. Hesaplanan komisyon: sunucunun sipariş üzerinden formülle hesapladığı değer.
+C. Deftere yazılan komisyon: commission log/cüzdan ve havuz state’inde görülen değer; ödeme sağlayıcısından tahsilat veya bankadan ödeme kanıtı değildir.
+D. Bekleyen komisyon: 14 günlük koruma veya yönetici/fraud incelemesi nedeniyle çekilebilir olmayan kayıt.
+E. Serbest bakiye: backend’in çekime uygun gördüğü bölgesel cüzdan tutarı.
+F. Çekim talebi: kullanıcının bankaya gönderilmesini istediği tutar; banka transferinin tamamlandığı anlamına gelmez.
+G. Ödenmiş gelir: ancak onay, transfer referansı/banka kanıtı ve muhasebe mutabakatıyla doğrulanabilir.
+
+Mevcut repodan A–F akışlarının çeşitli kod ve arayüz parçaları görülebiliyor; G aşaması için canlı ödeme/banka kanıtı bu incelemede mevcut değildir. Bu nedenle kariyer ve komisyon tabloları sistem kurallarının kod incelemesi olarak okunmalı, hukuki kazanç taahhüdü, yatırım getirisi vaadi veya denetlenmiş finansal rapor olarak kullanılmamalıdır.

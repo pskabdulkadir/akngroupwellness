@@ -301,7 +301,10 @@ export const DealerBackOfficeView: React.FC<DealerBackOfficeViewProps> = ({
   const [showNewSubDealerPassword, setShowNewSubDealerPassword] = useState<boolean>(false);
   const [newSubDealerLeg, setNewSubDealerLeg] = useState<'LEFT' | 'RIGHT' | 'AUTO'>('AUTO');
   const [showNetworkAddModal, setShowNetworkAddModal] = useState<boolean>(false);
-  const [monolineViewStyle, setMonolineViewStyle] = useState<'line' | 'schema'>('line');
+  const [monolineViewStyle, setMonolineViewStyle] = useState<'line' | 'schema'>(() =>
+    typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches ? 'schema' : 'line'
+  );
+  const [expandedMonolineSchemaNodes, setExpandedMonolineSchemaNodes] = useState<Set<string>>(() => new Set());
 
   const sortedMembers = useMemo(
     () => [...members].sort((a, b) => a.global_line_id - b.global_line_id),
@@ -1729,10 +1732,11 @@ export const DealerBackOfficeView: React.FC<DealerBackOfficeViewProps> = ({
   const renderMonolineSchemaNode = (node: MonolineMember): React.ReactNode => {
     const children = monolineChildrenMap.get(node.user_id) || [];
     const isRoot = node.user_id === monolineSchemaRoot?.user_id;
+    const isExpanded = expandedMonolineSchemaNodes.has(node.user_id);
     return (
       <div className="flex flex-col items-center">
         <div
-          className={`w-56 rounded-xl p-3 border text-center ${
+          className={`w-56 max-w-[calc(100vw-3rem)] rounded-xl p-3 border text-center ${
             isRoot ? 'bg-slate-900 text-white border-slate-900 shadow-sm' : 'bg-white border-emerald-200 text-slate-900'
           }`}
         >
@@ -1747,9 +1751,23 @@ export const DealerBackOfficeView: React.FC<DealerBackOfficeViewProps> = ({
             Direkt: <strong>{children.length}</strong> · Kişisel Hacim:{' '}
             <strong>{node.personal_volume.toLocaleString('tr-TR')} $</strong>
           </div>
+          {children.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setExpandedMonolineSchemaNodes((current) => {
+                const next = new Set(current);
+                if (next.has(node.user_id)) next.delete(node.user_id);
+                else next.add(node.user_id);
+                return next;
+              })}
+              className={`mt-2 rounded-lg px-2.5 py-1 text-[11px] font-bold ${isRoot ? 'bg-white/10 text-white' : 'bg-emerald-50 text-emerald-800'}`}
+            >
+              {isExpanded ? 'Alt hattı daralt' : `Alt hattı aç (${children.length})`}
+            </button>
+          )}
         </div>
 
-        {children.length > 0 && (
+        {children.length > 0 && isExpanded && (
           <>
             <div className="w-px h-6 bg-emerald-300" />
             <div className="flex items-start">
@@ -3836,7 +3854,7 @@ Paket Alarak Aktifliği Yenile →
 
       {/* SUB-TAB 3: AĞ YAPISI İZLEME (MONOLINE TEK HAT ALT BAYİ AĞACI & 7 DERİNLİK SPONSOR AĞACI) */}
       {subTab === 'network' && (
-        <section className="bg-white border border-slate-200 rounded-xl p-6 space-y-6">
+        <section className="min-w-0 bg-white border border-slate-200 rounded-xl p-3 sm:p-6 space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-4">
             <div>
               <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] font-semibold mb-1">
@@ -4433,7 +4451,14 @@ Paket Alarak Aktifliği Yenile →
                 </button>
                 <button
                   type="button"
-                  onClick={() => setMonolineViewStyle('schema')}
+                  onClick={() => {
+                    setMonolineViewStyle('schema');
+                    setExpandedMonolineSchemaNodes(
+                      window.matchMedia('(max-width: 767px)').matches
+                        ? new Set()
+                        : new Set(dealerDownlineTree.map((node) => node.user_id))
+                    );
+                  }}
                   className={`px-3 py-1.5 rounded-md cursor-pointer ${
                     monolineViewStyle === 'schema' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
                   }`}
@@ -4443,15 +4468,16 @@ Paket Alarak Aktifliği Yenile →
               </div>
 
               {monolineViewStyle === 'schema' && monolineSchemaRoot && (
-                <div className="overflow-x-auto pb-3 pt-1">
-                  <div className="inline-flex justify-center min-w-full">
+                <div className="min-w-0 max-w-full overflow-x-auto overscroll-x-contain pb-3 pt-1">
+                  <div className="inline-flex min-w-full justify-center">
                     {renderMonolineSchemaNode(monolineSchemaRoot)}
                   </div>
                 </div>
               )}
+              {monolineViewStyle === 'schema' && <p className="text-[11px] text-slate-500 sm:hidden">Şemada alt hatları kart üzerindeki düğmeyle açın; geniş dalları yatay kaydırarak inceleyin.</p>}
 
               {monolineViewStyle === 'line' && (
-              <div className="overflow-x-auto pb-3 pt-1">
+              <div className="min-w-0 max-w-full overflow-x-auto overscroll-x-contain pb-3 pt-1">
                 <div className="inline-flex items-stretch gap-3 min-w-full">
                   {dealerDownlineTree.map((node, idx) => {
                     const isRoot = node.user_id === member.user_id;
