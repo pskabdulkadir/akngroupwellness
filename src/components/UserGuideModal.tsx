@@ -343,7 +343,7 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({ isOpen, onClose 
             }`}
           >
             <Repeat className="w-4 h-4 text-emerald-400" />
-            <span>📊 10 Sekmeli Rapor</span>
+            <span>Tarama Raporu · 11 Bölüm</span>
           </button>
 
           <button
@@ -790,14 +790,14 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({ isOpen, onClose 
             </div>
           )}
 
-          {/* TAB 8: 10 SEKME RAPOR */}
+          {/* TAB 8: 11 BÖLÜMLÜ RAPOR */}
           {activeSection === 'reports_comparison' && (
             <div className="space-y-5">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
                     <Repeat className="w-5 h-5 text-emerald-400" />
-                    10 Sekmeli Tarama Raporu ve Öncesi/Sonrası Görünümü
+                    11 Bölümlü Tarama Raporu ve Öncesi/Sonrası Görünümü
                   </h3>
                   <p className="text-xs text-slate-600">
                     Tarama özetini, renk görsellerini ve rehberlik sekmelerini inceleyin; raporu PDF olarak indirebilirsiniz.
@@ -805,7 +805,7 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({ isOpen, onClose 
                 </div>
 
                 <button
-                  onClick={() => playSection(801, `Tarama raporunda toplam on sekme vardır: İlim Kapı, Genel Bakış, Detaylı Renk Analizi, Duygu Analizi, dört Aurik Katman, Çakra Rehberi, Letaif Nurları, Esma ve frekans seçimi, Yaşam Koçu Matrisi ve 3D görünüm. İsterseniz PDF indirebilirsiniz. Görseller ve öneriler uygulama içi rehberlik içindir; klinik ölçüm değildir.`)}
+                  onClick={() => playSection(801, `Tarama raporunda on bir bölüm vardır: İlim Kapı, Genel Bakış, Detaylı Renk Analizi, Duygu Analizi, dört Aurik Katman, Çakra Rehberi, Letaif Nurları, Esma ve frekans seçimi, Yaşam Koçu Matrisi, 3D görünüm ve paranormal enerji tespiti bilgilendirmesi. Bölümlere açılır menüden erişebilir, raporu PDF indirebilirsiniz. Tarama sırasında mikrofon izni istenir; cihaz destekliyorsa ışık ve manyetik alan sensörleri de okunur. Rapor bu çevresel sinyalleri gösterir; paranormal olasılık hesaplamaz. Ses kaydı saklanmaz; mikrofon yüzdesi kalibre edilmiş dB ölçümü değildir.`)}
                   className="px-3.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-700 text-slate-800 border border-slate-300 text-xs font-bold flex items-center gap-1.5 cursor-pointer"
                 >
                   <Volume2 className="w-4 h-4 text-emerald-400" />
@@ -816,7 +816,7 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({ isOpen, onClose 
               <div className="p-4 rounded-3xl bg-white/60 border border-slate-200 space-y-3">
                 <h4 className="text-sm font-bold text-slate-900">Rapor sekmeleri</h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
-                  {['İlim Kapı', 'Genel Bakış', 'Detaylı Renk Analizi', 'Duygu Analizi', '4 Aurik Katman', '7 Çakra Rehberi', 'Letaif Nurları', '99 Esma & Frekans Yükle', 'Yaşam Koçu Matrisi', '3D Canlı Aura & Letaif'].map((tab, index) => (
+                  {['İlim Kapı', 'Genel Bakış', 'Detaylı Renk Analizi', 'Duygu Analizi', '4 Aurik Katman', '7 Çakra Rehberi', 'Letaif Nurları', '99 Esma & Frekans Yükle', 'Yaşam Koçu Matrisi', '3D Canlı Aura & Letaif', 'Paranormal Enerji Tespiti · Ölçüm yapılmaz'].map((tab, index) => (
                     <div key={tab} className="p-2.5 rounded-xl bg-slate-50/80 border border-slate-200"><strong>{index + 1}. {tab}</strong></div>
                   ))}
                 </div>

@@ -55,7 +55,7 @@ import {
 import { db, wipeAllLocalApplicationData, doc, setDoc } from '../lib/db';
 import { DataBackupRestoreModal } from './DataBackupRestoreModal';
 import { UnilevelOrganizationTreePanel } from './UnilevelOrganizationTreePanel';
-import { loginAdminWithMessage } from '../utils/adminSession';
+import { loginAdminWithMessage, getAdminToken } from '../utils/adminSession';
 import {
   ADMIN_EMAILS,
   ADMIN_PHONE,
@@ -514,6 +514,13 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
   const [resFormLeftLegVol, setResFormLeftLegVol] = useState<number | string>(0);
   const [resFormRightLegVol, setResFormRightLegVol] = useState<number | string>(0);
   const [resFormCareerLevel, setResFormCareerLevel] = useState<number | string>(1);
+  const [resFormNewPassword, setResFormNewPassword] = useState('');
+  const [resFormConfirmPassword, setResFormConfirmPassword] = useState('');
+  const [resFormCompanyName, setResFormCompanyName] = useState('');
+  const [resFormTaxNumber, setResFormTaxNumber] = useState('');
+  const [resFormTaxOffice, setResFormTaxOffice] = useState('');
+  const [resFormBusinessField, setResFormBusinessField] = useState('');
+  const [resFormAddress, setResFormAddress] = useState('');
 
   // Commissions filters
   const [commSearch, setCommSearch] = useState<string>('');
@@ -1073,6 +1080,13 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
     setResFormAccountHolder('');
     setResFormIban('');
     setResFormNotes('');
+    setResFormNewPassword('');
+    setResFormConfirmPassword('');
+    setResFormCompanyName('');
+    setResFormTaxNumber('');
+    setResFormTaxOffice('');
+    setResFormBusinessField('');
+    setResFormAddress('');
   };
 
   const handleOpenEditReseller = (reseller: Reseller) => {
@@ -1101,6 +1115,13 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
     setResFormLeftLegVol((matchingMember as any)?.leftLegVolume || (reseller as any).leftLegVolume || 0);
     setResFormRightLegVol((matchingMember as any)?.rightLegVolume || (reseller as any).rightLegVolume || 0);
     setResFormCareerLevel((matchingMember as any)?.careerLevel || (reseller as any).careerLevel || 1);
+    setResFormNewPassword('');
+    setResFormConfirmPassword('');
+    setResFormCompanyName(matchingMember?.dealerDetails?.companyName || reseller.businessName || reseller.resellerName);
+    setResFormTaxNumber(matchingMember?.dealerDetails?.taxNumber || '');
+    setResFormTaxOffice(matchingMember?.dealerDetails?.taxOffice || '');
+    setResFormBusinessField(matchingMember?.dealerDetails?.businessField || '');
+    setResFormAddress(matchingMember?.dealerDetails?.address || '');
   };
 
   const handleSaveReseller = async (e: React.FormEvent) => {
@@ -1109,11 +1130,16 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
       alert('Lütfen Bayi Adı ve Referans Kodunu eksiksiz doldurun.');
       return;
     }
+    if (resFormNewPassword !== resFormConfirmPassword || (resFormNewPassword && resFormNewPassword.length < 8)) {
+      alert('Yeni parolalar eşleşmeli ve en az 8 karakter olmalıdır.');
+      return;
+    }
 
     setResellerSaveLoading(true);
     const updatedRes: Reseller = {
       uid: resFormUid || `res_${Date.now()}`,
       resellerName: resFormName.trim(),
+      businessName: resFormCompanyName.trim() || resFormName.trim(),
       email: resFormEmail.trim(),
       phone: resFormPhone.trim(),
       referralCode: resFormCode.trim().toUpperCase(),
@@ -1142,22 +1168,83 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
     };
 
     try {
+      const matchingMember = editingReseller ? members.find(
+        (m) =>
+          m.uid === editingReseller.uid ||
+          m.email.toLowerCase() === editingReseller.email.toLowerCase() ||
+          (m.resellerId && m.resellerId === editingReseller.referralCode)
+      ) : undefined;
+      if (editingReseller && !matchingMember && (resFormNewPassword || resFormEmail.trim() !== editingReseller.email.trim())) {
+        throw new Error('Giriş e-postası veya parola güncellemesi için eşleşen bayi hesabı bulunamadı.');
+      }
+      if (matchingMember) {
+        const token = getAdminToken();
+        if (!token) throw new Error('Yönetici oturumu bulunamadı. Yeniden giriş yapın.');
+        const response = await fetch(`/api/v1/admin/dealers/${encodeURIComponent(matchingMember.uid)}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({
+            full_name: resFormName.trim(),
+            email: resFormEmail.trim(),
+            phone: resFormPhone.trim(),
+            company_name: resFormCompanyName.trim(),
+            tax_number: resFormTaxNumber.trim(),
+            tax_office: resFormTaxOffice.trim(),
+            business_field: resFormBusinessField.trim(),
+            address: resFormAddress.trim(),
+            role: 'dealer',
+            is_active: updatedRes.status === 'active',
+            is_locked: updatedRes.status === 'suspended',
+            assigned_leg: resFormAssignedLeg,
+            ...(resFormNewPassword ? { new_password: resFormNewPassword } : {}),
+          }),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.message || 'Bayi profili güncellenemedi.');
+        if (data.state) window.dispatchEvent(new CustomEvent('aurabio_monoline_state_updated', { detail: data.state }));
+        const sponsorCode = resFormSponsorCode.trim().toUpperCase();
+        const sponsor = sponsorCode ? members.find((member) =>
+          member.uid === sponsorCode ||
+          member.referralCode?.toUpperCase() === sponsorCode ||
+          member.dealerDetails?.referralCode?.toUpperCase() === sponsorCode
+        ) : null;
+        if (sponsorCode && !sponsor) throw new Error('Seçilen sponsor hesabı bulunamadı.');
+        const rosterResponse = await fetch(`/api/v1/admin/members/${encodeURIComponent(matchingMember.uid)}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({
+            sponsor_id: sponsor?.uid || null,
+            assigned_leg: resFormAssignedLeg,
+            left_leg_volume: Number(resFormLeftLegVol) || 0,
+            right_leg_volume: Number(resFormRightLegVol) || 0,
+            manual_career_override: Number(resFormCareerLevel) || 1,
+            is_active: updatedRes.status === 'active',
+            is_locked: updatedRes.status === 'suspended',
+          }),
+        });
+        const rosterData = await rosterResponse.json().catch(() => ({}));
+        if (!rosterResponse.ok) throw new Error(rosterData.message || 'Bayi yetki ve ekip ayarları güncellenemedi.');
+        if (rosterData.state) window.dispatchEvent(new CustomEvent('aurabio_monoline_state_updated', { detail: rosterData.state }));
+      }
       const ok = await adminSaveReseller(updatedRes);
       if (ok) {
+        setResFormNewPassword('');
+        setResFormConfirmPassword('');
         // Also sync corresponding member record if exists
-        const matchingMember = members.find(
-          (m) =>
-            m.uid === updatedRes.uid ||
-            m.email.toLowerCase() === updatedRes.email.toLowerCase() ||
-            (m.resellerId && m.resellerId === updatedRes.referralCode)
-        );
-
         if (matchingMember) {
           const updatedUser: UserMember = {
             ...matchingMember,
             fullName: updatedRes.resellerName,
             email: updatedRes.email,
             phone: updatedRes.phone,
+            dealerDetails: {
+              ...matchingMember.dealerDetails,
+              companyName: resFormCompanyName.trim(),
+              taxNumber: resFormTaxNumber.trim(),
+              taxOffice: resFormTaxOffice.trim(),
+              businessField: resFormBusinessField.trim(),
+              address: resFormAddress.trim(),
+            },
             referredByCode: resFormSponsorCode.trim().toUpperCase() || undefined,
             resellerId: updatedRes.referralCode,
             ...({
@@ -1175,6 +1262,7 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
               fullName: updatedUser.fullName,
               email: updatedUser.email,
               phone: updatedUser.phone,
+              dealerDetails: updatedUser.dealerDetails,
               referredByCode: updatedUser.referredByCode || null,
               resellerId: updatedUser.resellerId || null,
               assignedLeg: resFormAssignedLeg,
@@ -1187,23 +1275,6 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
             console.debug('Firestore sync notice:', fsErr);
           }
 
-          try {
-            await fetch(`/api/v1/admin/members/${matchingMember.uid}`, {
-              method: 'PUT',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                full_name: updatedUser.fullName,
-                sponsor_id: resFormSponsorCode.trim().toUpperCase(),
-                assigned_leg: resFormAssignedLeg,
-                left_leg_volume: Number(resFormLeftLegVol) || 0,
-                right_leg_volume: Number(resFormRightLegVol) || 0,
-                manual_career_override: Number(resFormCareerLevel) || 1,
-                is_active: updatedRes.status === 'active',
-              }),
-            });
-          } catch (srvErr) {
-            console.debug('Server member update notice:', srvErr);
-          }
         }
 
         window.dispatchEvent(new CustomEvent('aurabio_members_updated'));
@@ -1218,6 +1289,8 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
       } else {
         alert('Bayi kaydedilirken hata oluştu.');
       }
+    } catch (err: any) {
+      alert(err?.message || 'Bayi güncellenirken hata oluştu.');
     } finally {
       setResellerSaveLoading(false);
     }
@@ -2842,7 +2915,7 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
                                   <button
                                     onClick={() => handleOpenEditReseller(r)}
                                     className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors cursor-pointer"
-                                    title="Bayiyi Düzenle & Komisyon Oranını Güncelle"
+                                    title="Bayiyi ve Profilini Düzenle"
                                   >
                                     <Edit2 className="w-3.5 h-3.5" />
                                   </button>
@@ -5919,7 +5992,7 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
                   </div>
                   <div>
                     <h3 className="text-base font-bold text-slate-100">
-                      {isCreatingReseller ? 'Yeni Yetkili Bayi Tanımla' : 'Bayi Bilgileri & Komisyon Oranını Düzenle'}
+                      {isCreatingReseller ? 'Yeni Yetkili Bayi Tanımla' : 'Bayi Profili, Giriş ve Komisyon Bilgilerini Düzenle'}
                     </h3>
                     <p className="text-xs text-slate-400">
                       Bayilik sistemi ve komisyon hak ediş ayarları
@@ -5929,7 +6002,7 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
 
                 <button
                   type="button"
-                  onClick={() => { setEditingReseller(null); setIsCreatingReseller(false); }}
+                  onClick={() => { setEditingReseller(null); setIsCreatingReseller(false); setResFormNewPassword(''); setResFormConfirmPassword(''); }}
                   className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-slate-200 transition-colors"
                 >
                   <X className="w-4 h-4" />
@@ -5973,6 +6046,22 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
                     />
                   </div>
                 </div>
+
+                {!isCreatingReseller && (
+                  <div className="space-y-3 rounded-2xl border border-cyan-500/30 bg-slate-950 p-4">
+                    <h4 className="text-xs font-bold text-cyan-300">Bayi Profili ve Giriş Bilgileri</h4>
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      <label className="space-y-1 text-[11px] text-slate-400">Firma / işletme<input maxLength={160} value={resFormCompanyName} onChange={(e) => setResFormCompanyName(e.target.value)} className="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-white" /></label>
+                      <label className="space-y-1 text-[11px] text-slate-400">Vergi numarası<input maxLength={50} value={resFormTaxNumber} onChange={(e) => setResFormTaxNumber(e.target.value)} className="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-white" /></label>
+                      <label className="space-y-1 text-[11px] text-slate-400">Vergi dairesi<input maxLength={80} value={resFormTaxOffice} onChange={(e) => setResFormTaxOffice(e.target.value)} className="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-white" /></label>
+                      <label className="space-y-1 text-[11px] text-slate-400">Faaliyet alanı<input maxLength={160} value={resFormBusinessField} onChange={(e) => setResFormBusinessField(e.target.value)} className="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-white" /></label>
+                      <label className="space-y-1 text-[11px] text-slate-400 sm:col-span-2">Adres<input maxLength={500} value={resFormAddress} onChange={(e) => setResFormAddress(e.target.value)} className="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-white" /></label>
+                      <label className="space-y-1 text-[11px] text-slate-400">Yeni parola<input type="password" autoComplete="new-password" minLength={8} maxLength={128} value={resFormNewPassword} onChange={(e) => setResFormNewPassword(e.target.value)} placeholder="Değiştirmeyecekseniz boş bırakın" className="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-white" /></label>
+                      <label className="space-y-1 text-[11px] text-slate-400">Yeni parola tekrar<input type="password" autoComplete="new-password" minLength={8} maxLength={128} value={resFormConfirmPassword} onChange={(e) => setResFormConfirmPassword(e.target.value)} className="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-white" /></label>
+                    </div>
+                    <p className="text-[10px] text-slate-500">Parola değiştirmezseniz alanları boş bırakın. Yeni parola bayi girişinde geçerli olur.</p>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
@@ -6132,7 +6221,7 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
                 <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-800">
                   <button
                     type="button"
-                    onClick={() => { setEditingReseller(null); setIsCreatingReseller(false); }}
+                    onClick={() => { setEditingReseller(null); setIsCreatingReseller(false); setResFormNewPassword(''); setResFormConfirmPassword(''); }}
                     className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold cursor-pointer"
                   >
                     İptal

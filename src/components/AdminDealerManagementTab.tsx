@@ -34,10 +34,15 @@ type DealerRecord = {
   wallet_monoline_earnings: number | string;
 };
 
-type DealerEditForm = Pick<DealerRecord, 'full_name' | 'phone' | 'city' | 'role' | 'is_active' | 'is_locked' | 'assigned_leg'> & {
+type DealerEditForm = Pick<DealerRecord, 'full_name' | 'email' | 'phone' | 'city' | 'role' | 'is_active' | 'is_locked' | 'assigned_leg'> & {
   activity_expires_at: string;
   sponsor_id: string;
   monoline_position: string;
+  company_name: string;
+  tax_number: string;
+  tax_office: string;
+  business_field: string;
+  address: string;
 };
 
 type WalletAdjustment = {
@@ -72,6 +77,8 @@ export const AdminDealerManagementTab: React.FC = () => {
   const [selected, setSelected] = useState<DealerRecord | null>(null);
   const [form, setForm] = useState<DealerEditForm | null>(null);
   const [saving, setSaving] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [walletAdjustments, setWalletAdjustments] = useState<WalletAdjustment[]>([]);
   const [walletDirection, setWalletDirection] = useState<'CREDIT' | 'DEBIT'>('CREDIT');
@@ -128,8 +135,13 @@ export const AdminDealerManagementTab: React.FC = () => {
       setWalletAdjustments(adjustmentData.adjustments || []);
       const dealer = data.dealer as DealerRecord;
       setSelected(dealer);
+      setNewPassword('');
+      setConfirmPassword('');
+      const profile = dealer.profile || {};
+      const dealerDetails = (profile.dealerDetails || {}) as Record<string, string | undefined>;
       setForm({
         full_name: dealer.full_name || '',
+        email: dealer.email || '',
         phone: dealer.phone || '',
         city: dealer.city || '',
         role: dealer.role || 'member',
@@ -139,6 +151,11 @@ export const AdminDealerManagementTab: React.FC = () => {
         sponsor_id: dealer.sponsor_id || '',
         assigned_leg: dealer.assigned_leg || 'AUTO',
         monoline_position: String(dealer.monoline_position || 1),
+        company_name: dealerDetails.companyName || '',
+        tax_number: dealerDetails.taxNumber || '',
+        tax_office: dealerDetails.taxOffice || '',
+        business_field: dealerDetails.businessField || '',
+        address: dealerDetails.address || '',
       });
     } catch (err: any) {
       setError(err.message || 'Bayi ayrıntıları alınamadı.');
@@ -148,6 +165,10 @@ export const AdminDealerManagementTab: React.FC = () => {
   const saveDealer = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!selected || !form) return;
+    if (Boolean(newPassword) !== Boolean(confirmPassword) || newPassword !== confirmPassword) {
+      setError('Yeni parola doğrulaması eşleşmiyor.');
+      return;
+    }
     setSaving(true);
     setSaveMessage(null);
     setError(null);
@@ -160,8 +181,15 @@ export const AdminDealerManagementTab: React.FC = () => {
         },
         body: JSON.stringify({
           full_name: form.full_name,
+          email: form.email,
           phone: form.phone,
           city: form.city,
+          company_name: form.company_name,
+          tax_number: form.tax_number,
+          tax_office: form.tax_office,
+          business_field: form.business_field,
+          address: form.address,
+          ...(newPassword ? { new_password: newPassword } : {}),
           role: form.role,
           is_active: form.is_active,
           is_locked: form.is_locked,
@@ -176,7 +204,13 @@ export const AdminDealerManagementTab: React.FC = () => {
       const updated = data.dealer as DealerRecord;
       setSelected(updated);
       setDealers((current) => current.map((dealer) => dealer.user_id === updated.user_id ? updated : dealer));
-      setSaveMessage('Değişiklikler PostgreSQL’e kaydedildi.');
+      if (data.state) window.dispatchEvent(new CustomEvent('aurabio_monoline_state_updated', { detail: data.state }));
+      window.dispatchEvent(new CustomEvent('aurabio_members_updated'));
+      window.dispatchEvent(new CustomEvent('aurabio_resellers_updated'));
+      window.dispatchEvent(new CustomEvent('monoline_webhook_triggered'));
+      setNewPassword('');
+      setConfirmPassword('');
+      setSaveMessage('Profil ve giriş bilgileri PostgreSQL’e kaydedildi.');
     } catch (err: any) {
       setError(err.message || 'Bayi bilgileri kaydedilemedi.');
     } finally {
@@ -284,9 +318,16 @@ export const AdminDealerManagementTab: React.FC = () => {
               <form onSubmit={saveDealer} className="space-y-4">
                 <div className="grid gap-3 sm:grid-cols-2">
                   <label className="text-xs text-slate-400">Ad Soyad<input required minLength={2} maxLength={150} value={form.full_name} onChange={(event) => setForm({ ...form, full_name: event.target.value })} className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white" /></label>
-                  <label className="text-xs text-slate-400">E-posta · salt okunur<input readOnly value={selected.email} className="mt-1 w-full cursor-not-allowed rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2 text-sm text-slate-500" /></label>
+                  <label className="text-xs text-slate-400">Giriş e-postası<input required type="email" maxLength={254} value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white" /></label>
                   <label className="text-xs text-slate-400">Telefon<input maxLength={50} value={form.phone} onChange={(event) => setForm({ ...form, phone: event.target.value })} className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white" /></label>
                   <label className="text-xs text-slate-400">Şehir<input maxLength={80} value={form.city} onChange={(event) => setForm({ ...form, city: event.target.value })} className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white" /></label>
+                  <label className="text-xs text-slate-400">Firma / işletme<input maxLength={160} value={form.company_name} onChange={(event) => setForm({ ...form, company_name: event.target.value })} className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white" /></label>
+                  <label className="text-xs text-slate-400">Vergi numarası<input maxLength={50} value={form.tax_number} onChange={(event) => setForm({ ...form, tax_number: event.target.value })} className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white" /></label>
+                  <label className="text-xs text-slate-400">Vergi dairesi<input maxLength={80} value={form.tax_office} onChange={(event) => setForm({ ...form, tax_office: event.target.value })} className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white" /></label>
+                  <label className="text-xs text-slate-400">Faaliyet alanı<input maxLength={160} value={form.business_field} onChange={(event) => setForm({ ...form, business_field: event.target.value })} className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white" /></label>
+                  <label className="text-xs text-slate-400 sm:col-span-2">Adres<input maxLength={500} value={form.address} onChange={(event) => setForm({ ...form, address: event.target.value })} className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white" /></label>
+                  <label className="text-xs text-slate-400">Yeni parola<input type="password" autoComplete="new-password" minLength={8} maxLength={128} value={newPassword} onChange={(event) => setNewPassword(event.target.value)} placeholder="Değiştirmeyecekseniz boş bırakın" className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white" /></label>
+                  <label className="text-xs text-slate-400">Yeni parola tekrar<input type="password" autoComplete="new-password" minLength={8} maxLength={128} value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white" /></label>
                   <label className="text-xs text-slate-400">Rol<select value={form.role} onChange={(event) => setForm({ ...form, role: event.target.value as DealerEditForm['role'] })} className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"><option value="customer">Müşteri</option><option value="member">Üye</option><option value="dealer">Bayi</option></select></label>
                   <label className="text-xs text-slate-400">Bayi referans kodu<input readOnly value={selected.referral_code || '—'} className="mt-1 w-full cursor-not-allowed rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2 text-sm text-slate-500" /></label>
                   <label className="text-xs text-slate-400">Sponsor kullanıcı ID<input value={form.sponsor_id} onChange={(event) => setForm({ ...form, sponsor_id: event.target.value })} placeholder="Boş bırak: sponsorsuz" className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white" /></label>

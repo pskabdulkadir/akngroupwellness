@@ -279,6 +279,31 @@ export interface AyetRecommendation {
   [key: string]: any;
 }
 
+export type EnvironmentalReadingStatus = 'measured' | 'not-supported' | 'permission-denied' | 'permission-pending' | 'unavailable';
+
+export interface ScanEnvironmentMeasurements {
+  capturedAt: number;
+  durationSeconds: number;
+  microphone: {
+    status: EnvironmentalReadingStatus;
+    relativeLevelPercent?: number;
+    dominantFrequencyHz?: number;
+    spectralCentroidHz?: number;
+  };
+  ambientLight: {
+    status: EnvironmentalReadingStatus;
+    value?: number;
+    unit: 'lx';
+  };
+  magneticField: {
+    status: EnvironmentalReadingStatus;
+    xMicrotesla?: number;
+    yMicrotesla?: number;
+    zMicrotesla?: number;
+    magnitudeMicrotesla?: number;
+  };
+}
+
 export interface ScanResult {
   id: string;
   timestamp: number;
@@ -312,6 +337,7 @@ export interface ScanResult {
   notes?: string;
   photoSnapshotUrl?: string;
   snapshotUrl?: string;
+  environmentMeasurements?: ScanEnvironmentMeasurements;
   targetType?: string;
   targetName?: string;
   chakras?: ChakraEnergy[];

@@ -13,8 +13,8 @@ import {
   Heart, 
   ArrowRight, 
   Zap, 
-  Download, 
-  Check, 
+  Download,
+  Check,
   Lock, 
   Leaf, 
   Gem, 
@@ -34,7 +34,8 @@ import {
   Search, 
   ArrowLeft,
   Trash2,
-  Rotate3d
+  Rotate3d,
+  ChevronDown
 } from 'lucide-react';
 import { ScanResult, ChakraEnergy, LetaifEnergy } from '../types';
 import { ESMA_LIST } from '../data/esmaData';
@@ -42,6 +43,7 @@ import { AYET_LIST } from '../data/ayetData';
 import { EASTERN_MANTRAS, MYTHOLOGICAL_ELEMENTS } from '../data/easternData';
 import { TreatmentSelection } from './FrequencyLoadingModal';
 import { exportScanReportToPDF } from '../utils/pdfExport';
+import { getEnvironmentSensorCoverage } from '../utils/environmentMeasurements';
 import { voiceAssistant } from '../utils/voiceAssistant';
 import { getActiveMemberSession } from '../utils/authManager';
 import { deleteScanResult } from '../utils/storage';
@@ -64,17 +66,40 @@ interface ReportModalProps {
   comparisonPairAvailable?: boolean;
 }
 
-export type ReportTab = 
-  | 'ilimKapi' 
-  | 'overview' 
+export type ReportTab =
+  | 'ilimKapi'
+  | 'overview'
   | 'colorAnalysis'
-  | 'emotions' 
-  | 'auraLayers' 
-  | 'chakras' 
-  | 'letaif' 
-  | 'recommendations' 
+  | 'emotions'
+  | 'auraLayers'
+  | 'chakras'
+  | 'letaif'
+  | 'recommendations'
   | 'allInnovations'
-  | 'simulation3d';
+  | 'simulation3d'
+  | 'paranormal';
+
+const SENSOR_STATUS_LABELS = {
+  measured: 'Ölçüm alındı',
+  'not-supported': 'Cihaz/tarayıcı desteklemiyor',
+  'permission-denied': 'İzin verilmedi',
+  'permission-pending': 'Ölçüm tamamlanmadı',
+  unavailable: 'Veri alınamadı',
+} as const;
+
+const REPORT_TABS: { id: ReportTab; label: string }[] = [
+  { id: 'ilimKapi', label: '1. İlim Kapı' },
+  { id: 'overview', label: '2. Genel Bakış' },
+  { id: 'colorAnalysis', label: '3. Detaylı Renk Analizi' },
+  { id: 'emotions', label: '4. Duygu Analizi' },
+  { id: 'auraLayers', label: '5. 4 Aurik Katman' },
+  { id: 'chakras', label: '6. 7 Çakra Rehberi' },
+  { id: 'letaif', label: '7. Letaif Nurları' },
+  { id: 'recommendations', label: '8. 99 Esma & Frekans Yükle' },
+  { id: 'allInnovations', label: '9. Yaşam Koçu Matrisi' },
+  { id: 'simulation3d', label: '10. 3D Canlı Aura & Letaif (Öncesi/Sonrası)' },
+  { id: 'paranormal', label: '11. Paranormal Enerji Tespiti' },
+];
 
 export const ReportModal: React.FC<ReportModalProps> = ({
   scanResult,
@@ -89,6 +114,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
   comparisonPairAvailable = false,
 }) => {
   const [activeTab, setActiveTab] = useState<ReportTab>('ilimKapi');
+  const [isReportMenuOpen, setIsReportMenuOpen] = useState(false);
   const [isExportingPDF, setIsExportingPDF] = useState<boolean>(false);
   const [pdfSuccess, setPdfSuccess] = useState<boolean>(false);
   const [isMenuPickerOpen, setIsMenuPickerOpen] = useState<boolean>(false);
@@ -101,6 +127,8 @@ export const ReportModal: React.FC<ReportModalProps> = ({
 
   const isHuman = scanResult.targetType === 'human' || !scanResult.targetType;
   const emo = scanResult.emotionalState;
+  const environmentMeasurements = scanResult.environmentMeasurements;
+  const environmentSensorCoverage = getEnvironmentSensorCoverage(environmentMeasurements);
 
   // Synthesize or use provided pre-scan baseline for 3D comparison simulation
   const effectivePreScan = useMemo<ScanResult>(() => {
@@ -313,114 +341,44 @@ export const ReportModal: React.FC<ReportModalProps> = ({
           </div>
         </div>
 
-        {/* Main Navigation Tabs */}
-        <div className="px-6 py-2 bg-slate-950/40 border-b border-slate-800 flex items-center gap-2 overflow-x-auto scrollbar-none">
+        <nav aria-label="Tarama raporu bölümleri" className="relative z-20 px-4 sm:px-6 py-3 bg-slate-950/60 border-b border-slate-800">
           <button
-            onClick={() => setActiveTab('ilimKapi')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 cursor-pointer ${
-              activeTab === 'ilimKapi'
-                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm shadow-amber-500/20'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
+            type="button"
+            aria-expanded={isReportMenuOpen}
+            aria-controls="scan-report-section-menu"
+            onClick={() => setIsReportMenuOpen((open) => !open)}
+            className="w-full flex items-center justify-between gap-3 rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-left transition hover:border-emerald-500/50"
           >
-            <BookOpen className="w-3.5 h-3.5 text-amber-400" />
-            <span>1. İlim Kapı</span>
+            <span className="min-w-0">
+              <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Rapor Bölümleri</span>
+              <span className="block truncate text-sm font-semibold text-slate-100">{REPORT_TABS.find((tab) => tab.id === activeTab)?.label}</span>
+            </span>
+            <ChevronDown className={`h-4 w-4 shrink-0 text-slate-300 transition-transform ${isReportMenuOpen ? 'rotate-180' : ''}`} />
           </button>
-          <button
-            onClick={() => setActiveTab('overview')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
-              activeTab === 'overview'
-                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
+          <div
+            id="scan-report-section-menu"
+            className={`${isReportMenuOpen ? 'grid' : 'hidden'} mt-2 max-h-56 grid-cols-1 gap-1.5 overflow-y-auto pr-1 sm:grid-cols-2 lg:grid-cols-3`}
           >
-            2. Genel Bakış
-          </button>
-          <button
-            onClick={() => setActiveTab('colorAnalysis')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 cursor-pointer ${
-              activeTab === 'colorAnalysis'
-                ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm shadow-cyan-500/20'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <Palette className="w-3.5 h-3.5 text-cyan-400" />
-            <span>3. Detaylı Renk Analizi</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('emotions')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 cursor-pointer ${
-              activeTab === 'emotions'
-                ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <Brain className="w-3.5 h-3.5 text-rose-400" />
-            <span>4. Duygu Analizi</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('auraLayers')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
-              activeTab === 'auraLayers'
-                ? 'bg-teal-500/20 text-teal-300 border border-teal-500/40'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            5. 4 Aurik Katman
-          </button>
-          <button
-            onClick={() => setActiveTab('chakras')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
-              activeTab === 'chakras'
-                ? 'bg-orange-500/20 text-orange-300 border border-orange-500/40'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            6. 7 Çakra Rehberi
-          </button>
-          <button
-            onClick={() => setActiveTab('letaif')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
-              activeTab === 'letaif'
-                ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/40'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            7. Letaif Nurları
-          </button>
-          <button
-            onClick={() => setActiveTab('recommendations')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
-              activeTab === 'recommendations'
-                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            8. 99 Esma & Frekans Yükle
-          </button>
-          <button
-            onClick={() => setActiveTab('allInnovations')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 cursor-pointer ${
-              activeTab === 'allInnovations'
-                ? 'bg-purple-500/20 text-purple-200 border border-purple-500/40 shadow-sm shadow-purple-500/20'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <Sparkles className="w-3.5 h-3.5 text-purple-400" />
-            <span>9. Yaşam Koçu Matrisi</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('simulation3d')}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 cursor-pointer ${
-              activeTab === 'simulation3d'
-                ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white border border-indigo-400 shadow-md shadow-indigo-600/30'
-                : 'text-indigo-300 hover:text-white bg-indigo-950/40 border border-indigo-800/50'
-            }`}
-          >
-            <Rotate3d className="w-3.5 h-3.5 text-cyan-300 animate-pulse" />
-            <span>10. 3D Canlı Aura & Letaif (Öncesi/Sonrası)</span>
-          </button>
-        </div>
+            {REPORT_TABS.map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                aria-pressed={activeTab === tab.id}
+                onClick={() => {
+                  setActiveTab(tab.id);
+                  setIsReportMenuOpen(false);
+                }}
+                className={`w-full rounded-lg border px-3 py-2.5 text-left text-xs font-semibold transition ${
+                  activeTab === tab.id
+                    ? 'border-emerald-500/50 bg-emerald-500/15 text-emerald-200'
+                    : 'border-slate-800 bg-slate-950/70 text-slate-300 hover:border-slate-600 hover:bg-slate-800'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        </nav>
 
         {/* Modal Body */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
@@ -575,6 +533,10 @@ export const ReportModal: React.FC<ReportModalProps> = ({
           {/* TAB 2: OVERVIEW */}
           {activeTab === 'overview' && (
             <div className="space-y-6">
+              <div className="rounded-2xl border border-violet-500/30 bg-violet-950/20 p-4">
+                <h3 className="text-sm font-bold text-violet-200">Tahmini Paranormal Varlıklar Tespiti</h3>
+                <p className="mt-1 text-xs text-slate-300">Paranormal olasılık hesaplanmıyor. Sensör ölçüm kapsamı: %{environmentSensorCoverage.percent} ({environmentSensorCoverage.measuredSensorCount}/{environmentSensorCoverage.totalSensorCount} sensör).</p>
+              </div>
               {/* Top Key Metrics Grid */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <div className="p-4 rounded-2xl bg-slate-950/70 border border-slate-800">
@@ -1402,6 +1364,59 @@ export const ReportModal: React.FC<ReportModalProps> = ({
                 </div>
               </div>
             </div>
+          )}
+
+          {activeTab === 'paranormal' && (
+            <section className="space-y-4 animate-fade-in" aria-labelledby="paranormal-report-heading">
+              <div className="rounded-2xl border border-violet-500/30 bg-violet-950/20 p-5 space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-violet-400/30 bg-violet-500/10 text-violet-200">
+                    <ShieldAlert className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-violet-300">Paranormal olasılık: ölçülemiyor</span>
+                    <h3 id="paranormal-report-heading" className="text-lg font-bold text-slate-100">Paranormal Enerji Tespiti</h3>
+                  </div>
+                </div>
+                <div className="rounded-xl border border-violet-500/30 bg-slate-900/80 p-4">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-violet-300">Tahmini Paranormal Varlıklar Tespiti</h4>
+                  <div className="mt-1 text-2xl font-bold text-slate-300">Paranormal olasılık hesaplanmıyor</div>
+                  <p className="mt-1 text-xs text-slate-400">Sensör ölçüm kapsamı: %{environmentSensorCoverage.percent} ({environmentSensorCoverage.measuredSensorCount}/{environmentSensorCoverage.totalSensorCount} sensör). Bu oran varlık olasılığı değildir.</p>
+                </div>
+                <div className="space-y-3 rounded-xl border border-slate-700 bg-slate-950/70 p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-200">Tarama sırasında alınan çevresel sensör okumaları</h4>
+                    <span className="text-[10px] text-slate-500">{environmentMeasurements ? `${environmentMeasurements.durationSeconds} sn` : 'Bu eski kayıtta ölçüm yok'}</span>
+                  </div>
+                  {environmentMeasurements ? (
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                      <div className="rounded-lg bg-slate-900 p-3">
+                        <div className="text-[10px] text-slate-400">Mikrofon · göreli RMS seviye</div>
+                        <div className="mt-1 font-semibold text-slate-100">{environmentMeasurements.microphone.relativeLevelPercent !== undefined ? `%${environmentMeasurements.microphone.relativeLevelPercent}` : SENSOR_STATUS_LABELS[environmentMeasurements.microphone.status]}</div>
+                        <div className="mt-1 text-[10px] text-slate-500">Tepe {environmentMeasurements.microphone.dominantFrequencyHz ?? '—'} Hz · spektral merkez {environmentMeasurements.microphone.spectralCentroidHz ?? '—'} Hz · {SENSOR_STATUS_LABELS[environmentMeasurements.microphone.status]}</div>
+                      </div>
+                      <div className="rounded-lg bg-slate-900 p-3">
+                        <div className="text-[10px] text-slate-400">Ortam ışığı</div>
+                        <div className="mt-1 font-semibold text-slate-100">{environmentMeasurements.ambientLight.value !== undefined ? `${environmentMeasurements.ambientLight.value} lx` : SENSOR_STATUS_LABELS[environmentMeasurements.ambientLight.status]}</div>
+                        {environmentMeasurements.ambientLight.value !== undefined && <div className="mt-1 text-[10px] text-slate-500">{SENSOR_STATUS_LABELS[environmentMeasurements.ambientLight.status]}</div>}
+                      </div>
+                      <div className="rounded-lg bg-slate-900 p-3 sm:col-span-2">
+                        <div className="text-[10px] text-slate-400">Manyetik alan</div>
+                        <div className="mt-1 font-semibold text-slate-100">
+                          {environmentMeasurements.magneticField.magnitudeMicrotesla !== undefined
+                            ? `${environmentMeasurements.magneticField.magnitudeMicrotesla} µT · X ${environmentMeasurements.magneticField.xMicrotesla?.toFixed(2)} / Y ${environmentMeasurements.magneticField.yMicrotesla?.toFixed(2)} / Z ${environmentMeasurements.magneticField.zMicrotesla?.toFixed(2)} µT`
+                            : SENSOR_STATUS_LABELS[environmentMeasurements.magneticField.status]}
+                        </div>
+                        {environmentMeasurements.magneticField.magnitudeMicrotesla !== undefined && <div className="mt-1 text-[10px] text-slate-500">{SENSOR_STATUS_LABELS[environmentMeasurements.magneticField.status]}</div>}
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-slate-400">Bu tarama kaydedildiğinde çevresel sensör ölçümü alınmamış. Yeni tarama başlatıldığında izin verilen ve cihazın desteklediği veriler kaydedilir.</p>
+                  )}
+                  <p className="text-[10px] leading-relaxed text-slate-500">Kamera analiz yüzdesi kalibre edilmiş fiziksel enerji ölçümü değildir. Mikrofon yüzdesi dB SPL değil, göreli dijital sinyal seviyesidir. Ortam ışığı ve manyetik alan okumaları yalnızca cihaz destekliyorsa alınır. Bu çevresel sinyaller paranormal tespit, sağlık ölçümü veya tanı değildir; ses kaydı saklanmaz.</p>
+                </div>
+              </div>
+            </section>
           )}
 
         </div>

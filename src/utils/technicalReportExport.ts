@@ -119,7 +119,7 @@ export function downloadTechnicalReportWord(): void {
     </div>
 
     <div class="highlight-box">
-      <strong>TEKNİK ÖZET:</strong> AuraBio Frekans; kamera ve mikrofon girdilerinden uygulama içi görseller üreten araçlar, Web Audio tabanlı ses içerikleri, isteğe bağlı Bluetooth bağlantısı, MindSpace, mandala ve harita ekranları, <strong>10 sekmeli uygulama raporu</strong>, <strong>${TOTAL_HEALING_COUNT} kayıtlı ses/frekans içeriği</strong> ve <strong>${PACKAGE_COUNT} frekans paketi</strong> içerir. Bu özellikler tıbbi ölçüm, tanı veya tedavi kanıtı değildir. Ödeme sağlayıcısı sandbox test ortamıdır; banka hareketleri CSV ile kullanıcı tarafından içe aktarılır. Sağlık etkinliği, canlı banka/POS bağlantısı, lisans ve mevzuat uygunluğu bu raporla doğrulanmış sayılmaz.
+      <strong>TEKNİK ÖZET:</strong> AuraBio Frekans; kamera ve mikrofon girdilerinden uygulama içi görseller üreten araçlar, Web Audio tabanlı ses içerikleri, isteğe bağlı Bluetooth bağlantısı, MindSpace, mandala ve harita ekranları, <strong>11 bölümlü uygulama raporu</strong>, <strong>${TOTAL_HEALING_COUNT} kayıtlı ses/frekans içeriği</strong> ve <strong>${PACKAGE_COUNT} frekans paketi</strong> içerir. Bu özellikler tıbbi ölçüm, tanı veya tedavi kanıtı değildir. Ödeme sağlayıcısı sandbox test ortamıdır; banka hareketleri CSV ile kullanıcı tarafından içe aktarılır. Sağlık etkinliği, canlı banka/POS bağlantısı, lisans ve mevzuat uygunluğu bu raporla doğrulanmış sayılmaz.
     </div>
 
     <h2>1. UYGULAMA ÖZELLİKLERİ VE TEKNİK SINIRLAR</h2>
@@ -131,7 +131,7 @@ export function downloadTechnicalReportWord(): void {
       <li><strong>Bluetooth:</strong> Uyumlu tarayıcı ve cihazla nabız verisi görüntülenebilir; cihaz uyumu ve ölçüm doğruluğu ayrıca teyit edilmelidir.</li>
       <li><strong>Mandala, harita ve rehberli içerikler:</strong> Uygulama içi görsel ve etkileşimli deneyimler sunar; sağlık etkisi veya gerçek zamanlı kapsam garanti edilmez.</li>
       <li><strong>Frekans kütüphanesi:</strong> ${TOTAL_HEALING_COUNT} kayıtlı içerik, dinleme ve seçme arayüzlerinde sunulur; tedavi etkinliği doğrulanmış değildir.</li>
-      <li><strong>Tarama raporu:</strong> 10 sekmeden oluşur; ön tarama bulunmadığında 3D karşılaştırma örnek veri gösterebilir. Uygulama raporu PDF olarak indirilebilir.</li>
+      <li><strong>Tarama raporu:</strong> 11 bölümden oluşur ve bölümler açılır listeden seçilir. İzin verilirse mikrofon ses seviyesi/spektrumu; destek varsa ortam ışığı ve manyetik alan okumaları kaydedilir. Ham ses tutulmaz; bu veriler paranormal ölçüm değildir, paranormal olasılık hesaplanmaz. Mikrofon göreli seviyesi kalibre edilmiş dB SPL değildir; kamera yüzdesi fiziksel enerji ölçümü değildir.</li>
       <li><strong>Wellness ve bayi araçları:</strong> Paket, cüzdan, komisyon ve çekim akışları ekranda sunulur. Hak ediş, bakiye ve banka ödemesi ayrı durumlar olup koşullara tabidir.</li>
       <li><strong>Akıllı Muhasebe:</strong> Finans kayıtlarını ve kullanıcı tarafından CSV ile içe aktarılan banka ekstresi verilerini inceleme ekranlarında gösterir; canlı banka bağlantısı değildir.</li>
     </ul>
@@ -356,7 +356,7 @@ export function downloadTechnicalReportPDF(): void {
   doc.setFontSize(8.2);
   doc.setFont('helvetica', 'normal');
   const summaryText = clean(
-    `AuraBio Frekans; kamera ve mikrofon girdilerinden uygulama ici gorseller, Web Audio tabanli ses icerikleri, istege bagli Bluetooth, MindSpace, mandala ve harita ekranlari, 10 sekmeli uygulama raporu, ${TOTAL_HEALING_COUNT} ses/frekans icerigi ve ${PACKAGE_COUNT} frekans paketi sunar. Gorseller tibbi olcum, tani veya tedavi kaniti degildir. Kart odemesi sandbox test ortamindadir; banka hareketleri CSV ile kullanici tarafindan aktarilir. Canli banka/POS, saglik etkinligi, lisans ve mevzuat uygunlugu bu raporla dogrulanmis sayilmaz.`
+    `AuraBio Frekans; kamera ve mikrofon girdilerinden uygulama ici gorseller, Web Audio tabanli ses icerikleri, istege bagli Bluetooth, MindSpace, mandala ve harita ekranlari, 11 bolumlu uygulama raporu, paranormal olcum yapilmadigi bilgisi, ${TOTAL_HEALING_COUNT} ses/frekans icerigi ve ${PACKAGE_COUNT} frekans paketi sunar. Gorseller tibbi olcum, tani veya tedavi kaniti degildir. Kart odemesi sandbox test ortamindadir; banka hareketleri CSV ile kullanici tarafindan aktarilir. Canli banka/POS, saglik etkinligi, lisans ve mevzuat uygunlugu bu raporla dogrulanmis sayilmaz.`
   );
   const summaryLines = doc.splitTextToSize(summaryText, pageWidth - 2 * margin - 8);
   const summaryHeight = Math.max(30, summaryLines.length * 4 + 10);

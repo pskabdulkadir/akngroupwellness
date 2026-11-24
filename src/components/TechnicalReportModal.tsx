@@ -157,7 +157,7 @@ export const TechnicalReportModal: React.FC<TechnicalReportModalProps> = ({
             </div>
             
             <p className="text-slate-200 leading-relaxed">
-              <strong>AuraBio Frekans</strong>, kamera ve mikrofon tabanlı görselleştirmeler, Web Audio ses üretimi, MindSpace araçları, <strong>10 sekmeli rapor</strong> ve {TOTAL_HEALING_COUNT} kayıtlı frekans içeriği sunan bir yazılım platformudur. 3D karşılaştırmada ön tarama yoksa örnek veriler üretilir. Bu göstergeler tıbbi ölçüm, tanı veya tedavi kanıtı değildir; klinik etki ve sertifikasyon bu raporda doğrulanmamıştır. Sağlık kararları için yetkili sağlık uzmanına başvurulmalıdır.
+              <strong>AuraBio Frekans</strong>, kamera ve mikrofon tabanlı görselleştirmeler, Web Audio ses üretimi, MindSpace araçları, <strong>11 bölümlü rapor</strong> ve {TOTAL_HEALING_COUNT} kayıtlı frekans içeriği sunan bir yazılım platformudur. 3D karşılaştırmada ön tarama yoksa örnek veriler üretilir. Bu göstergeler tıbbi ölçüm, tanı veya tedavi kanıtı değildir; klinik etki ve sertifikasyon bu raporda doğrulanmamıştır. Sağlık kararları için yetkili sağlık uzmanına başvurulmalıdır.
             </p>
           </div>
 
@@ -284,10 +284,10 @@ export const TechnicalReportModal: React.FC<TechnicalReportModalProps> = ({
               <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800 space-y-1.5">
                 <div className="font-bold text-indigo-300 text-xs flex items-center gap-1.5">
                   <Repeat className="w-4 h-4 text-indigo-400" />
-                  <span>12. 10 Sekmeli Rapor &amp; 3D Karşılaştırma</span>
+                  <span>12. 11 Bölümlü Rapor &amp; 3D Karşılaştırma</span>
                 </div>
                 <p className="text-xs text-slate-400">
-                  İlim Kapı, Genel Bakış, Detaylı Renk Analizi, Duygu Analizi, Aurik Katmanlar, Çakra Rehberi, Letaif, Esma ve Frekans, Yaşam Koçu Matrisi ve 3D karşılaştırma. Ön tarama yoksa 3D örnek verilerle gösterilir; tarama raporunda PDF dışa aktarımı bulunur.
+                  İlim Kapı, Genel Bakış, Detaylı Renk Analizi, Duygu Analizi, Aurik Katmanlar, Çakra Rehberi, Letaif, Esma ve Frekans, Yaşam Koçu Matrisi, 3D karşılaştırma ve sensör ölçümleri/paranormal sınırını açıklayan bölüm. İzinle mikrofon sinyali, destek varsa lux ve manyetik alan değerleri gösterilir; paranormal olasılık hesaplanmaz. Bölümler açılır listeden seçilir; ön tarama yoksa 3D örnek verilerle gösterilebilir.
                 </p>
               </div>
 

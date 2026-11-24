@@ -9,10 +9,13 @@ export async function wasRecordedAfterUnknownCommit(status: number, data: any, b
   return (await verifyRecordedRequest(data.request_id, bearerToken)) === 'RECORDED';
 }
 
-export async function verifyRecordedRequest(requestId: string, bearerToken: string): Promise<PersistenceVerdict> {
+export async function verifyRecordedRequest(requestId: string, bearerToken: string | null): Promise<PersistenceVerdict> {
   try {
+    const headers: Record<string, string> = {};
+    if (bearerToken) headers.Authorization = `Bearer ${bearerToken}`;
     const res = await fetch(`/api/v1/idempotency/${encodeURIComponent(requestId)}/status`, {
-      headers: { Authorization: `Bearer ${bearerToken}` },
+      credentials: 'same-origin',
+      headers,
     });
     if (!res.ok) return 'UNKNOWN';
     const data = await res.json().catch(() => null);

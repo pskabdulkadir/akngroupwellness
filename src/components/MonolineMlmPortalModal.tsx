@@ -29,6 +29,7 @@ import {
   OrderCommissionPayload,
   PackageId,
   SystemStateResponse,
+  WithdrawalChannel,
 } from '../types/monoline';
 import { formatUsd } from '../utils/currency';
 
@@ -451,7 +452,7 @@ export const MonolineMlmPortalModal: React.FC<MonolineMlmPortalModalProps> = ({
     bank_name?: string;
     iban?: string;
     region?: 'DOMESTIC' | 'INTERNATIONAL';
-    channel?: 'TR_IBAN' | 'SWIFT' | 'SEPA' | 'WISE';
+    channel?: WithdrawalChannel;
     swift_code?: string;
     wants_tax_refund?: boolean;
     invoice_number?: string;

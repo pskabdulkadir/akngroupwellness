@@ -4857,6 +4857,34 @@ function verifyMemberToken(token: string): string | null {
   }
 }
 
+const MEMBER_SESSION_COOKIE_NAME = 'aurabio_member_session';
+const MEMBER_SESSION_COOKIE_OPTIONS = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: 'strict' as const,
+  path: '/',
+  maxAge: MEMBER_TOKEN_TTL_MS,
+};
+
+function setMemberSessionCookie(res: express.Response, token: string): void {
+  res.cookie(MEMBER_SESSION_COOKIE_NAME, token, MEMBER_SESSION_COOKIE_OPTIONS);
+}
+
+function clearMemberSessionCookie(res: express.Response): void {
+  res.clearCookie(MEMBER_SESSION_COOKIE_NAME, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+    path: '/',
+  });
+}
+
+function getMemberSessionCookie(req: express.Request): string | null {
+  const prefix = `${MEMBER_SESSION_COOKIE_NAME}=`;
+  const cookie = req.headers.cookie?.split(';').map((part) => part.trim()).find((part) => part.startsWith(prefix));
+  return cookie ? cookie.slice(prefix.length) : null;
+}
+
 function hashMemberPassword(password: string): { salt: string; hash: string } {
   const salt = randomBytes(16).toString('hex');
   return { salt, hash: scryptSync(password, salt, 64).toString('hex') };
@@ -4973,18 +5001,16 @@ function requireAdminOrOwnMember(
   next: express.NextFunction
 ) {
   const authHeader = req.headers.authorization;
-  if (!authHeader?.startsWith('Bearer ')) {
-    res.status(401).json({ status: 'error', code: 'AUTH_REQUIRED', message: 'Yetkilendirme gereklidir.' });
-    return;
-  }
-  const token = authHeader.slice('Bearer '.length).trim();
-  const adminUid = verifyAdminToken(token);
+  const token = authHeader?.startsWith('Bearer ')
+    ? authHeader.slice('Bearer '.length).trim()
+    : '';
+  const adminUid = token ? verifyAdminToken(token) : null;
   if (adminUid) {
     res.locals.adminUid = adminUid;
     next();
     return;
   }
-  const memberUid = verifyMemberToken(token);
+  const memberUid = (token ? verifyMemberToken(token) : null) || verifyMemberToken(getMemberSessionCookie(req) || '');
   if (!memberUid) {
     res.status(403).json({ status: 'error', code: 'FORBIDDEN', message: 'Oturum geçersiz veya süresi dolmuş.' });
     return;
@@ -4993,6 +5019,7 @@ function requireAdminOrOwnMember(
     res.status(403).json({ status: 'error', code: 'MEMBER_SCOPE_MISMATCH', message: 'Yalnızca kendi hesabınız için işlem yapabilirsiniz.' });
     return;
   }
+  setMemberSessionCookie(res, issueMemberToken(memberUid));
   next();
 }
 
@@ -5516,7 +5543,9 @@ async function startServer(options: { listen?: boolean } = {}) {
     const authHeader = req.headers.authorization;
     const token = authHeader?.startsWith('Bearer ') ? authHeader.slice('Bearer '.length).trim() : '';
     const adminUid = token ? verifyAdminToken(token) : null;
-    const memberUid = !adminUid && token ? verifyMemberToken(token) : null;
+    const memberUid = !adminUid
+      ? (token ? verifyMemberToken(token) : null) || verifyMemberToken(getMemberSessionCookie(req) || '')
+      : null;
     if (!adminUid && !memberUid) {
       res.status(403).json({ status: 'error', code: 'FORBIDDEN', message: 'Oturum geçersiz veya süresi dolmuş.' });
       return;
@@ -5525,6 +5554,7 @@ async function startServer(options: { listen?: boolean } = {}) {
       res.status(400).json({ status: 'error', code: 'REQUEST_ID_REQUIRED', message: 'request_id zorunludur.' });
       return;
     }
+    if (memberUid) setMemberSessionCookie(res, issueMemberToken(memberUid));
     try {
       const result = await pgQuery(
         'SELECT request_id, scope, user_id FROM idempotency_keys WHERE request_id = ANY($1::text[])',
@@ -5681,13 +5711,20 @@ async function startServer(options: { listen?: boolean } = {}) {
       return;
     }
 
+    const token = issueMemberToken(member.user_id);
+    setMemberSessionCookie(res, token);
     res.json({
       status: 'success',
-      token: issueMemberToken(member.user_id),
+      token,
       user_id: member.user_id,
       member,
       expires_in_ms: MEMBER_TOKEN_TTL_MS,
     });
+  });
+
+  app.post('/api/v1/member/session/logout', (_req, res) => {
+    clearMemberSessionCookie(res);
+    res.json({ status: 'success' });
   });
 
   // Public quick dealer lookup by email, code, user_id, or phone
@@ -5758,9 +5795,11 @@ async function startServer(options: { listen?: boolean } = {}) {
       member.two_factor.backup_codes = member.two_factor.backup_codes.filter((c) => c !== cleanCode);
     }
 
+    const token = issueMemberToken(member.user_id);
+    setMemberSessionCookie(res, token);
     res.json({
       status: 'success',
-      token: issueMemberToken(member.user_id),
+      token,
       user_id: member.user_id,
       expires_in_ms: MEMBER_TOKEN_TTL_MS,
     });
@@ -6151,8 +6190,8 @@ async function startServer(options: { listen?: boolean } = {}) {
 
   app.put('/api/v1/admin/dealers/:id', requireAdminJwt, async (req, res) => {
     const allowedFields = new Set([
-      'full_name', 'phone', 'city', 'role', 'is_active', 'is_locked', 'activity_expires_at',
-      'sponsor_id', 'assigned_leg', 'monoline_position',
+      'full_name', 'email', 'new_password', 'phone', 'city', 'role', 'is_active', 'is_locked', 'activity_expires_at',
+      'sponsor_id', 'assigned_leg', 'monoline_position', 'company_name', 'tax_number', 'tax_office', 'business_field', 'address',
     ]);
     const input = req.body && typeof req.body === 'object' && !Array.isArray(req.body) ? req.body : {};
     const fields = Object.keys(input);
@@ -6162,20 +6201,46 @@ async function startServer(options: { listen?: boolean } = {}) {
     }
 
     const updates: Record<string, string | boolean | null> = {};
-    for (const field of ['full_name', 'phone', 'city'] as const) {
+    for (const field of ['full_name', 'email', 'phone', 'city'] as const) {
       if (input[field] === undefined) continue;
       if (typeof input[field] !== 'string') {
         res.status(400).json({ status: 'error', message: `${field} metin olmalıdır.` });
         return;
       }
       const value = input[field].trim();
-      const maxLength = field === 'full_name' ? 150 : field === 'phone' ? 50 : 80;
-      if (value.length > maxLength || (field === 'full_name' && value.length < 2)) {
+      const maxLength = field === 'full_name' ? 150 : field === 'email' ? 254 : field === 'phone' ? 50 : 80;
+      if (value.length > maxLength || (field === 'full_name' && value.length < 2) || (field === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value))) {
         res.status(400).json({ status: 'error', message: `${field} değeri geçersiz.` });
         return;
       }
-      updates[field] = value || null;
+      updates[field] = field === 'email' ? value.toLowerCase() : value || null;
     }
+    const profileFields = {
+      company_name: 'companyName',
+      tax_number: 'taxNumber',
+      tax_office: 'taxOffice',
+      business_field: 'businessField',
+      address: 'address',
+    } as const;
+    const dealerDetailsUpdates: Record<string, string> = {};
+    for (const [field, profileField] of Object.entries(profileFields)) {
+      if (input[field] === undefined) continue;
+      if (typeof input[field] !== 'string' || input[field].length > (field === 'address' ? 500 : 160)) {
+        res.status(400).json({ status: 'error', message: `${field} değeri geçersiz.` });
+        return;
+      }
+      dealerDetailsUpdates[profileField] = input[field].trim();
+    }
+    if (input.new_password !== undefined && typeof input.new_password !== 'string') {
+      res.status(400).json({ status: 'error', message: 'Yeni parola metin olmalıdır.' });
+      return;
+    }
+    const newPassword = typeof input.new_password === 'string' ? input.new_password.trim() : '';
+    if (newPassword && (newPassword.length < 8 || newPassword.length > 128)) {
+      res.status(400).json({ status: 'error', message: 'Yeni parola 8 ile 128 karakter arasında olmalıdır.' });
+      return;
+    }
+    const newCredentials = newPassword ? hashMemberPassword(newPassword) : null;
     if (input.role !== undefined) {
       if (!['customer', 'member', 'dealer'].includes(input.role)) {
         res.status(400).json({ status: 'error', message: 'Rol customer, member veya dealer olmalıdır.' });
@@ -6226,6 +6291,10 @@ async function startServer(options: { listen?: boolean } = {}) {
         if (!target) throw Object.assign(new Error('Bayi veya üye bulunamadı.'), { statusCode: 404 });
         const nextActive = typeof updates.is_active === 'boolean' ? updates.is_active : target.is_active;
         const nextExpiry = updates.activity_expires_at || target.activity_expires_at;
+        if (updates.email) {
+          const duplicateEmail = await client.query('SELECT user_id FROM users WHERE LOWER(email) = LOWER($1) AND user_id <> $2 LIMIT 1', [updates.email, req.params.id]);
+          if (duplicateEmail.rowCount) throw Object.assign(new Error('Bu e-posta başka bir hesapta kullanılıyor.'), { statusCode: 409 });
+        }
         if (nextActive && (!nextExpiry || new Date(nextExpiry).getTime() <= Date.now())) {
           throw Object.assign(new Error('Aktif hesap için bitiş tarihi gelecekte olmalıdır.'), { statusCode: 400 });
         }
@@ -6246,7 +6315,7 @@ async function startServer(options: { listen?: boolean } = {}) {
         }
 
         const sqlColumns: Record<string, string> = {
-          full_name: 'full_name', phone: 'phone', city: 'city',
+          full_name: 'full_name', email: 'email', phone: 'phone', city: 'city',
           is_active: 'is_active', is_locked: 'is_locked', activity_expires_at: 'activity_expires_at',
           sponsor_id: 'sponsor_id', assigned_leg: 'assigned_leg',
         };
@@ -6262,6 +6331,39 @@ async function startServer(options: { listen?: boolean } = {}) {
           await client.query(
             `UPDATE users SET member_data = jsonb_set(COALESCE(member_data, '{}'::jsonb), '{role}', to_jsonb($1::text), true), updated_at = CURRENT_TIMESTAMP WHERE user_id = $2`,
             [updates.role, req.params.id]
+          );
+        }
+        const memberProfilePatch = {
+          ...(updates.full_name !== undefined ? { fullName: updates.full_name } : {}),
+          ...(updates.email !== undefined ? { email: updates.email } : {}),
+          ...(updates.phone !== undefined ? { phone: updates.phone } : {}),
+          ...(updates.city !== undefined ? { city: updates.city } : {}),
+        };
+        if (updates.phone !== undefined) {
+          dealerDetailsUpdates.phone = String(updates.phone || '');
+          dealerDetailsUpdates.whatsapp = String(updates.phone || '');
+        }
+        if (Object.keys(memberProfilePatch).length) {
+          await client.query(
+            `UPDATE users SET member_data = COALESCE(member_data, '{}'::jsonb) || $1::jsonb WHERE user_id = $2`,
+            [JSON.stringify(memberProfilePatch), req.params.id]
+          );
+        }
+        if (Object.keys(dealerDetailsUpdates).length) {
+          await client.query(
+            `UPDATE users SET member_data = jsonb_set(
+               COALESCE(member_data, '{}'::jsonb),
+               '{dealerDetails}',
+               COALESCE(member_data->'dealerDetails', '{}'::jsonb) || $1::jsonb,
+               true
+             ) WHERE user_id = $2`,
+            [JSON.stringify(dealerDetailsUpdates), req.params.id]
+          );
+        }
+        if (newCredentials) {
+          await client.query(
+            'UPDATE users SET password_salt = $1, password_hash = $2 WHERE user_id = $3',
+            [newCredentials.salt, newCredentials.hash, req.params.id]
           );
         }
 
@@ -6282,7 +6384,9 @@ async function startServer(options: { listen?: boolean } = {}) {
         }
       });
 
+      if (newCredentials) memberCredentials.set(req.params.id, newCredentials);
       members = await queryMembersFromPostgres();
+      await persistApplicationState();
       const result = await pgQuery(
         `SELECT u.user_id, u.full_name, u.email, u.phone, u.city, u.referral_code, u.sponsor_id,
                 u.monoline_position, u.career_level, u.max_career_level, u.active_career_level,
@@ -6312,7 +6416,7 @@ async function startServer(options: { listen?: boolean } = {}) {
          LEFT JOIN wallets w ON w.user_id = u.user_id WHERE u.user_id = $1`,
         [req.params.id]
       );
-      res.json({ status: 'success', dealer: result?.rows[0] });
+      res.json({ status: 'success', dealer: result?.rows[0], state: buildStateResponse() });
     } catch (err: any) {
       const statusCode = err.statusCode || (err.code === '23505' ? 409 : 500);
       res.status(statusCode).json({ status: 'error', message: err?.message || 'Bayi bilgileri kaydedilemedi.' });

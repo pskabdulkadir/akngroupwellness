@@ -47,6 +47,8 @@ import { analyzeVideoFrame, generateDeepBioScan, DetectionStatus } from '../util
 import { soundEngine } from '../utils/soundEngine';
 import { voiceAssistant, VoiceCommandEvent } from '../utils/voiceAssistant';
 import { TreatmentSelection } from './FrequencyLoadingModal';
+import { startEnvironmentMeasurement } from '../utils/environmentMeasurements';
+import type { EnvironmentMeasurementSession } from '../utils/environmentMeasurements';
 
 interface CameraViewProps {
   onScanStart?: () => Promise<string | null>;
@@ -93,7 +95,7 @@ export const CameraView: React.FC<CameraViewProps> = ({
   const [isScanning, setIsScanning] = useState<boolean>(false);
   const [scanProgress, setScanProgress] = useState<number>(0);
   const [scanSecondsLeft, setScanSecondsLeft] = useState<number>(15);
-  const [scanPhaseText, setScanPhaseText] = useState<string>('Optik Foton & Biyo-Alan Sensörleri Okunuyor...');
+  const [scanPhaseText, setScanPhaseText] = useState<string>('Kamera ve desteklenen ortam sensörleri okunuyor...');
   const [humanWarningMessage, setHumanWarningMessage] = useState<string | null>(null);
   const [isVoiceSpeaking, setIsVoiceSpeaking] = useState<boolean>(false);
   const [isVoiceMuted, setIsVoiceMuted] = useState<boolean>(false);
@@ -109,6 +111,7 @@ export const CameraView: React.FC<CameraViewProps> = ({
   const isTreatmentRunningRef = useRef<boolean>(false);
   const isScanningRef = useRef<boolean>(false);
   const scanIntervalRef = useRef<any>(null);
+  const environmentMeasurementRef = useRef<EnvironmentMeasurementSession | null>(null);
   const onScanStartRef = useRef(onScanStart);
   const onScanCancelRef = useRef(onScanCancel);
   onScanStartRef.current = onScanStart;
@@ -121,6 +124,8 @@ export const CameraView: React.FC<CameraViewProps> = ({
       scanIntervalRef.current = null;
     }
     isScanningRef.current = false;
+    environmentMeasurementRef.current?.cancel();
+    environmentMeasurementRef.current = null;
     setIsScanning(false);
     setScanProgress(0);
     onScanCancelRef.current?.();
@@ -134,6 +139,11 @@ export const CameraView: React.FC<CameraViewProps> = ({
   useEffect(() => {
     isScanningRef.current = isScanning;
   }, [isScanning]);
+
+  useEffect(() => () => {
+    if (scanIntervalRef.current) clearInterval(scanIntervalRef.current);
+    environmentMeasurementRef.current?.cancel();
+  }, []);
 
   const [detectionStatus, setDetectionStatus] = useState<DetectionStatus>({
     isTargetDetected: false,
@@ -505,15 +515,18 @@ export const CameraView: React.FC<CameraViewProps> = ({
 
     const startError = await onScanStartRef.current?.();
     if (startError) {
+      environmentMeasurementRef.current?.cancel();
+      environmentMeasurementRef.current = null;
       setIsScanning(false);
       setCameraError(startError);
       return;
     }
 
+    environmentMeasurementRef.current = startEnvironmentMeasurement();
     const video = videoRef.current;
     setScanProgress(0);
     setScanSecondsLeft(15);
-    setScanPhaseText('1/5: İnsan Biyo-Aura Foton & Elektromanyetik Alanı Ölçülüyor...');
+    setScanPhaseText('1/5: Kamera ve desteklenen ortam sensörleri okunuyor...');
 
     voiceAssistant.speakScanStart();
 
@@ -533,15 +546,15 @@ export const CameraView: React.FC<CameraViewProps> = ({
       setScanSecondsLeft(curSecondsLeft);
 
       if (elapsedMs < 3000) {
-        setScanPhaseText('1/5: İnsan Biyo-Aura Foton & Elektromanyetik Alanı Ölçülüyor...');
+        setScanPhaseText('1/5: Kamera ve desteklenen ortam sensörleri okunuyor...');
       } else if (elapsedMs < 6000) {
-        setScanPhaseText('2/5: Spektral Letaif & Çakra Enerji Dağılımı Analiz Ediliyor...');
+        setScanPhaseText('2/5: Görüntü renk ve ışık örnekleri inceleniyor...');
       } else if (elapsedMs < 9000) {
-        setScanPhaseText('3/5: 3 Aurik Katman & Kuantum Biyo-Rezonans Haritası Çıkarılıyor...');
+        setScanPhaseText('3/5: Ortam sensörü verileri toplanıyor...');
       } else if (elapsedMs < 12000) {
-        setScanPhaseText('4/5: Meridyen & Yaşam Enerjisi Seviyeleri Hesaplanıyor...');
+        setScanPhaseText('4/5: Mikrofon ses spektrumu özetleniyor...');
       } else {
-        setScanPhaseText('5/5: Biyo-Rezonans ve Frekans Raporu Derleniyor...');
+        setScanPhaseText('5/5: Tarama raporu hazırlanıyor...');
       }
 
       if (elapsedMs >= 4500 && !spokenMilestone30) {
@@ -584,8 +597,11 @@ export const CameraView: React.FC<CameraViewProps> = ({
           console.warn('Snapshot capture warning:', snapErr);
         }
 
+        const environmentMeasurements = environmentMeasurementRef.current?.finish();
+        environmentMeasurementRef.current = null;
         const scanResult = generateDeepBioScan(video, preScanData, snapshotDataUrl, 'human');
         scanResult.snapshotUrl = snapshotDataUrl;
+        if (environmentMeasurements) scanResult.environmentMeasurements = environmentMeasurements;
 
         voiceAssistant.speakScanComplete(scanResult);
         onScanComplete(scanResult);
@@ -1134,10 +1150,11 @@ export const CameraView: React.FC<CameraViewProps> = ({
         </button>
 
         {/* Primary Scan Button strictly for Human Bio-Aura */}
+        <div className="flex flex-1 max-w-md flex-col items-center gap-1.5">
         <button
           onClick={handleStartScan}
           disabled={isScanning || isCameraInitializing}
-          className={`flex-1 max-w-md py-3.5 px-6 rounded-2xl font-black text-sm sm:text-base flex items-center justify-center gap-2 shadow-xl transition-all ${
+          className={`w-full py-3.5 px-6 rounded-2xl font-black text-sm sm:text-base flex items-center justify-center gap-2 shadow-xl transition-all ${
             isCameraInitializing || isScanning
               ? 'bg-slate-900/90 text-slate-400 border border-slate-800 cursor-not-allowed opacity-80 shadow-lg'
               : detectionStatus.isHumanDetected
@@ -1167,6 +1184,8 @@ export const CameraView: React.FC<CameraViewProps> = ({
             </>
           )}
         </button>
+        <p className="text-center text-[9px] leading-tight text-slate-400">Mikrofon ve desteklenen sensörlerden özet ölçüm alınır; ses kaydı saklanmaz.</p>
+        </div>
 
         {/* Sun Indicator Toggle Button */}
         <button

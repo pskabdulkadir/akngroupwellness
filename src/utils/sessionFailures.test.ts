@@ -10,6 +10,25 @@ class TestStorage {
   removeItem(key: string) { this.values.delete(key); }
 }
 
+test('tarama kredi isteği taşıyıcı token yokken aynı-kaynaklı oturum çerezini kullanır', async () => {
+  const originalFetch = globalThis.fetch;
+  const originalStorage = globalThis.sessionStorage;
+  let requestInit: RequestInit | undefined;
+  Object.assign(globalThis, { sessionStorage: new TestStorage() });
+  try {
+    globalThis.fetch = async (_input, init) => {
+      requestInit = init;
+      return new Response(JSON.stringify({ status: 'error', code: 'AUTH_REQUIRED' }), { status: 401 });
+    };
+    await deductScanCreditFromDealer('dealer-1', { requestId: 'scan-mobile-session' });
+    assert.equal(requestInit?.credentials, 'same-origin');
+    assert.equal(new Headers(requestInit?.headers).has('Authorization'), false);
+  } finally {
+    globalThis.fetch = originalFetch;
+    Object.assign(globalThis, { sessionStorage: originalStorage });
+  }
+});
+
 test('muhasebe dışı hesap ve eksik giriş servisi ayırt edilir', async () => {
   const originalFetch = globalThis.fetch;
   const originalStorage = globalThis.sessionStorage;

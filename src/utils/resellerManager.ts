@@ -581,14 +581,13 @@ async function postCreditCommand(
   body: Record<string, unknown>,
   bearerToken: string | null
 ): Promise<{ status: number; data: any } | null> {
-  if (!bearerToken) return null;
   try {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (bearerToken) headers.Authorization = `Bearer ${bearerToken}`;
     const res = await fetch(path, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${bearerToken}`,
-      },
+      credentials: 'same-origin',
+      headers,
       body: JSON.stringify(body),
     });
     const data = await res.json().catch(() => ({}));
@@ -691,7 +690,6 @@ export async function refundScanCreditToDealer(
     import('./adminSession'),
   ]);
   const token = getAdminToken() || getMemberWalletToken();
-  if (!token) return authFailure(requestId);
   const response = await postCreditCommand(
     `/api/v1/members/${encodeURIComponent(dealerId)}/refund-scan-credit`,
     { requestId },
@@ -729,7 +727,6 @@ async function performAtomicScanDeduct(
     import('./adminSession'),
   ]);
   const token = getAdminToken() || getMemberWalletToken();
-  if (!token) return authFailure(requestId);
   const response = await postCreditCommand(
     `/api/v1/members/${encodeURIComponent(dealerId)}/deduct-scan-credit`,
     { amount: scanCost, requestId },

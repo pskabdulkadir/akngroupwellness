@@ -550,7 +550,7 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
                   <span>Kamera görselleştirmeleri, ses araçları ve frekans kütüphanesi</span>
                 </div>
                 <h3 className="text-xl sm:text-2xl font-black text-slate-900 leading-tight">
-                  Kamera tabanlı görseller, ses araçları ve 10 sekmeli rapor sunan dijital platform
+                  Kamera tabanlı görseller, ses araçları ve 11 bölümlü rapor sunan dijital platform
                 </h3>
                 <p className="text-xs sm:text-sm text-slate-700 leading-relaxed max-w-4xl">
                   AuraBio; kamera raporu, isteğe bağlı mikrofon ve uyumlu Bluetooth cihazı, ses kütüphanesi, MindSpace ve mandala araçlarını bir araya getirir. Rapor ve görseller sembolik veya uygulama içi yorumlardır; sağlık, enerji alanı ya da hücresel durum ölçümü, tıbbi teşhis veya tedavi değildir.
@@ -570,7 +570,7 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
                     <div className="text-[10px] text-slate-600">Kütüphane sınıflandırması</div>
                   </div>
                   <div className="p-2.5 rounded-xl bg-slate-50/90 border border-slate-200">
-                    <div className="text-purple-400 font-mono font-black text-lg">10 Sekmeli</div>
+                    <div className="text-purple-400 font-mono font-black text-lg">11 Bölümlü</div>
                     <div className="text-[10px] text-slate-600">Uygulama içi rapor</div>
                   </div>
                 </div>
@@ -802,10 +802,10 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
                         <div className="p-2 rounded-xl bg-amber-500/20 border border-amber-500/40">
                           <FileText className="w-4 h-4" />
                         </div>
-                        <span>16. 10 sekmeli uygulama raporu ve harita görünümü</span>
+                        <span>16. 11 bölümlü uygulama raporu ve harita görünümü</span>
                       </div>
                       <p className="text-xs text-slate-600 leading-relaxed">
-                        İlim Kapı, Genel Bakış, renk ve duygu görünümleri, aurik katmanlar, çakra rehberi, letaif, Esma/frekans, yaşam koçu ve 3D görünümden oluşan 10 sekmeli uygulama raporunu ve ayrı harita ekranını sunar. Rapor PDF olarak indirilebilir; görseller klinik ölçüm değildir.
+                        İlim Kapı, Genel Bakış, renk ve duygu görünümleri, aurik katmanlar, çakra rehberi, letaif, Esma/frekans, yaşam koçu, 3D görünüm ve paranormal ölçüm yapılmadığını bildiren bölümden oluşan 11 bölümlü raporu ve ayrı harita ekranını sunar. Bölümler açılır listeden seçilir. Rapor PDF olarak indirilebilir; görseller klinik ölçüm değildir.
                       </p>
                     </div>
                   </div>
@@ -1254,9 +1254,9 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
                     5
                   </div>
                   <div className="space-y-1">
-                    <h4 className="text-sm font-bold text-slate-900">10 sekmeli uygulama raporunu inceleyin</h4>
+                    <h4 className="text-sm font-bold text-slate-900">11 bölümlü uygulama raporunu inceleyin</h4>
                     <p className="text-xs text-slate-600 leading-relaxed">
-                      Tarama ekranındaki 10 sekmeli uygulama raporunu inceleyin ve sunulan PDF dışa aktarma seçeneğini kullanın. Rapor kamera girdisinden üretilen uygulama içi görsellerdir; hücresel değişim veya klinik sonuç ölçmez.
+                      Tarama ekranındaki 11 bölümlü uygulama raporunu açılır listeden inceleyin ve PDF dışa aktarma seçeneğini kullanın. Paranormal enerji/varlık ölçümü yapılmaz; rapor bu konuda sonuç üretmez. Rapor kamera girdisinden üretilen uygulama içi görsellerdir; hücresel değişim veya klinik sonuç ölçmez.
                     </p>
                   </div>
                 </div>
@@ -1861,7 +1861,7 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
                     </p>
                     <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-[11px] text-slate-700 space-y-1.5">
                       <div className="font-bold text-emerald-700">Belge İçeriği:</div>
-                      <div>• Uygulama özellikleri ve 10 sekmeli raporun kapsamı</div>
+                      <div>• Uygulama özellikleri, 11 bölümlü tarama raporu ve paranormal ölçüm sınırı</div>
                       <div>• {TOTAL_HEALING_COUNT} ses/frekans içeriği ve tematik kategoriler</div>
                       <div>• {packageCount} frekans paketi ve katalogdaki fiyat/kredi bilgileri</div>
                       <div>• Komisyon oranları ve örnek hesaplama varsayımları</div>

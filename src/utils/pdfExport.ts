@@ -1,5 +1,6 @@
 import jsPDF from 'jspdf';
-import { ScanResult, EmotionalStateData } from '../types';
+import { ScanResult, EmotionalStateData, EnvironmentalReadingStatus } from '../types';
+import { getEnvironmentSensorCoverage } from './environmentMeasurements';
 import { ESMA_LIST } from '../data/esmaData';
 import { AYET_LIST } from '../data/ayetData';
 import { EASTERN_MANTRAS } from '../data/easternData';
@@ -35,6 +36,17 @@ function clean(t: string): string {
     .replace(/Î/g, 'I')
     .replace(/û/g, 'u')
     .replace(/Û/g, 'U');
+}
+
+function sensorStatusLabel(status?: EnvironmentalReadingStatus): string {
+  if (!status) return 'veri kaydedilmemis';
+  return {
+    measured: 'olcum alindi',
+    'not-supported': 'cihaz/tarayici desteklemiyor',
+    'permission-denied': 'izin verilmedi',
+    'permission-pending': 'olcum tamamlanmadi',
+    unavailable: 'veri alinamadi',
+  }[status];
 }
 
 /**
@@ -371,6 +383,18 @@ export function generateMasterComprehensivePDF(
     const postClarity = postScan.emotionalState?.mentalClarity || 86;
     const clarityDelta = postClarity - preClarity;
     const coherenceDelta = (postScan.coherenceScore || 92) - (preScan.coherenceScore || 52);
+    const environment = postScan.environmentMeasurements;
+    const environmentSensorCoverage = getEnvironmentSensorCoverage(environment);
+    const microphone = environment?.microphone;
+    const ambientLight = environment?.ambientLight;
+    const magneticField = environment?.magneticField;
+    const microphoneSummary = microphone?.relativeLevelPercent !== undefined
+      ? `%${microphone.relativeLevelPercent} goreli RMS - tepe ${microphone.dominantFrequencyHz ?? '-'} Hz - spektral merkez ${microphone.spectralCentroidHz ?? '-'} Hz`
+      : sensorStatusLabel(microphone?.status);
+    const lightSummary = ambientLight?.value !== undefined ? `${ambientLight.value} lx` : sensorStatusLabel(ambientLight?.status);
+    const magneticSummary = magneticField?.magnitudeMicrotesla !== undefined
+      ? `${magneticField.magnitudeMicrotesla} uT (X ${magneticField.xMicrotesla?.toFixed(2)}, Y ${magneticField.yMicrotesla?.toFixed(2)}, Z ${magneticField.zMicrotesla?.toFixed(2)})`
+      : sensorStatusLabel(magneticField?.status);
 
     const reportDate = new Date(postScan.timestamp || Date.now()).toLocaleDateString('tr-TR', {
       year: 'numeric',
@@ -437,6 +461,17 @@ export function generateMasterComprehensivePDF(
 
     // Initialize Page 1
     drawHeader();
+    doc.setFillColor(245, 243, 255);
+    doc.setDrawColor(167, 139, 250);
+    doc.roundedRect(margin, y, pageWidth - 2 * margin, 13, 2, 2, 'FD');
+    doc.setFontSize(7.4);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(109, 40, 217);
+    doc.text(clean('Tahmini Paranormal Varliklar Tespiti'), margin + 4, y + 5);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(30, 41, 59);
+    doc.text(clean(`Paranormal olasilik hesaplanmiyor. Sensor olcum kapsami: %${environmentSensorCoverage.percent} (${environmentSensorCoverage.measuredSensorCount}/${environmentSensorCoverage.totalSensorCount} sensor).`), margin + 4, y + 10);
+    y += 16;
 
     // =========================================================================
     // 1. SECTION: 3D Live Letaif and Aura Simulation Visuals
@@ -975,7 +1010,34 @@ export function generateMasterComprehensivePDF(
     y += 28;
 
     // =========================================================================
-    // 11. SECTION: Institutional Signatures & Stamp (11. Bölüm)
+    // 11. SECTION: Paranormal Measurement Status
+    // =========================================================================
+    checkPage(82);
+    doc.setTextColor(15, 23, 42);
+    doc.setFontSize(9.5);
+    doc.setFont('helvetica', 'bold');
+    doc.text(clean('11. PARANORMAL ENERJI TESPITI'), margin, y);
+    y += 4;
+    doc.setFillColor(245, 243, 255);
+    doc.setDrawColor(167, 139, 250);
+    doc.roundedRect(margin, y, pageWidth - 2 * margin, 69, 2, 2, 'FD');
+    doc.setFontSize(7.2);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(109, 40, 217);
+    doc.text(clean('Tahmini Paranormal Varliklar Tespiti'), margin + 4, y + 5);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(30, 41, 59);
+    doc.text(clean('Paranormal olasilik hesaplanmiyor; bu cihazlarla varlik tespiti dogrulanamaz.'), margin + 4, y + 11, { maxWidth: pageWidth - 2 * margin - 8 });
+    doc.text(clean(`Sensor olcum kapsami: %${environmentSensorCoverage.percent} (${environmentSensorCoverage.measuredSensorCount}/${environmentSensorCoverage.totalSensorCount} sensor) - varlik olasiligi degildir.`), margin + 4, y + 18, { maxWidth: pageWidth - 2 * margin - 8 });
+    doc.text(clean(`Kamera analiz gostergesi (fiziksel enerji olcumu degil): %${postScan.bioEnergyLevel} - ${postScan.frequencyHz} Hz uygulama frekans degeri`), margin + 4, y + 25, { maxWidth: pageWidth - 2 * margin - 8 });
+    doc.text(clean(`Mikrofon - goreli RMS/spektrum: ${microphoneSummary} - ${sensorStatusLabel(microphone?.status)}`), margin + 4, y + 32, { maxWidth: pageWidth - 2 * margin - 8 });
+    doc.text(clean(`Ortam isigi: ${lightSummary} - ${sensorStatusLabel(ambientLight?.status)}`), margin + 4, y + 39, { maxWidth: pageWidth - 2 * margin - 8 });
+    doc.text(clean(`Manyetik alan: ${magneticSummary} - ${sensorStatusLabel(magneticField?.status)}`), margin + 4, y + 46, { maxWidth: pageWidth - 2 * margin - 8 });
+    doc.text(clean('Mikrofon RMS kalibre edilmis dB SPL degildir; sensor verileri paranormal veya saglik olcumu/tanisi degildir.'), margin + 4, y + 54, { maxWidth: pageWidth - 2 * margin - 8 });
+    y += 73;
+
+    // =========================================================================
+    // 12. SECTION: Institutional Signatures & Stamp
     // =========================================================================
     checkPage(24);
     doc.setDrawColor(4, 120, 87);
@@ -991,7 +1053,7 @@ export function generateMasterComprehensivePDF(
     doc.setFontSize(6.8);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(100, 116, 139);
-    doc.text(clean('Kuantum Biyo-Optik Spektrometre Onayli Dijital Rapor Belgesidir.'), margin, y + 9);
+    doc.text(clean('Uygulama ici analiz raporudur; paranormal olcum veya klinik tani belgesi degildir.'), margin, y + 9);
     doc.text(clean(`Rapor No: AURA-${(postScan.id || 'BIO').slice(0, 8).toUpperCase()}`), pageWidth - margin - 85, y + 9);
 
     drawFooter();
@@ -1064,6 +1126,17 @@ export function exportComparisonReportToWord(
     const postClarity = postScan.emotionalState?.mentalClarity || 89;
     const clarityDelta = postClarity - preClarity;
     const coherenceDelta = (postScan.coherenceScore || 92) - (preScan.coherenceScore || 52);
+    const environment = postScan.environmentMeasurements;
+    const microphone = environment?.microphone;
+    const ambientLight = environment?.ambientLight;
+    const magneticField = environment?.magneticField;
+    const microphoneSummary = microphone?.relativeLevelPercent !== undefined
+      ? `%${microphone.relativeLevelPercent} goreli RMS - tepe ${microphone.dominantFrequencyHz ?? '-'} Hz - spektral merkez ${microphone.spectralCentroidHz ?? '-'} Hz`
+      : sensorStatusLabel(microphone?.status);
+    const lightSummary = ambientLight?.value !== undefined ? `${ambientLight.value} lx` : sensorStatusLabel(ambientLight?.status);
+    const magneticSummary = magneticField?.magnitudeMicrotesla !== undefined
+      ? `${magneticField.magnitudeMicrotesla} uT (X ${magneticField.xMicrotesla?.toFixed(2)}, Y ${magneticField.yMicrotesla?.toFixed(2)}, Z ${magneticField.zMicrotesla?.toFixed(2)})`
+      : sensorStatusLabel(magneticField?.status);
 
     const reportDate = new Date(postScan.timestamp || Date.now()).toLocaleDateString('tr-TR', {
       year: 'numeric',
@@ -1445,16 +1518,27 @@ export function exportComparisonReportToWord(
         </ol>
       </div>
 
-      <!-- 10. SECTION: Institutional Signatures & Stamp -->
-      <h2>10. KURUMSAL ONAY VE DİJİTAL MÜHÜR</h2>
+      <!-- 10. SECTION: Paranormal Measurement Status -->
+      <h2>10. PARANORMAL ENERJİ TESPİTİ</h2>
+      <div class="alert-box">
+        <p><strong>Paranormal olasılık:</strong> Hesaplanmıyor; cihaz sensörleri paranormal varlık veya enerji ölçmez.</p>
+        <p><strong>Kamera analiz göstergesi (fiziksel enerji ölçümü değildir):</strong> %${postScan.bioEnergyLevel} · ${postScan.frequencyHz} Hz uygulama içi frekans değeri</p>
+        <p><strong>Mikrofon göreli RMS/spektrum:</strong> ${microphoneSummary} · ${sensorStatusLabel(microphone?.status)}</p>
+        <p><strong>Ortam ışığı:</strong> ${lightSummary} · ${sensorStatusLabel(ambientLight?.status)}</p>
+        <p><strong>Manyetik alan:</strong> ${magneticSummary} · ${sensorStatusLabel(magneticField?.status)}</p>
+        <p>Mikrofon RMS değeri kalibre edilmiş dB SPL değildir. Çevresel sinyaller paranormal olasılık, sağlık ölçümü veya tanı değildir. Ses kaydı saklanmaz.</p>
+      </div>
+
+      <!-- 11. SECTION: Institutional Signatures & Stamp -->
+      <h2>11. KURUMSAL BİLGİLENDİRME</h2>
       <table style="border: none; background-color: transparent;">
         <tr>
           <td style="border: none; width: 50%; vertical-align: top;">
             <strong style="color: #064e3b;">AuraBio Kuantum Biyo-Rezonans & Letaif Enstitüsü</strong><br>
-            <span style="font-size: 8.5pt; color: #64748b;">Kuantum Biyo-Optik Spektrometre Onaylı Dijital Rapor Belgesidir.</span>
+            <span style="font-size: 8.5pt; color: #64748b;">Uygulama içi analiz raporudur; paranormal ölçüm veya klinik tanı belgesi değildir.</span>
           </td>
           <td style="border: none; width: 50%; text-align: right; vertical-align: top;">
-            <strong style="color: #064e3b;">Sistem Onayı: AuraBio Biyo-Rezonans ve Frekans Heyeti</strong><br>
+            <strong style="color: #064e3b;">Rapor: AuraBio Biyo-Rezonans ve Frekans Uygulaması</strong><br>
             <span style="font-size: 8.5pt; color: #64748b;">Rapor No: AURA-${(postScan.id || 'BIO').slice(0, 8).toUpperCase()}</span>
           </td>
         </tr>

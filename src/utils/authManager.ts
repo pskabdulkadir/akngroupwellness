@@ -578,6 +578,7 @@ async function requestMemberWalletToken(
   try {
     const response = await fetch('/api/v1/member/session', {
       method: 'POST',
+      credentials: 'same-origin',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
     });
@@ -2323,6 +2324,7 @@ export function saveMemberWalletToken(token: string): void {
 
 export function logoutMemberSession(): void {
   if (typeof window === 'undefined') return;
+  void fetch('/api/v1/member/session/logout', { method: 'POST', credentials: 'same-origin' }).catch(() => {});
   clearAccountingToken();
   clearAdminToken();
   sessionStorage.removeItem(MEMBER_WALLET_TOKEN_KEY);
