@@ -1,4 +1,4 @@
-import type { EnvironmentalReadingStatus, ScanEnvironmentMeasurements } from '../types';
+import type { EnvironmentalReadingStatus, ScanEnvironmentMeasurements, ScanResult } from '../types';
 
 export interface EnvironmentMeasurementSession {
   finish: () => ScanEnvironmentMeasurements;
@@ -17,6 +17,63 @@ export function getEnvironmentSensorCoverage(measurements?: ScanEnvironmentMeasu
     measuredSensorCount,
     totalSensorCount: statuses.length,
     percent: Math.round((measuredSensorCount / statuses.length) * 100),
+  };
+}
+
+export function getParanormalEstimate(scan: ScanResult) {
+  const clampPercent = (value: number) => Math.max(0, Math.min(100, value));
+  const readings = scan.environmentMeasurements;
+  const signals: { value: number; weight: number }[] = [
+    { value: clampPercent(scan.opticalBrightnessPercent ?? scan.bioEnergyLevel), weight: 0.3 },
+  ];
+
+  if (readings?.microphone.relativeLevelPercent !== undefined) {
+    signals.push({ value: clampPercent(readings.microphone.relativeLevelPercent), weight: 0.2 });
+  }
+  if (readings?.microphone.dominantFrequencyHz !== undefined) {
+    signals.push({ value: clampPercent(readings.microphone.dominantFrequencyHz / 40), weight: 0.15 });
+  }
+  if (readings?.microphone.spectralCentroidHz !== undefined) {
+    signals.push({ value: clampPercent(readings.microphone.spectralCentroidHz / 80), weight: 0.15 });
+  }
+  if (readings?.ambientLight.value !== undefined) {
+    signals.push({ value: clampPercent(readings.ambientLight.value / 5), weight: 0.1 });
+  }
+  if (readings?.magneticField.magnitudeMicrotesla !== undefined) {
+    signals.push({ value: clampPercent(readings.magneticField.magnitudeMicrotesla), weight: 0.1 });
+  }
+
+  const totalWeight = signals.reduce((total, signal) => total + signal.weight, 0);
+  const percent = Math.round(signals.reduce((total, signal) => total + signal.value * signal.weight, 0) / totalWeight);
+  const summary = percent < 25
+    ? 'Tarama örneklerinde düşük düzeyde eşleşme gözlendi.'
+    : percent < 50
+      ? 'Tarama örneklerinde hafif düzeyde eşleşme gözlendi.'
+      : percent < 75
+        ? 'Tarama örneklerinde belirgin düzeyde eşleşme gözlendi.'
+        : 'Tarama örneklerinde yüksek düzeyde eşleşme gözlendi.';
+
+  return { percent, summary };
+}
+
+export function getEnvironmentReadingSummary(scan: ScanResult) {
+  const measurements = scan.environmentMeasurements;
+  const opticalPercent = scan.opticalBrightnessPercent ?? scan.bioEnergyLevel;
+  const microphone = measurements?.microphone;
+  const light = measurements?.ambientLight;
+  const magnetic = measurements?.magneticField;
+
+  return {
+    optical: `Kamera optik analiz indeksi: %${opticalPercent}${scan.opticalBrightnessPercent === undefined ? ' · kayıtlı optik gösterge' : ' · görüntü aydınlığı örneklemi'}`,
+    microphone: microphone?.relativeLevelPercent !== undefined
+      ? `%${microphone.relativeLevelPercent} göreli RMS · tepe ${microphone.dominantFrequencyHz ?? '—'} Hz · spektral merkez ${microphone.spectralCentroidHz ?? '—'} Hz`
+      : 'Mikrofon örneklemi kaydedilmedi',
+    light: light?.value !== undefined
+      ? `${light.value} lx · doğrudan ortam ışığı okuması`
+      : `Doğrudan lux kaydı yok · kamera optik örnekleminden türetilen indeks %${opticalPercent}`,
+    magnetic: magnetic?.magnitudeMicrotesla !== undefined
+      ? `${magnetic.magnitudeMicrotesla} µT · X ${magnetic.xMicrotesla?.toFixed(2)} / Y ${magnetic.yMicrotesla?.toFixed(2)} / Z ${magnetic.zMicrotesla?.toFixed(2)} µT`
+      : 'Manyetik alan için doğrudan kayıt yok',
   };
 }
 

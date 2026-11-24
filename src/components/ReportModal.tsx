@@ -43,7 +43,7 @@ import { AYET_LIST } from '../data/ayetData';
 import { EASTERN_MANTRAS, MYTHOLOGICAL_ELEMENTS } from '../data/easternData';
 import { TreatmentSelection } from './FrequencyLoadingModal';
 import { exportScanReportToPDF } from '../utils/pdfExport';
-import { getEnvironmentSensorCoverage } from '../utils/environmentMeasurements';
+import { getEnvironmentReadingSummary, getParanormalEstimate } from '../utils/environmentMeasurements';
 import { voiceAssistant } from '../utils/voiceAssistant';
 import { getActiveMemberSession } from '../utils/authManager';
 import { deleteScanResult } from '../utils/storage';
@@ -79,14 +79,6 @@ export type ReportTab =
   | 'simulation3d'
   | 'paranormal';
 
-const SENSOR_STATUS_LABELS = {
-  measured: 'Ölçüm alındı',
-  'not-supported': 'Cihaz/tarayıcı desteklemiyor',
-  'permission-denied': 'İzin verilmedi',
-  'permission-pending': 'Ölçüm tamamlanmadı',
-  unavailable: 'Veri alınamadı',
-} as const;
-
 const REPORT_TABS: { id: ReportTab; label: string }[] = [
   { id: 'ilimKapi', label: '1. İlim Kapı' },
   { id: 'overview', label: '2. Genel Bakış' },
@@ -98,7 +90,7 @@ const REPORT_TABS: { id: ReportTab; label: string }[] = [
   { id: 'recommendations', label: '8. 99 Esma & Frekans Yükle' },
   { id: 'allInnovations', label: '9. Yaşam Koçu Matrisi' },
   { id: 'simulation3d', label: '10. 3D Canlı Aura & Letaif (Öncesi/Sonrası)' },
-  { id: 'paranormal', label: '11. Paranormal Enerji Tespiti' },
+  { id: 'paranormal', label: '11. PARANORMAL ENERJİ TESPİTİ' },
 ];
 
 export const ReportModal: React.FC<ReportModalProps> = ({
@@ -128,7 +120,8 @@ export const ReportModal: React.FC<ReportModalProps> = ({
   const isHuman = scanResult.targetType === 'human' || !scanResult.targetType;
   const emo = scanResult.emotionalState;
   const environmentMeasurements = scanResult.environmentMeasurements;
-  const environmentSensorCoverage = getEnvironmentSensorCoverage(environmentMeasurements);
+  const paranormalEstimate = getParanormalEstimate(scanResult);
+  const environmentReadingSummary = getEnvironmentReadingSummary(scanResult);
 
   // Synthesize or use provided pre-scan baseline for 3D comparison simulation
   const effectivePreScan = useMemo<ScanResult>(() => {
@@ -534,8 +527,8 @@ export const ReportModal: React.FC<ReportModalProps> = ({
           {activeTab === 'overview' && (
             <div className="space-y-6">
               <div className="rounded-2xl border border-violet-500/30 bg-violet-950/20 p-4">
-                <h3 className="text-sm font-bold text-violet-200">Tahmini Paranormal Varlıklar Tespiti</h3>
-                <p className="mt-1 text-xs text-slate-300">Paranormal olasılık hesaplanmıyor. Sensör ölçüm kapsamı: %{environmentSensorCoverage.percent} ({environmentSensorCoverage.measuredSensorCount}/{environmentSensorCoverage.totalSensorCount} sensör).</p>
+                <h3 className="text-sm font-bold text-violet-200">Tahmini Paranormal Varlıklar Tespiti · %{paranormalEstimate.percent}</h3>
+                <p className="mt-1 text-xs text-slate-300">{paranormalEstimate.summary} AuraBio tarama örneklerinden üretilen uygulama içi tahmin göstergesidir.</p>
               </div>
               {/* Top Key Metrics Grid */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -1374,46 +1367,39 @@ export const ReportModal: React.FC<ReportModalProps> = ({
                     <ShieldAlert className="h-5 w-5" />
                   </div>
                   <div>
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-violet-300">Paranormal olasılık: ölçülemiyor</span>
-                    <h3 id="paranormal-report-heading" className="text-lg font-bold text-slate-100">Paranormal Enerji Tespiti</h3>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-violet-300">11. PARANORMAL ENERJİ TESPİTİ</span>
+                    <h3 id="paranormal-report-heading" className="text-lg font-bold text-slate-100">AuraBio Frekans Tarama Özeti</h3>
                   </div>
                 </div>
                 <div className="rounded-xl border border-violet-500/30 bg-slate-900/80 p-4">
                   <h4 className="text-xs font-bold uppercase tracking-wider text-violet-300">Tahmini Paranormal Varlıklar Tespiti</h4>
-                  <div className="mt-1 text-2xl font-bold text-slate-300">Paranormal olasılık hesaplanmıyor</div>
-                  <p className="mt-1 text-xs text-slate-400">Sensör ölçüm kapsamı: %{environmentSensorCoverage.percent} ({environmentSensorCoverage.measuredSensorCount}/{environmentSensorCoverage.totalSensorCount} sensör). Bu oran varlık olasılığı değildir.</p>
+                  <div className="mt-1 text-2xl font-bold text-violet-200">%{paranormalEstimate.percent} · Tarama eşleşme skoru</div>
+                  <p className="mt-1 text-xs text-slate-300">{paranormalEstimate.summary} Uygulama içi deneyim amaçlı, sensör örneklerinden türetilen deterministik bir göstergedir.</p>
                 </div>
                 <div className="space-y-3 rounded-xl border border-slate-700 bg-slate-950/70 p-4">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <h4 className="text-xs font-bold uppercase tracking-wider text-slate-200">Tarama sırasında alınan çevresel sensör okumaları</h4>
-                    <span className="text-[10px] text-slate-500">{environmentMeasurements ? `${environmentMeasurements.durationSeconds} sn` : 'Bu eski kayıtta ölçüm yok'}</span>
+                    <span className="text-[10px] text-slate-500">{scanResult.frequencyHz} Hz · {environmentMeasurements ? `${environmentMeasurements.durationSeconds} sn` : 'oturum ölçüm özeti'}</span>
                   </div>
-                  {environmentMeasurements ? (
-                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                       <div className="rounded-lg bg-slate-900 p-3">
-                        <div className="text-[10px] text-slate-400">Mikrofon · göreli RMS seviye</div>
-                        <div className="mt-1 font-semibold text-slate-100">{environmentMeasurements.microphone.relativeLevelPercent !== undefined ? `%${environmentMeasurements.microphone.relativeLevelPercent}` : SENSOR_STATUS_LABELS[environmentMeasurements.microphone.status]}</div>
-                        <div className="mt-1 text-[10px] text-slate-500">Tepe {environmentMeasurements.microphone.dominantFrequencyHz ?? '—'} Hz · spektral merkez {environmentMeasurements.microphone.spectralCentroidHz ?? '—'} Hz · {SENSOR_STATUS_LABELS[environmentMeasurements.microphone.status]}</div>
+                        <div className="text-[10px] text-slate-400">Kamera / optik analizi</div>
+                        <div className="mt-1 font-semibold text-slate-100">{environmentReadingSummary.optical}</div>
+                      </div>
+                      <div className="rounded-lg bg-slate-900 p-3">
+                        <div className="text-[10px] text-slate-400">Mikrofon · göreli RMS ve spektrum</div>
+                        <div className="mt-1 font-semibold text-slate-100">{environmentReadingSummary.microphone}</div>
                       </div>
                       <div className="rounded-lg bg-slate-900 p-3">
                         <div className="text-[10px] text-slate-400">Ortam ışığı</div>
-                        <div className="mt-1 font-semibold text-slate-100">{environmentMeasurements.ambientLight.value !== undefined ? `${environmentMeasurements.ambientLight.value} lx` : SENSOR_STATUS_LABELS[environmentMeasurements.ambientLight.status]}</div>
-                        {environmentMeasurements.ambientLight.value !== undefined && <div className="mt-1 text-[10px] text-slate-500">{SENSOR_STATUS_LABELS[environmentMeasurements.ambientLight.status]}</div>}
+                        <div className="mt-1 font-semibold text-slate-100">{environmentReadingSummary.light}</div>
                       </div>
                       <div className="rounded-lg bg-slate-900 p-3 sm:col-span-2">
                         <div className="text-[10px] text-slate-400">Manyetik alan</div>
-                        <div className="mt-1 font-semibold text-slate-100">
-                          {environmentMeasurements.magneticField.magnitudeMicrotesla !== undefined
-                            ? `${environmentMeasurements.magneticField.magnitudeMicrotesla} µT · X ${environmentMeasurements.magneticField.xMicrotesla?.toFixed(2)} / Y ${environmentMeasurements.magneticField.yMicrotesla?.toFixed(2)} / Z ${environmentMeasurements.magneticField.zMicrotesla?.toFixed(2)} µT`
-                            : SENSOR_STATUS_LABELS[environmentMeasurements.magneticField.status]}
-                        </div>
-                        {environmentMeasurements.magneticField.magnitudeMicrotesla !== undefined && <div className="mt-1 text-[10px] text-slate-500">{SENSOR_STATUS_LABELS[environmentMeasurements.magneticField.status]}</div>}
+                        <div className="mt-1 font-semibold text-slate-100">{environmentReadingSummary.magnetic}</div>
                       </div>
-                    </div>
-                  ) : (
-                    <p className="text-xs text-slate-400">Bu tarama kaydedildiğinde çevresel sensör ölçümü alınmamış. Yeni tarama başlatıldığında izin verilen ve cihazın desteklediği veriler kaydedilir.</p>
-                  )}
-                  <p className="text-[10px] leading-relaxed text-slate-500">Kamera analiz yüzdesi kalibre edilmiş fiziksel enerji ölçümü değildir. Mikrofon yüzdesi dB SPL değil, göreli dijital sinyal seviyesidir. Ortam ışığı ve manyetik alan okumaları yalnızca cihaz destekliyorsa alınır. Bu çevresel sinyaller paranormal tespit, sağlık ölçümü veya tanı değildir; ses kaydı saklanmaz.</p>
+                  </div>
+                  <p className="text-[10px] leading-relaxed text-slate-500">Tahmin oranı optik, ses ve varsa doğrudan ortam sensörü örneklerinin sabit ağırlıklı birleşimidir; AuraBio uygulama içi deneyim göstergesidir. Mikrofon RMS değeri göreli dijital seviyedir, kalibre edilmiş dB SPL değildir. Ses kaydı saklanmaz.</p>
                 </div>
               </div>
             </section>

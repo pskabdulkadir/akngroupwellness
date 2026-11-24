@@ -311,6 +311,7 @@ export interface ScanResult {
   auraHex: string;
   auraSecondaryHex?: string;
   bioEnergyLevel: number; // 0-100
+  opticalBrightnessPercent?: number;
   frequencyHz: number;
   measuredFrequencyHz?: number;
   coherenceScore: number; // 0-100

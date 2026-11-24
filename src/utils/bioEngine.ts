@@ -1144,6 +1144,7 @@ export function generateDeepBioScan(
     timestamp: Date.now(),
     snapshotUrl,
     bioEnergyLevel,
+    opticalBrightnessPercent: count > 0 ? Math.round((globalLum / 255) * 100) : undefined,
     frequencyHz,
     dominantAuraColor,
     auraHex,

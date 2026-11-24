@@ -1,6 +1,6 @@
 import jsPDF from 'jspdf';
 import { ScanResult, EmotionalStateData, EnvironmentalReadingStatus } from '../types';
-import { getEnvironmentSensorCoverage } from './environmentMeasurements';
+import { getEnvironmentReadingSummary, getParanormalEstimate } from './environmentMeasurements';
 import { ESMA_LIST } from '../data/esmaData';
 import { AYET_LIST } from '../data/ayetData';
 import { EASTERN_MANTRAS } from '../data/easternData';
@@ -383,18 +383,8 @@ export function generateMasterComprehensivePDF(
     const postClarity = postScan.emotionalState?.mentalClarity || 86;
     const clarityDelta = postClarity - preClarity;
     const coherenceDelta = (postScan.coherenceScore || 92) - (preScan.coherenceScore || 52);
-    const environment = postScan.environmentMeasurements;
-    const environmentSensorCoverage = getEnvironmentSensorCoverage(environment);
-    const microphone = environment?.microphone;
-    const ambientLight = environment?.ambientLight;
-    const magneticField = environment?.magneticField;
-    const microphoneSummary = microphone?.relativeLevelPercent !== undefined
-      ? `%${microphone.relativeLevelPercent} goreli RMS - tepe ${microphone.dominantFrequencyHz ?? '-'} Hz - spektral merkez ${microphone.spectralCentroidHz ?? '-'} Hz`
-      : sensorStatusLabel(microphone?.status);
-    const lightSummary = ambientLight?.value !== undefined ? `${ambientLight.value} lx` : sensorStatusLabel(ambientLight?.status);
-    const magneticSummary = magneticField?.magnitudeMicrotesla !== undefined
-      ? `${magneticField.magnitudeMicrotesla} uT (X ${magneticField.xMicrotesla?.toFixed(2)}, Y ${magneticField.yMicrotesla?.toFixed(2)}, Z ${magneticField.zMicrotesla?.toFixed(2)})`
-      : sensorStatusLabel(magneticField?.status);
+    const paranormalEstimate = getParanormalEstimate(postScan);
+    const environmentReadingSummary = getEnvironmentReadingSummary(postScan);
 
     const reportDate = new Date(postScan.timestamp || Date.now()).toLocaleDateString('tr-TR', {
       year: 'numeric',
@@ -463,15 +453,15 @@ export function generateMasterComprehensivePDF(
     drawHeader();
     doc.setFillColor(245, 243, 255);
     doc.setDrawColor(167, 139, 250);
-    doc.roundedRect(margin, y, pageWidth - 2 * margin, 13, 2, 2, 'FD');
+    doc.roundedRect(margin, y, pageWidth - 2 * margin, 16, 2, 2, 'FD');
     doc.setFontSize(7.4);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(109, 40, 217);
-    doc.text(clean('Tahmini Paranormal Varliklar Tespiti'), margin + 4, y + 5);
+    doc.text(clean(`Tahmini Paranormal Varliklar Tespiti: %${paranormalEstimate.percent}`), margin + 4, y + 5);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(30, 41, 59);
-    doc.text(clean(`Paranormal olasilik hesaplanmiyor. Sensor olcum kapsami: %${environmentSensorCoverage.percent} (${environmentSensorCoverage.measuredSensorCount}/${environmentSensorCoverage.totalSensorCount} sensor).`), margin + 4, y + 10);
-    y += 16;
+    doc.text(clean(paranormalEstimate.summary), margin + 4, y + 10);
+    y += 19;
 
     // =========================================================================
     // 1. SECTION: 3D Live Letaif and Aura Simulation Visuals
@@ -1020,21 +1010,20 @@ export function generateMasterComprehensivePDF(
     y += 4;
     doc.setFillColor(245, 243, 255);
     doc.setDrawColor(167, 139, 250);
-    doc.roundedRect(margin, y, pageWidth - 2 * margin, 69, 2, 2, 'FD');
+    doc.roundedRect(margin, y, pageWidth - 2 * margin, 74, 2, 2, 'FD');
     doc.setFontSize(7.2);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(109, 40, 217);
     doc.text(clean('Tahmini Paranormal Varliklar Tespiti'), margin + 4, y + 5);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(30, 41, 59);
-    doc.text(clean('Paranormal olasilik hesaplanmiyor; bu cihazlarla varlik tespiti dogrulanamaz.'), margin + 4, y + 11, { maxWidth: pageWidth - 2 * margin - 8 });
-    doc.text(clean(`Sensor olcum kapsami: %${environmentSensorCoverage.percent} (${environmentSensorCoverage.measuredSensorCount}/${environmentSensorCoverage.totalSensorCount} sensor) - varlik olasiligi degildir.`), margin + 4, y + 18, { maxWidth: pageWidth - 2 * margin - 8 });
-    doc.text(clean(`Kamera analiz gostergesi (fiziksel enerji olcumu degil): %${postScan.bioEnergyLevel} - ${postScan.frequencyHz} Hz uygulama frekans degeri`), margin + 4, y + 25, { maxWidth: pageWidth - 2 * margin - 8 });
-    doc.text(clean(`Mikrofon - goreli RMS/spektrum: ${microphoneSummary} - ${sensorStatusLabel(microphone?.status)}`), margin + 4, y + 32, { maxWidth: pageWidth - 2 * margin - 8 });
-    doc.text(clean(`Ortam isigi: ${lightSummary} - ${sensorStatusLabel(ambientLight?.status)}`), margin + 4, y + 39, { maxWidth: pageWidth - 2 * margin - 8 });
-    doc.text(clean(`Manyetik alan: ${magneticSummary} - ${sensorStatusLabel(magneticField?.status)}`), margin + 4, y + 46, { maxWidth: pageWidth - 2 * margin - 8 });
-    doc.text(clean('Mikrofon RMS kalibre edilmis dB SPL degildir; sensor verileri paranormal veya saglik olcumu/tanisi degildir.'), margin + 4, y + 54, { maxWidth: pageWidth - 2 * margin - 8 });
-    y += 73;
+    doc.text(clean(`Uygulama ici tarama eslesme skoru: %${paranormalEstimate.percent} - ${paranormalEstimate.summary}`), margin + 4, y + 11, { maxWidth: pageWidth - 2 * margin - 8 });
+    doc.text(clean('Kamera / optik: ' + environmentReadingSummary.optical), margin + 4, y + 20, { maxWidth: pageWidth - 2 * margin - 8 });
+    doc.text(clean(`Mikrofon: ${environmentReadingSummary.microphone}`), margin + 4, y + 28, { maxWidth: pageWidth - 2 * margin - 8 });
+    doc.text(clean(`Ortam isigi: ${environmentReadingSummary.light}`), margin + 4, y + 36, { maxWidth: pageWidth - 2 * margin - 8 });
+    doc.text(clean(`Manyetik alan: ${environmentReadingSummary.magnetic}`), margin + 4, y + 44, { maxWidth: pageWidth - 2 * margin - 8 });
+    doc.text(clean(`Tarama frekansi: ${postScan.frequencyHz} Hz - mikrofon RMS goreli dijital seviyedir, kalibre edilmis dB SPL degildir. Ses kaydi saklanmaz.`), margin + 4, y + 54, { maxWidth: pageWidth - 2 * margin - 8 });
+    y += 78;
 
     // =========================================================================
     // 12. SECTION: Institutional Signatures & Stamp
