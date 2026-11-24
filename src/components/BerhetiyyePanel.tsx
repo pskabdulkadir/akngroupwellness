@@ -20,6 +20,7 @@ type SessionState = {
   loop: boolean;
   kind: 'single' | 'cleaning';
   phaseIndex: number;
+  readingOrder?: number;
 };
 
 const SECTIONS: { id: SectionKey; title: string }[] = [
@@ -32,6 +33,7 @@ const SECTIONS: { id: SectionKey; title: string }[] = [
 ];
 
 const PURPOSE_FILTERS: (BerhetiyyePurpose | 'Tümü')[] = ['Tümü', 'Arınma', 'Koruma', 'Denge', 'Canlılık', 'Odak'];
+const READING_DURATIONS = [1, 3, 5, 7, 10, 15, 20, 30];
 
 const formatTime = (seconds: number) => `${Math.floor(seconds / 60).toString().padStart(2, '0')}:${Math.max(0, seconds % 60).toString().padStart(2, '0')}`;
 
@@ -45,6 +47,7 @@ export const BerhetiyyePanel: React.FC<BerhetiyyePanelProps> = ({ onGoBack, onGo
   const [volume, setVolume] = useState(0.35);
   const [session, setSession] = useState<SessionState | null>(null);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [expandedReading, setExpandedReading] = useState<number | null>(null);
   const sessionRef = useRef<SessionState | null>(null);
 
   const setActiveSession = (next: SessionState | null) => {
@@ -122,6 +125,23 @@ export const BerhetiyyePanel: React.FC<BerhetiyyePanelProps> = ({ onGoBack, onGo
     });
   };
 
+  const startReadingFrequency = async (reading: BerhetiyyeReading, minutes: number) => {
+    await soundEngine.unlockAudio();
+    soundEngine.playTone(reading.frequencyHz, volume);
+    setElapsedSeconds(0);
+    setActiveSession({
+      name: reading.name,
+      frequencyHz: reading.frequencyHz,
+      binauralHz: 0,
+      startedAt: Date.now(),
+      durationSeconds: minutes * 60,
+      loop: false,
+      kind: 'single',
+      phaseIndex: 0,
+      readingOrder: reading.order,
+    });
+  };
+
   const startCleaningSession = async () => {
     await soundEngine.unlockAudio();
     const firstStage = BERHETIYYE_CLEANING_STAGES[0];
@@ -169,6 +189,32 @@ export const BerhetiyyePanel: React.FC<BerhetiyyePanelProps> = ({ onGoBack, onGo
         <p className="rounded-lg bg-slate-950/50 p-2.5 text-slate-300"><strong className="text-slate-100">Ses profili:</strong> {reading.waveProfile}</p>
       </div>
       <p className="text-xs leading-relaxed text-slate-300"><strong className="text-violet-200">Uygulama:</strong> {reading.readingGuide}</p>
+      <button
+        type="button"
+        aria-expanded={expandedReading === reading.order}
+        onClick={() => setExpandedReading(expandedReading === reading.order ? null : reading.order)}
+        className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-cyan-400/30 bg-cyan-500/10 px-4 text-xs font-bold text-cyan-200 hover:bg-cyan-500/20"
+      >
+        <Waves className="h-4 w-4" /> Frekans
+      </button>
+      {expandedReading === reading.order && (
+        <div className="space-y-3 rounded-xl border border-slate-700 bg-slate-950/70 p-3">
+          <p className="text-xs font-semibold text-slate-200">Meditasyon süresi seçin ve frekansı başlatın</p>
+          <div className="grid grid-cols-4 gap-2">
+            {READING_DURATIONS.map((minutes) => (
+              <button key={minutes} type="button" onClick={() => void startReadingFrequency(reading, minutes)} aria-label={`${reading.name} frekansını ${minutes} dakika oynat`} className="min-h-10 rounded-lg border border-violet-400/30 bg-violet-500/10 px-2 text-xs font-bold text-violet-200 hover:bg-violet-500/25">
+                {minutes} dk
+              </button>
+            ))}
+          </div>
+          {session?.readingOrder === reading.order && (
+            <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-emerald-200" aria-live="polite">
+              <span>{reading.frequencyHz} Hz · Kalan {formatTime(Math.max(0, session.durationSeconds - elapsedSeconds))}</span>
+              <button type="button" onClick={stopSession} className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-rose-400/30 bg-rose-500/10 px-3 font-bold text-rose-200"><Square className="h-3.5 w-3.5 fill-current" /> Durdur</button>
+            </div>
+          )}
+        </div>
+      )}
     </article>
   );
 
@@ -206,7 +252,7 @@ export const BerhetiyyePanel: React.FC<BerhetiyyePanelProps> = ({ onGoBack, onGo
             <label className="flex items-center gap-2 text-xs text-slate-300">
               <Clock className="h-4 w-4 text-cyan-300" />
               <select value={durationChoice} onChange={(event) => setDurationChoice(event.target.value)} className="min-h-10 rounded-lg border border-slate-700 bg-slate-900 px-2 text-xs text-slate-100">
-                {[3, 5, 11, 21, 33].map((minutes) => <option key={minutes} value={minutes}>{minutes} dakika</option>)}
+                {[1, 3, 5, 7, 10, 11, 15, 20, 21, 30, 33].map((minutes) => <option key={minutes} value={minutes}>{minutes} dakika</option>)}
                 <option value="custom">Özel süre</option>
               </select>
             </label>
@@ -215,7 +261,7 @@ export const BerhetiyyePanel: React.FC<BerhetiyyePanelProps> = ({ onGoBack, onGo
               <input type="checkbox" checked={loop} onChange={(event) => {
                 const nextLoop = event.target.checked;
                 setLoop(nextLoop);
-                if (session) setActiveSession({ ...session, loop: nextLoop });
+                if (session && session.readingOrder === undefined) setActiveSession({ ...session, loop: nextLoop });
               }} /> Döngü
             </label>
             <label className="flex min-h-10 items-center gap-2 rounded-lg border border-slate-700 px-2 text-xs text-slate-300">
@@ -269,7 +315,7 @@ export const BerhetiyyePanel: React.FC<BerhetiyyePanelProps> = ({ onGoBack, onGo
         <section className="space-y-3">
           <div className="rounded-xl border border-cyan-500/20 bg-cyan-950/15 p-4 text-xs leading-relaxed text-slate-300">Katalogdaki taşıyıcı tonlar ve binaural aralıklar, oynatıcı için seçilmiş uygulama parametreleridir. Belirli sağlık, ruhsal veya metafizik etkileri olduğu iddia edilmez.</div>
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">{BERHETIYYE_FREQUENCIES.map((frequency) => (
-            <FrequencyCard key={frequency.id} frequency={frequency} active={session?.frequencyHz === frequency.frequencyHz && session.kind === 'single'} onPlay={() => void startFrequency(frequency)} />
+            <FrequencyCard key={frequency.id} frequency={frequency} active={session?.name === frequency.name && session.frequencyHz === frequency.frequencyHz && session.kind === 'single'} onPlay={() => void startFrequency(frequency)} />
           ))}</div>
         </section>
       )}
@@ -313,7 +359,7 @@ export const BerhetiyyePanel: React.FC<BerhetiyyePanelProps> = ({ onGoBack, onGo
               <li>Sessiz ve rahat bir ortam seçin; isterseniz ortamı havalandırıp cihaz sesini kapatın.</li>
               <li>Genel bakıştan veya arama/filtreyle 1–28 arasındaki maddelerden birini seçin.</li>
               <li>İsmi sessiz ya da rahat sesle okuyun; tekrar önerileri zorunlu değildir.</li>
-              <li>İsterseniz frekans kataloğundan ton, süre ve ses seviyesini seçip dinlemeyi başlatın.</li>
+              <li>Seçtiğiniz maddenin Frekans düğmesinden süre seçerek dinlemeyi başlatabilir veya frekans kataloğunu kullanabilirsiniz.</li>
               <li>Haftalık kullanımda kısa ve düzenli seansları tercih edin; her seans sonrası birkaç dakika dinlenin.</li>
             </ol>
           </article>
