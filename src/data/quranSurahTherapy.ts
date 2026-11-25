@@ -1,3 +1,5 @@
+import { getQuranSurahToneHz } from './quranSurahs';
+
 export interface QuranSurahTherapy {
   id: string;
   name: string;
@@ -15,7 +17,7 @@ export const QURAN_SURAH_THERAPY: QuranSurahTherapy[] = [
     name: 'Fâtiha',
     verseCount: 7,
     theme: 'Hamd, rahmet ve hidayet duası',
-    frequencyHz: 528,
+    frequencyHz: getQuranSurahToneHz(1),
     applicationSteps: [
       'Sabah veya akşam, kendinize uygun bir sesle Fâtiha’yı üç kez okuyun ya da dinleyin.',
       'Her okuyuştan sonra anlamındaki bir cümle üzerinde kısa süre düşünün.',
@@ -27,7 +29,7 @@ export const QURAN_SURAH_THERAPY: QuranSurahTherapy[] = [
     name: 'Yâsîn',
     verseCount: 83,
     theme: 'Ahiret ve diriliş üzerine tefekkür',
-    frequencyHz: 432,
+    frequencyHz: getQuranSurahToneHz(36),
     applicationSteps: [
       'Sûreyi acele etmeden, bölümler hâlinde okuyun veya dinleyin.',
       'Her bölümden sonra kısa bir sessizlik bırakın.',
@@ -39,7 +41,7 @@ export const QURAN_SURAH_THERAPY: QuranSurahTherapy[] = [
     name: 'Rahmân',
     verseCount: 78,
     theme: 'Allah’ın nimetlerini hatırlama ve şükür',
-    frequencyHz: 639,
+    frequencyHz: getQuranSurahToneHz(55),
     applicationSteps: [
       'Sûrede tekrarlanan nimet hatırlatmalarından birini seçip hayatınızdaki karşılığını düşünün.',
       'Okuyuşu yavaş tempoda yapın.',
@@ -51,7 +53,7 @@ export const QURAN_SURAH_THERAPY: QuranSurahTherapy[] = [
     name: 'Vâkıa',
     verseCount: 96,
     theme: 'Rızık, şükür ve kıyamet üzerine tefekkür',
-    frequencyHz: 741,
+    frequencyHz: getQuranSurahToneHz(56),
     applicationSteps: [
       'Rızık ve kazanç konusundaki niyetinizi sessizce belirleyin.',
       'Sûreyi bir kez tamamen dinleyin, ikinci okuyuşta anlamına odaklanın.',
@@ -63,7 +65,7 @@ export const QURAN_SURAH_THERAPY: QuranSurahTherapy[] = [
     name: 'Mülk',
     verseCount: 30,
     theme: 'Kâinattaki düzen ve kudret üzerine tefekkür',
-    frequencyHz: 396,
+    frequencyHz: getQuranSurahToneHz(67),
     applicationSteps: [
       'Gökyüzü veya doğa üzerine düşünerek sûreyi okuyun ya da dinleyin.',
       'Her beş ayette bir durup kısa bir sessizlik bırakın.',
@@ -75,7 +77,7 @@ export const QURAN_SURAH_THERAPY: QuranSurahTherapy[] = [
     name: 'Kehf',
     verseCount: 110,
     theme: 'Sabır, iman ve kıssalar üzerine tefekkür',
-    frequencyHz: 174,
+    frequencyHz: getQuranSurahToneHz(18),
     applicationSteps: [
       'Sûreyi cuma gününe özgü bir alışkanlık olarak okuyun veya dinleyin.',
       'Kıssalardan birini seçip sabır teması üzerinde düşünün.',
@@ -87,7 +89,7 @@ export const QURAN_SURAH_THERAPY: QuranSurahTherapy[] = [
     name: 'İnşirâh',
     verseCount: 8,
     theme: 'Zorlukların ardından gelen ferahlık üzerine tefekkür',
-    frequencyHz: 432,
+    frequencyHz: getQuranSurahToneHz(94),
     applicationSteps: [
       'Kısa sûreyi üç kez okuyun ya da dinleyin.',
       'Yaşadığınız bir zorluğu düşünüp “yüsr” kavramı üzerinde kısa süre durun.',
@@ -99,7 +101,7 @@ export const QURAN_SURAH_THERAPY: QuranSurahTherapy[] = [
     name: 'İhlâs',
     verseCount: 4,
     theme: 'Tevhid ve sadelik üzerine tefekkür',
-    frequencyHz: 852,
+    frequencyHz: getQuranSurahToneHz(112),
     applicationSteps: [
       'Sûreyi üç kez, her okuyuşta bir öncekinden yavaş okuyun.',
       'Tevhid cümlesi üzerinde kısa bir sessizlik bırakın.',
@@ -111,7 +113,7 @@ export const QURAN_SURAH_THERAPY: QuranSurahTherapy[] = [
     name: 'Felak',
     verseCount: 5,
     theme: 'Korunma sığınağı; geleneksel olarak nazar ve kötülüklerden korunma için okunur',
-    frequencyHz: 285,
+    frequencyHz: getQuranSurahToneHz(113),
     applicationSteps: [
       'Muavvizeteyn’in ilk sûresini üç kez okuyun ya da dinleyin.',
       'Her okuyuşta korunma niyetinizi sessizce yenileyin.',
@@ -123,7 +125,7 @@ export const QURAN_SURAH_THERAPY: QuranSurahTherapy[] = [
     name: 'Nâs',
     verseCount: 6,
     theme: 'Korunma sığınağı; Felak ile birlikte Muavvizeteyn olarak okunur',
-    frequencyHz: 285,
+    frequencyHz: getQuranSurahToneHz(114),
     applicationSteps: [
       'Muavvizeteyn’in ikinci sûresini üç kez okuyun ya da dinleyin.',
       'Her okuyuşta korunma niyetinizi sessizce yenileyin.',

@@ -20,16 +20,13 @@ const SURAH_NAMES_AND_COUNTS = [
   ['Tebbet', 5], ['İhlâs', 4], ['Felak', 5], ['Nâs', 6],
 ] as const;
 
-const SPECIAL_FREQUENCIES: Readonly<Record<number, number>> = {
-  1: 528, 2: 963, 10: 639, 12: 432, 36: 432, 55: 639, 56: 741, 59: 528,
-  93: 432, 94: 432, 112: 528, 113: 396, 114: 396,
-};
+export const getQuranSurahToneHz = (surahNumber: number) => 218 + surahNumber * 2;
 
 export const QURAN_SURAHS: readonly QuranSurahInfo[] = SURAH_NAMES_AND_COUNTS.map(([name, verseCount], index) => ({
   number: index + 1,
   name,
   verseCount,
-  frequencyHz: SPECIAL_FREQUENCIES[index + 1] ?? 432,
+  frequencyHz: getQuranSurahToneHz(index + 1),
 }));
 
 export const QURAN_SURAH_COUNT = QURAN_SURAHS.length;

@@ -10,7 +10,7 @@ export const MEDITATION_MODES = [
   {
     id: 'nefes', name: 'Nefes ve Sükûnet Meditasyonu',
     description: 'Doğal nefes, sakin bir ton ve anlam üzerine düşünme.',
-    steps: ['Rahatça oturun ve nefesinizi zorlamadan izleyin.', 'Seçtiğiniz ayeti ve anlamını okuyun.', 'İsterseniz 432 Hz tonunu başlatın; nefesinize ve anlama dönün.', 'Seans sonunda kısa bir süre sessiz kalın.'],
+    steps: ['Rahatça oturun ve nefesinizi zorlamadan izleyin.', 'Seçtiğiniz ayeti ve anlamını okuyun.', 'İsterseniz seçili sure için gösterilen uygulama tonunu başlatın; nefesinize ve anlama dönün.', 'Seans sonunda kısa bir süre sessiz kalın.'],
     recommendedMinutes: [1, 3, 5, 10],
   },
   {
