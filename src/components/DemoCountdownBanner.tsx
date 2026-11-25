@@ -16,6 +16,7 @@ import { useLanguage } from '../utils/i18n';
 
 interface DemoCountdownBannerProps {
   demoStatus: DeviceDemoStatus;
+  remainingDemoCredits: number;
   onOpenRegister: () => void;
   onOpenLogin: () => void;
   onOpenDealer: () => void;
@@ -25,6 +26,7 @@ interface DemoCountdownBannerProps {
 
 export const DemoCountdownBanner: React.FC<DemoCountdownBannerProps> = ({
   demoStatus,
+  remainingDemoCredits,
   onOpenRegister,
   onOpenLogin,
   onOpenDealer,
@@ -133,6 +135,9 @@ export const DemoCountdownBanner: React.FC<DemoCountdownBannerProps> = ({
                 {formattedTime}
               </span>
             </div>
+            <span className="px-2.5 py-1 rounded-lg bg-slate-900/90 border border-slate-800 text-[11px] font-semibold text-emerald-300">
+              Demo kredisi: {remainingDemoCredits}/30
+            </span>
           </div>
 
           {/* Contextual Warning & Dealer attribution */}

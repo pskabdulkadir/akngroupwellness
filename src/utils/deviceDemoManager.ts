@@ -27,6 +27,7 @@ const STORAGE_DEMO_STARTED = 'aurabio_demo_started_v3';
 const STORAGE_DEMO_LAST_TICK = 'aurabio_demo_last_tick_v3';
 const STORAGE_DEMO_RENEWAL_PENDING = 'aurabio_demo_renewal_pending_v3';
 const STORAGE_DEMO_RENEWAL_REQ_DATA = 'aurabio_demo_renewal_req_data_v3';
+const STORAGE_DEMO_CREDITS = 'aurabio_demo_credits_v1';
 const COOKIE_DEVICE_UUID = 'aurabio_device_uuid_v3';
 
 // Cookie storage helpers for cross-browser & private window persistence
@@ -95,6 +96,88 @@ export interface DeviceDemoStatus {
   demoExpiresAt: number;
   percentageRemaining: number; // 0 to 100
   warningLevel: 'normal' | 'warning' | 'critical'; // normal > 10m, warning 5-10m, critical < 5m
+}
+
+interface DeviceDemoCredits {
+  demoStartTime: number;
+  remaining: number;
+  requests: Record<string, 'deducted' | 'refunded'>;
+}
+
+function readDeviceDemoCredits(): DeviceDemoCredits | null {
+  try {
+    const raw = localStorage.getItem(STORAGE_DEMO_CREDITS);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as DeviceDemoCredits;
+    if (
+      !Number.isFinite(parsed.demoStartTime) ||
+      !Number.isInteger(parsed.remaining) ||
+      parsed.remaining < 0 ||
+      parsed.remaining > 30 ||
+      !parsed.requests ||
+      typeof parsed.requests !== 'object'
+    ) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+export function getDeviceDemoCredits(demoStartTime = getDeviceDemoStatus().demoStartTime): number {
+  if (typeof window === 'undefined' || !demoStartTime) return 0;
+  const credits = readDeviceDemoCredits();
+  return credits?.demoStartTime === demoStartTime ? credits.remaining : 0;
+}
+
+export function initializeDeviceDemoCredits(demoStartTime: number): number {
+  if (typeof window === 'undefined' || !demoStartTime) return 0;
+  const existing = readDeviceDemoCredits();
+  if (existing?.demoStartTime === demoStartTime) return existing.remaining;
+  const credits: DeviceDemoCredits = { demoStartTime, remaining: 30, requests: {} };
+  try {
+    localStorage.setItem(STORAGE_DEMO_CREDITS, JSON.stringify(credits));
+    return credits.remaining;
+  } catch {
+    return 0;
+  }
+}
+
+export function deductDeviceDemoCredit(
+  demoStartTime: number,
+  requestId: string
+): { success: boolean; remainingCredits: number } {
+  const credits = readDeviceDemoCredits();
+  if (!credits || credits.demoStartTime !== demoStartTime) return { success: false, remainingCredits: 0 };
+  if (credits.requests[requestId] === 'deducted') return { success: true, remainingCredits: credits.remaining };
+  if (credits.remaining <= 0 || credits.requests[requestId] === 'refunded') {
+    return { success: false, remainingCredits: credits.remaining };
+  }
+  credits.remaining -= 1;
+  credits.requests[requestId] = 'deducted';
+  try {
+    localStorage.setItem(STORAGE_DEMO_CREDITS, JSON.stringify(credits));
+    return { success: true, remainingCredits: credits.remaining };
+  } catch {
+    return { success: false, remainingCredits: credits.remaining + 1 };
+  }
+}
+
+export function refundDeviceDemoCredit(
+  demoStartTime: number,
+  requestId: string
+): { success: boolean; remainingCredits: number } {
+  const credits = readDeviceDemoCredits();
+  if (!credits || credits.demoStartTime !== demoStartTime || credits.requests[requestId] !== 'deducted') {
+    return { success: false, remainingCredits: credits?.remaining ?? 0 };
+  }
+  credits.remaining = Math.min(30, credits.remaining + 1);
+  credits.requests[requestId] = 'refunded';
+  try {
+    localStorage.setItem(STORAGE_DEMO_CREDITS, JSON.stringify(credits));
+    return { success: true, remainingCredits: credits.remaining };
+  } catch {
+    return { success: false, remainingCredits: credits.remaining - 1 };
+  }
 }
 
 /**

@@ -77,11 +77,15 @@ import {
   getResellerByCode, 
   detectAndSaveReferralCodeFromUrl 
 } from './utils/resellerManager';
-import { 
-  initializeDeviceDemo, 
-  subscribeToDeviceDemo, 
-  getDeviceDemoStatus, 
-  DeviceDemoStatus 
+import {
+  initializeDeviceDemo,
+  subscribeToDeviceDemo,
+  getDeviceDemoStatus,
+  getDeviceDemoCredits,
+  initializeDeviceDemoCredits,
+  deductDeviceDemoCredit,
+  refundDeviceDemoCredit,
+  DeviceDemoStatus
 } from './utils/deviceDemoManager';
 import {
   parseCurrentUrlState,
@@ -103,6 +107,7 @@ export default function WellnessApp({
   useKeyboardAvoidance();
   const initialNav = useRef<Partial<AppNavigationState>>(parseCurrentUrlState()).current;
   const activeScanRequestIdRef = useRef<string | null>(null);
+  const activeGuestDemoStartTimeRef = useRef<number | null>(null);
 
   // 1. Navigation & History State
   const [activeTab, setActiveTab] = useState<ActiveTab>(() => initialNav.activeTab || 'camera');
@@ -134,6 +139,7 @@ export default function WellnessApp({
   // 5. Membership & Authentication State
   const [currentUser, setCurrentUser] = useState<UserMember | null>(() => getActiveMemberSession());
   const [demoStatus, setDemoStatus] = useState<DeviceDemoStatus>(() => getDeviceDemoStatus());
+  const [guestDemoCredits, setGuestDemoCredits] = useState<number>(() => getDeviceDemoCredits());
   const [isGuestDemoActive, setIsGuestDemoActive] = useState<boolean>(() => {
     const st = getDeviceDemoStatus();
     return Boolean(st.isStarted && !st.isExpired && st.remainingSeconds > 0);
@@ -656,6 +662,7 @@ export default function WellnessApp({
     // Initialize with central Firestore
     initializeDeviceDemo().then((status) => {
       setDemoStatus(status);
+      setGuestDemoCredits(getDeviceDemoCredits(status.demoStartTime));
       if (status.isStarted && !status.isExpired && status.remainingSeconds > 0) {
         setIsGuestDemoActive(true);
       } else if (status.isExpired && !currentUser) {
@@ -668,6 +675,7 @@ export default function WellnessApp({
     // Subscribe to live ticking demo status (background wall clock persistence)
     const unsubscribeDemo = subscribeToDeviceDemo((status) => {
       setDemoStatus(status);
+      setGuestDemoCredits(getDeviceDemoCredits(status.demoStartTime));
       if (status.isStarted && !status.isExpired && status.remainingSeconds > 0) {
         setIsGuestDemoActive(true);
       } else if (status.isExpired) {
@@ -782,6 +790,15 @@ export default function WellnessApp({
 
   const handleScanStart = async (): Promise<string | null> => {
     const requestId = `SCAN-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
+    const currentDemo = getDeviceDemoStatus();
+    if (!currentUser && !getActiveResellerSession()?.uid && currentDemo.isStarted && currentDemo.isActive) {
+      const result = deductDeviceDemoCredit(currentDemo.demoStartTime, requestId);
+      if (!result.success) return 'Ücretsiz demo tarama krediniz tükendi.';
+      activeScanRequestIdRef.current = requestId;
+      activeGuestDemoStartTimeRef.current = currentDemo.demoStartTime;
+      setGuestDemoCredits(result.remainingCredits);
+      return null;
+    }
     const res = await deductScanCreditFromDealer(currentUser?.uid, { scanCost: 1, requestId });
     if (!res.success) {
       if (res.insufficientCredits && (currentUser?.role === 'dealer' || currentUser?.dealerDetails)) {
@@ -800,6 +817,13 @@ export default function WellnessApp({
     const requestId = activeScanRequestIdRef.current;
     if (!requestId) return;
     activeScanRequestIdRef.current = null;
+    const demoStartTime = activeGuestDemoStartTimeRef.current;
+    if (demoStartTime !== null) {
+      activeGuestDemoStartTimeRef.current = null;
+      const result = refundDeviceDemoCredit(demoStartTime, requestId);
+      if (result.success) setGuestDemoCredits(result.remainingCredits);
+      return;
+    }
     refundScanCreditToDealer(currentUser?.uid, requestId).then((res) => {
       if (res.success) {
         setCurrentUser((prev) => prev ? { ...prev, creditsBalance: res.remainingCredits } : prev);
@@ -815,6 +839,7 @@ export default function WellnessApp({
     });
     setScanHistory((prev) => [result, ...prev.filter(s => s.id !== result.id)]);
     activeScanRequestIdRef.current = null;
+    activeGuestDemoStartTimeRef.current = null;
 
     if (autoStartPostScan && lastPreScan && pendingComparisonTreatment) {
       setComparisonPair({
@@ -994,6 +1019,7 @@ export default function WellnessApp({
       {isGuestDemoValid && (
         <DemoCountdownBanner
           demoStatus={demoStatus}
+          remainingDemoCredits={guestDemoCredits}
           onOpenRegister={() => {
             setAuthModalInitialMode('register');
             setIsAuthModalOpen(true);
@@ -1232,6 +1258,9 @@ export default function WellnessApp({
             handleAuthSuccess(user);
           }}
           onStartDemo={() => {
+            const status = getDeviceDemoStatus();
+            setDemoStatus(status);
+            setGuestDemoCredits(initializeDeviceDemoCredits(status.demoStartTime));
             setIsGuestDemoActive(true);
             setIsAuthModalOpen(false);
             setDealerRegistrationSponsor(null);
