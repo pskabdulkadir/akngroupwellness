@@ -663,7 +663,7 @@ export const DealerBackOfficeView: React.FC<DealerBackOfficeViewProps> = ({
             val: `${selectedPlaqueTier.unlockedDepth}. Derinlik (%${selectedPlaqueTier.depthCommissionPercent})`,
           },
           {
-            label: 'KARİYER TERFİ ÖDÜLÜ',
+            label: 'KARİYER MATRİSİ SABİT BONUSU',
             val: `${(selectedPlaqueTier.fixedCareerBonusAmount || 1000).toLocaleString('tr-TR')} $ + Havuz`,
           },
           {
@@ -893,7 +893,7 @@ export const DealerBackOfficeView: React.FC<DealerBackOfficeViewProps> = ({
             val: `${selectedPlaqueTier.unlockedDepth}. Derinlik (%${selectedPlaqueTier.depthCommissionPercent})`,
           },
           {
-            label: 'KARİYER TERFİ ÖDÜLÜ',
+            label: 'KARİYER MATRİSİ SABİT BONUSU',
             val: `${(selectedPlaqueTier.fixedCareerBonusAmount || 1000).toLocaleString('tr-TR')} $`,
           },
           {
@@ -1179,8 +1179,8 @@ export const DealerBackOfficeView: React.FC<DealerBackOfficeViewProps> = ({
   
   <!-- Kutu 2 -->
   <rect x="592" y="770" width="395" height="110" rx="16" fill="#0f172a" fill-opacity="0.85" stroke="rgba(245, 158, 11, 0.5)" stroke-width="2"/>
-  <text x="789" y="810" text-anchor="middle" fill="#94a3b8" font-family="system-ui, sans-serif" font-size="13" font-weight="bold">KARİYER TERFİ ÖDÜLÜ</text>
-  <text x="789" y="850" text-anchor="middle" fill="#fde68a" font-family="monospace" font-size="22" font-weight="bold">${escapeXml((selectedPlaqueTier.fixedCareerBonusAmount || 1000).toLocaleString('tr-TR'))} $ + Havuz</text>
+  <text x="789" y="810" text-anchor="middle" fill="#94a3b8" font-family="system-ui, sans-serif" font-size="13" font-weight="bold">KARİYER MATRİSİ SABİT BONUSU</text>
+  <text x="789" y="850" text-anchor="middle" fill="#fde68a" font-family="monospace" font-size="22" font-weight="bold">${escapeXml((selectedPlaqueTier.fixedCareerBonusAmount || 1000).toLocaleString('tr-TR'))} $ kariyer matrisi bonusu + havuz uygunluğu</text>
   
   <!-- Kutu 3 -->
   <rect x="1013" y="770" width="395" height="110" rx="16" fill="#0f172a" fill-opacity="0.85" stroke="rgba(245, 158, 11, 0.5)" stroke-width="2"/>
@@ -1229,14 +1229,14 @@ export const DealerBackOfficeView: React.FC<DealerBackOfficeViewProps> = ({
     URL.revokeObjectURL(url);
   };
 
-  // Withdrawal form state (Bank Audit Compliance: IBAN Only + Name Cross-Check + %20 Vergi Kesintisi & Fatura Yükleme)
+  // Withdrawal form state (IBAN/name checks and optional invoice review)
   const [withdrawAmount, setWithdrawAmount] = useState<number>(1000);
   const [customIban, setCustomIban] = useState<string>('');
   const [customBankName, setCustomBankName] = useState<string>('');
   const [customIbanHolder, setCustomIbanHolder] = useState<string>(member?.full_name || '');
   const [withdrawComplianceError, setWithdrawComplianceError] = useState<string | null>(null);
 
-  // %20 Vergi İadesi Fatura Yükleme State'leri
+  // Çekimle ilgili belge inceleme alanları
   const [wantsTaxRefund, setWantsTaxRefund] = useState<boolean>(true);
   const [invoiceNo, setInvoiceNo] = useState<string>('');
   const [taxOfficeAndId, setTaxOfficeAndId] = useState<string>('');
@@ -1594,12 +1594,10 @@ export const DealerBackOfficeView: React.FC<DealerBackOfficeViewProps> = ({
 
   const totalEarnings = member.wallets.total_earnings || 0;
   const matchingEarnings = member.wallets.matching_wallet || 0;
-  const fastRoiEarnings = member.wallets.fast_roi_wallet || 0;
-  const sponsorEarnings = Math.max(0, (member.wallets.sponsor_wallet || 0) - fastRoiEarnings);
+  const sponsorEarnings = member.wallets.sponsor_wallet || 0;
   const careerEarnings = Math.max(0, (member.wallets.career_pool_wallet || 0) - matchingEarnings);
   const earningsBreakdown = [
-    { label: 'Sponsor ve başlangıç bonusları', amount: sponsorEarnings },
-    { label: 'FAST-ROI bonusu', amount: fastRoiEarnings },
+    { label: 'Direkt sponsor primi', amount: sponsorEarnings },
     { label: 'Unilevel ekip komisyonu', amount: unilevelEarnings },
     { label: 'Monoline sıra teşviki', amount: monolineIncentiveEarnings },
     { label: 'Unilevel Infinity', amount: member.wallets.infinity_wallet || 0 },
@@ -1626,7 +1624,7 @@ export const DealerBackOfficeView: React.FC<DealerBackOfficeViewProps> = ({
 
     if (wantsTaxRefund && !invoiceDataUrl) {
       setWithdrawComplianceError(
-        'Vergi İadesi (%20) talebi seçtiniz: Lütfen aşağıdaki "Cihazdan Fatura Dosyası Yükle" alanından kestiğiniz faturayı (PDF veya Görsel) seçiniz veya faturasız çekim için kutucuğu kaldırınız.'
+        'Belge incelemesi seçildi: Lütfen aşağıdaki fatura alanını doldurun veya belge göndermeden devam etmek için seçimi kaldırın.'
       );
       return;
     }
@@ -2773,7 +2771,7 @@ export const DealerBackOfficeView: React.FC<DealerBackOfficeViewProps> = ({
         </div>
       )}
 
-      {/* SUB-TAB 1: CÜZDAN, PARA TRANSFERİ, KREDİ ALIŞVERİŞİ, YENİ BAYİ ÖDEMESİ & %20 VERGİ İADELİ NAKİT ÇEKİM */}
+      {/* SUB-TAB 1: CÜZDAN, PARA TRANSFERİ, KREDİ ALIŞVERİŞİ, YENİ BAYİ ÖDEMESİ VE ÇEKİM */}
       {subTab === 'wallet' && (
         <div className="space-y-8">
           {/* CÜZDAN BAKİYESİ İLE PARA GÖNDERME, KREDİ/PAKET SATIN ALMA & YENİ BAYİ ÖDEMESİ PANELİ */}
@@ -3172,13 +3170,13 @@ export const DealerBackOfficeView: React.FC<DealerBackOfficeViewProps> = ({
           <section className="lg:col-span-5 bg-white border border-slate-200 rounded-xl p-6 space-y-5">
             <div className="border-b border-slate-200 pb-4">
               <div className="text-xs font-mono text-emerald-700 font-bold">
-                SQL: withdrawal_requests · %20 VERGİ KESİNTİSİ &amp; FATURA İLE %20 VERGİ İADESİ
+                SQL: withdrawal_requests · stopaj/ödenecek tutar sunucu kaydına göre
               </div>
               <h3 className="text-lg font-bold text-slate-900 mt-0.5">
-                Resmi Banka Hesabına (TR IBAN) Komisyon Çekim &amp; %20 Vergi İadesi Talebi
+                Resmi Banka Hesabına (TR IBAN) Komisyon Çekim Talebi
               </h3>
               <p className="text-xs text-slate-500 mt-0.5">
-                Nakit çekim talebi oluşturulduğunda <strong>%20 vergi kesilerek Sistem Fonuna</strong> aktarılır. Vergi iadesini (<strong>%20</strong>) isteyen bayiler fatura keserek bu ekrandan cihazdan yükler; yönetici onayladığında %20 tutar hesaplarına aktarılır.
+                Sunucu çekim talebinde <strong>stopajı 0</strong> ve net tutarı brüt tutara eşit kaydeder. Bu ekrandaki fatura alanı belge incelemesi içindir; belge yüklemek kesinti, iade veya banka ödemesi onayı anlamına gelmez. Vergi uygulaması mali incelemeye tabidir.
               </p>
             </div>
 
@@ -3221,7 +3219,7 @@ export const DealerBackOfficeView: React.FC<DealerBackOfficeViewProps> = ({
                 />
               </div>
 
-              {/* %20 VERGİ KESİNTİSİ (SİSTEM FONU) VE NET ÖDEME HESAPLAMA TABLOSU */}
+              {/* Çekim tahmini sunucunun kaydettiği tutarlarla aynı tutulur. */}
               <div className="p-3.5 rounded-xl bg-slate-900 text-white space-y-2 text-xs font-mono">
                 <div className="flex items-center justify-between text-slate-300">
                   <span>Talep Edilen Brüt Çekim:</span>
@@ -3230,20 +3228,18 @@ export const DealerBackOfficeView: React.FC<DealerBackOfficeViewProps> = ({
                   </strong>
                 </div>
                 <div className="flex items-center justify-between text-amber-300">
-                  <span>%20 Vergi Kesintisi (Sistem Fonuna Aktarılır):</span>
-                  <strong>
-                    -{(withdrawAmount * 0.2).toLocaleString('en-US', { minimumFractionDigits: 2 })} USD
-                  </strong>
+                  <span>Sunucu kaydındaki stopaj:</span>
+                  <strong>0.00 USD</strong>
                 </div>
                 <div className="flex items-center justify-between pt-2 border-t border-white/15 text-emerald-300 text-sm">
-                  <span>Bankaya Yatacak Net Tutar (%80):</span>
+                  <span>Sunucu talebindeki net tutar:</span>
                   <strong className="font-extrabold">
-                    {(withdrawAmount * 0.8).toLocaleString('en-US', { minimumFractionDigits: 2 })} USD
+                    {withdrawAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })} USD
                   </strong>
                 </div>
               </div>
 
-              {/* %20 VERGİ İADESİ TALEBİ & CİHAZDAN FATURA YÜKLEME ALANI */}
+              {/* İsteğe bağlı vergi belgesi incelemesi */}
               <div className="p-4 rounded-xl bg-teal-50/80 border-2 border-teal-300 space-y-3 text-xs">
                 <label className="flex items-start gap-2.5 cursor-pointer">
                   <input
@@ -3254,12 +3250,10 @@ export const DealerBackOfficeView: React.FC<DealerBackOfficeViewProps> = ({
                   />
                   <div>
                     <div className="font-extrabold text-teal-950">
-                      🧾 %20 Vergi İadesi İstiyorum (+
-                      {(withdrawAmount * 0.2).toLocaleString('tr-TR', { minimumFractionDigits: 2 })}{' '}
-                      USD İade İçin Fatura Yükle)
+                      🧾 Vergi belgesi incelemesi için fatura ekle
                     </div>
                     <p className="text-[11px] text-teal-800 mt-0.5">
-                      Fatura keserek cihazınızdan yüklediğinizde faturanız Yönetici Vergi İadesi Panelinde görünür ve onaylandığında kesilen %20 vergi tutarı hesabınıza geri aktarılır.
+                      Sunucu bu çekim talebinde stopajı 0 kaydeder; bu nedenle hesaplanmış bir iade tutarı yoktur. Yüklenen belge yalnızca incelemeye gönderilir; iade veya ödeme garantisi vermez.
                     </p>
                   </div>
                 </label>
@@ -3451,17 +3445,17 @@ Paket Alarak Aktifliği Yenile →
                         <th className="py-2 pr-2">Talep ID</th>
                         <th className="py-2 px-2">Hedef TR IBAN</th>
                         <th className="py-2 px-2 text-right">Brüt Tutar</th>
-                        <th className="py-2 px-2 text-right">%20 Vergi (Fon)</th>
-                        <th className="py-2 px-2 text-right">Net (%80)</th>
-                        <th className="py-2 px-2">%20 Vergi İadesi &amp; Fatura</th>
+                        <th className="py-2 px-2 text-right">Kaydedilen stopaj</th>
+                        <th className="py-2 px-2 text-right">Kaydedilen net</th>
+                        <th className="py-2 px-2">Belge durumu</th>
                         <th className="py-2 pl-2 text-right">Çekim Durumu</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-200 font-mono tabular-nums">
                       {memberWithdrawals.map((w) => {
                         const gross = w.gross_amount ?? w.amount;
-                        const tax = w.tax_deduction ?? Math.round(gross * 0.2 * 100) / 100;
-                        const net = w.net_amount ?? Math.round((gross - tax) * 100) / 100;
+                        const tax = w.tax_deduction;
+                        const net = w.net_amount;
                         return (
                           <tr key={w.id}>
                             <td className="py-2.5 pr-2 font-bold text-slate-900">#{w.id}</td>
@@ -3475,15 +3469,15 @@ Paket Alarak Aktifliği Yenile →
                               {gross.toLocaleString('en-US', { minimumFractionDigits: 2 })} USD
                             </td>
                             <td className="py-2.5 px-2 text-right font-bold text-rose-700">
-                              -{tax.toLocaleString('en-US', { minimumFractionDigits: 2 })} USD
+                              {tax === undefined ? 'Kaydedilmedi' : `${tax.toLocaleString('en-US', { minimumFractionDigits: 2 })} USD`}
                             </td>
                             <td className="py-2.5 px-2 text-right font-extrabold text-emerald-800">
-                              {net.toLocaleString('en-US', { minimumFractionDigits: 2 })} USD
+                              {net === undefined ? 'Kaydedilmedi' : `${net.toLocaleString('en-US', { minimumFractionDigits: 2 })} USD`}
                             </td>
                             <td className="py-2.5 px-2 font-sans text-[11px]">
                               {w.tax_refund_status === 'APPROVED_CREDITED' && (
                                 <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-900 font-bold">
-                                  ✓ +{tax.toLocaleString('en-US')} USD İade Edildi
+                                  ✓ Belge/iade kaydı onaylandı{tax ? ` · ${tax.toLocaleString('en-US')} USD` : ''}
                                 </span>
                               )}
                               {w.tax_refund_status === 'PENDING_ADMIN_APPROVAL' && (
@@ -3499,7 +3493,7 @@ Paket Alarak Aktifliği Yenile →
                                   onClick={() => setSelectedWithdrawalIdForInvoice(String(w.id))}
                                   className="px-2 py-0.5 rounded bg-teal-100 hover:bg-teal-200 text-teal-950 font-bold cursor-pointer"
                                 >
-                                  📄 Fatura Yükle (+{tax.toLocaleString('en-US')} USD)
+                                  📄 Belge incelemesi için fatura yükle
                                 </button>
                               )}
                             </td>
@@ -3529,7 +3523,7 @@ Paket Alarak Aktifliği Yenile →
               >
                 <div className="font-bold text-teal-950 flex items-center justify-between">
                   <span>
-                    📄 Kesilen %20 Vergiyi Geri Almak İçin Cihazdan Fatura Yükle (Yönetici Onayına Gönder)
+                    📄 Çekim için fatura/vergisel belgeyi incelemeye gönder
                   </span>
                   {selectedWithdrawalIdForInvoice && (
                     <span className="px-2 py-0.5 rounded bg-teal-200 text-teal-950 font-mono text-[10px]">
@@ -3571,7 +3565,7 @@ Paket Alarak Aktifliği Yenile →
                 >
                   {invoiceUploadBusy
                     ? 'Fatura Yükleniyor...'
-                    : '🧾 Seçilen Faturayı Cihazdan Yükle & %20 Vergi İadesi Talep Et'}
+                    : '🧾 Seçilen faturayı yükle ve belge incelemesine gönder'}
                 </button>
               </form>
             </div>
@@ -3644,11 +3638,6 @@ Paket Alarak Aktifliği Yenile →
                           {log.commission_type === 'SPONSOR' && (
                             <span className="text-emerald-700 font-medium">
                               Direkt Sponsor Satış Primi (%20)
-                            </span>
-                          )}
-                          {log.commission_type === 'FAST_ROI_BONUS' && (
-                            <span className="text-teal-700 font-bold">
-                              3 Getir Bedavaya Getir (+%15 Fast-ROI)
                             </span>
                           )}
                           {log.commission_type === 'MONOLINE_DEPTH' && (
@@ -5146,10 +5135,10 @@ Paket Alarak Aktifliği Yenile →
                   </div>
                   <div className="p-3 rounded-xl bg-white/5 border border-amber-400/30">
                     <div className="text-[10px] font-mono uppercase text-slate-400">
-                      Kariyer Terfi Ödülü
+                      Kariyer Matrisi Sabit Bonusu
                     </div>
                     <div className="text-sm font-black font-mono text-emerald-300 mt-0.5">
-                      {(selectedPlaqueTier.fixedCareerBonusAmount || 1000).toLocaleString('tr-TR')} $ + Havuz
+                      {(selectedPlaqueTier.fixedCareerBonusAmount || 1000).toLocaleString('tr-TR')} $ · kariyer matrisi sabit bonusu + havuz uygunluğu
                     </div>
                   </div>
                   <div className="p-3 rounded-xl bg-white/5 border border-amber-400/30">

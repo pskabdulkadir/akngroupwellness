@@ -123,7 +123,6 @@ export const CommissionEngineView: React.FC<CommissionEngineViewProps> = ({
     dynamic_compression_enabled: true,
     unilevel_infinity_enabled: false,
     matching_bonus_enabled: true,
-    fast_roi_3x15_enabled: true,
   };
 
   useEffect(() => {
@@ -1099,7 +1098,7 @@ export const CommissionEngineView: React.FC<CommissionEngineViewProps> = ({
                   : 'bg-emerald-50 text-emerald-900 hover:bg-emerald-100 border border-emerald-300'
               }`}
             >
-              8. 🏆 V2.2 6 Altın Revizyon (Eşleşme, Sıkıştırma &amp; Fast-ROI)
+              8. 🏆 V2.2 Altın Revizyonlar (Eşleşme ve Sıkıştırma)
             </button>
           </div>
         </div>
@@ -2092,7 +2091,7 @@ const worker = new Worker('commission-processing', async (job) => {
                       1. HUKUKİ VE MALİ UYUM MODÜLÜ (COMPLIANCE &amp; TAX MODULE)
                     </div>
                     <h4 className="text-sm font-bold text-slate-900 mt-0.5">
-                      %20 Gelir Vergisi Stopajı / Gider Pusulası &amp; KVKK / MLM Sözleşme Onay Logları
+                      Çekim Kayıtları, Vergi İnceleme Durumu &amp; KVKK / MLM Sözleşme Onay Logları
                     </h4>
                   </div>
                   <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-indigo-100 text-indigo-800 font-bold">
@@ -2100,13 +2099,8 @@ const worker = new Worker('commission-processing', async (job) => {
                   </span>
                 </div>
                 <p className="text-xs text-slate-600 leading-relaxed">
-                  Şirket olmayan şahıs bayileri (<code className="font-mono">has_tax_company = FALSE</code>)
-                  komisyon çekerken sistem otomatik olarak <strong>%20 Gelir Vergisi Stopajı</strong> düşer ve{' '}
-                  <code className="font-mono">withdrawal_requests</code> tablosuna{' '}
-                  <code className="font-mono">gross_amount</code> (Brüt),{' '}
-                  <code className="font-mono">tax_deduction</code> (Kesilen Vergi),{' '}
-                  <code className="font-mono">net_amount</code> (Bankaya Yatacak Net Tutar) olarak kaydeder.
-                  Şirketi olan fatura mükellefi bayilerde stopaj <strong>%0</strong> uygulanır.
+                  Çekim talebinde sunucu şu anda <code className="font-mono">tax_deduction = 0</code> ve{' '}
+                  <code className="font-mono">net_amount = gross_amount</code> kaydeder. Bu tabloda stopaj ve net tutarlar tahmin edilmez; talep kaydındaki değerler gösterilir. Vergi uygulaması ayrıca mali inceleme gerektirir.
                 </p>
 
                 <div className="overflow-x-auto border border-slate-200 rounded-lg bg-white max-h-56 overflow-y-auto">
@@ -2140,11 +2134,11 @@ const worker = new Worker('commission-processing', async (job) => {
                             <td className="py-2 px-2.5">
                               {m.has_tax_company ? (
                                 <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold text-[10px]">
-                                  ŞİRKET (%0 Stopaj)
+                                  ŞİRKET (vergi statüsü kayıtlı)
                                 </span>
                               ) : (
                                 <span className="px-2 py-0.5 rounded bg-amber-100 text-amber-800 font-bold text-[10px]">
-                                  ŞAHIS (%20 Stopaj)
+                                  ŞAHIS (oran mali incelemeye tabi)
                                 </span>
                               )}
                             </td>
@@ -2245,7 +2239,7 @@ const worker = new Worker('commission-processing', async (job) => {
                           ? withdrawalRequests
                           : members.slice(0, 3).map((m, idx) => {
                               const gross = 5000 * (idx + 1);
-                              const tax = m.has_tax_company ? 0 : gross * 0.2;
+                              const tax = 0;
                               return {
                                 id: 100 + idx,
                                 user_full_name: m.full_name,
@@ -2261,10 +2255,8 @@ const worker = new Worker('commission-processing', async (job) => {
                             })
                         ).map((w: any) => {
                           const gross = Number(w.gross_amount ?? w.amount ?? 0);
-                          const tax = Number(
-                            w.tax_deduction ?? (w.has_tax_company ? 0 : gross * 0.2)
-                          );
-                          const net = Number(w.net_amount ?? gross - tax);
+                          const tax = w.tax_deduction;
+                          const net = w.net_amount;
                           return [
                             bankExportFormat,
                             w.id,
@@ -2273,8 +2265,8 @@ const worker = new Worker('commission-processing', async (job) => {
                             w.has_tax_company ? 'SIRKET_FATURALI_0_STOPAJ' : 'SAHIS_GIDER_PUSULASI_20_STOPAJ',
                             `"${w.payout_address}"`,
                             gross.toFixed(2),
-                            tax.toFixed(2),
-                            net.toFixed(2),
+                            tax === undefined ? '' : Number(tax).toFixed(2),
+                            net === undefined ? '' : Number(net).toFixed(2),
                             w.status,
                           ];
                         });
@@ -2306,8 +2298,8 @@ const worker = new Worker('commission-processing', async (job) => {
                       <tr className="bg-slate-100 border-b border-slate-200 text-slate-600">
                         <th className="py-2 px-2.5">Talep / Bayi</th>
                         <th className="py-2 px-2.5 text-right">gross_amount (Brüt)</th>
-                        <th className="py-2 px-2.5 text-right">tax_deduction (%20)</th>
-                        <th className="py-2 px-2.5 text-right">net_amount (Yatan Net)</th>
+                        <th className="py-2 px-2.5 text-right">tax_deduction (Kaydedilen)</th>
+                        <th className="py-2 px-2.5 text-right">net_amount (Kaydedilen)</th>
                         <th className="py-2 px-2.5">Durum</th>
                       </tr>
                     </thead>
@@ -2315,15 +2307,14 @@ const worker = new Worker('commission-processing', async (job) => {
                       {withdrawalRequests.length === 0 ? (
                         <tr>
                           <td colSpan={5} className="py-5 text-center text-slate-400 font-sans">
-                            Henüz çekim talebi yok. Çekim talebi oluşturulduğunda Brüt / %20 Stopaj /
-                            Net ayrımı burada listelenir.
+                            Henüz çekim talebi yok. Çekim oluşturulduğunda brüt, stopaj ve net tutar kayıt alanlarından gösterilir.
                           </td>
                         </tr>
                       ) : (
                         withdrawalRequests.map((w) => {
                           const gross = w.gross_amount ?? w.amount;
-                          const tax = w.tax_deduction ?? (w.has_tax_company ? 0 : gross * 0.2);
-                          const net = w.net_amount ?? gross - tax;
+                          const tax = w.tax_deduction;
+                          const net = w.net_amount;
                           return (
                             <tr key={w.id} className="hover:bg-slate-50">
                               <td className="py-2 px-2.5 font-sans">
@@ -2338,10 +2329,10 @@ const worker = new Worker('commission-processing', async (job) => {
                                 {gross.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} $
                               </td>
                               <td className="py-2 px-2.5 text-right font-bold text-rose-700">
-                                -{tax.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} $
+                                {tax === undefined ? 'Kaydedilmedi' : `${tax.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} $`}
                               </td>
                               <td className="py-2 px-2.5 text-right font-black text-emerald-700">
-                                {net.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} $
+                                {net === undefined ? 'Kaydedilmedi' : `${net.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} $`}
                               </td>
                               <td className="py-2 px-2.5">
                                 <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-800 font-bold text-[10px]">
@@ -2358,7 +2349,7 @@ const worker = new Worker('commission-processing', async (job) => {
               </div>
             </div>
 
-            {/* 2. Anti-Fraud & Risk Engine + 3. Gamification (Fast-Start & Rank-Up Rewards) */}
+            {/* 2. Anti-Fraud & Risk Engine + 3. Kariyer Terfi Ödülleri */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
               <div className="lg:col-span-6 p-5 bg-slate-50 border border-slate-200 rounded-xl space-y-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
@@ -2488,37 +2479,10 @@ const worker = new Worker('commission-processing', async (job) => {
                       3. LİDERLİK, MOTİVASYON &amp; OYUNLAŞTIRMA (SQL: user_rewards_log)
                     </div>
                     <h4 className="text-sm font-bold text-slate-900 mt-0.5">
-                      İlk 14 Gün Hızlı Başlangıç Bonusu (FAST_START) &amp; Kariyer Ödülleri (RANK_UP_GIFT)
+                      Tek Seferlik Terfi Hediyesi (RANK_UP_GIFT)
                     </h4>
+                    <p className="mt-1 text-[11px] text-slate-600">RANK_UP_GIFT ilk kariyer geçişine bağlı ödül kaydıdır; yönetici tarafından kariyer matrisi için tanımlanan sabit bonusla aynı ödeme değildir. Teslim durumu bu kayıt üzerinden izlenir.</p>
                   </div>
-                  <button
-                    type="button"
-                    disabled={v2Busy}
-                    onClick={async () => {
-                      setV2Busy(true);
-                      try {
-                        const res = await fetch('/api/v1/admin/rewards/trigger-fast-start', {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({
-                            user_id: userId || members[0]?.user_id,
-                            cash_value: 2500,
-                          }),
-                        });
-                        const data = await res.json();
-                        setV2ActionBanner({
-                          type: res.ok ? 'success' : 'error',
-                          message: data.message,
-                        });
-                        if (onRefreshState) await onRefreshState();
-                      } finally {
-                        setV2Busy(false);
-                      }
-                    }}
-                    className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-lg cursor-pointer disabled:opacity-50"
-                  >
-                    İlk 14G Hızlı Başlangıç Bonusu Tetikle (+2.500 $)
-                  </button>
                 </div>
 
                 <div className="overflow-x-auto border border-slate-200 rounded-lg bg-white max-h-56 overflow-y-auto">
@@ -2536,8 +2500,7 @@ const worker = new Worker('commission-processing', async (job) => {
                       {userRewardsLog.length === 0 ? (
                         <tr>
                           <td colSpan={5} className="py-5 text-center text-slate-400 font-sans">
-                            Üye ilk kez kariyer atladığında (RANK_UP_GIFT) veya ilk 14 günde 3 aktif
-                            direkt referans getirdiğinde (FAST_START) ödüller burada listelenir.
+                            Üye ilk kez kariyer atladığında (RANK_UP_GIFT) ödül burada listelenir.
                           </td>
                         </tr>
                       ) : (
@@ -2550,13 +2513,9 @@ const worker = new Worker('commission-processing', async (job) => {
                             </td>
                             <td className="py-2 px-2.5">
                               <span
-                                className={`px-1.5 py-0.5 rounded font-bold text-[10px] ${
-                                  rw.reward_type === 'FAST_START'
-                                    ? 'bg-amber-100 text-amber-800'
-                                    : 'bg-indigo-100 text-indigo-800'
-                                }`}
+                                className="px-1.5 py-0.5 rounded font-bold text-[10px] bg-indigo-100 text-indigo-800"
                               >
-                                {rw.reward_type === 'FAST_START' ? 'Hızlı Başlangıç' : `${rw.career_level}. Kariyer · ${CAREER_TIERS.find((tier) => tier.level === rw.career_level)?.title || 'Kariyer Ödülü'}`}
+                                {`${rw.career_level}. Kariyer · ${CAREER_TIERS.find((tier) => tier.level === rw.career_level)?.title || 'Kariyer'} · Tek Seferlik Terfi Hediyesi`}
                               </span>
                             </td>
                             <td className="py-2 px-2.5 font-sans text-[10px] text-slate-700">
@@ -2695,13 +2654,13 @@ const worker = new Worker('commission-processing', async (job) => {
 {`-- 1. VERGİ VE KESİNTİ DETAYLI ÇEKİM TABLOSU GÜNCELLEMESİ
 ALTER TABLE withdrawal_requests 
 ADD COLUMN gross_amount NUMERIC(15,2) NOT NULL,      -- Talep edilen Brüt
-ADD COLUMN tax_deduction NUMERIC(15,2) DEFAULT 0.00, -- %20 Stopaj Kesintisi
+ADD COLUMN tax_deduction NUMERIC(15,2) DEFAULT 0.00, -- Sunucunun kaydettiği kesinti tutarı
 ADD COLUMN net_amount NUMERIC(15,2) NOT NULL;        -- Bankaya Yatacak Net Tutar
 
 -- 2. HUKUKİ ONAY VE GÜVENLİK İZLERİ (USERS TABLOSUNA EK)
 ALTER TABLE users 
-ADD COLUMN tc_identity_no VARCHAR(11) UNIQUE,        -- Stopaj ve Fatura için zorunlu
-ADD COLUMN has_tax_company BOOLEAN DEFAULT FALSE,    -- Şirketi var mı? (Varsa fatura keser, stopaj düşülmez)
+ADD COLUMN tc_identity_no VARCHAR(11) UNIQUE,        -- Kimlik doğrulama bilgisi
+ADD COLUMN has_tax_company BOOLEAN DEFAULT FALSE,    -- Vergi statüsü bilgisi
 ADD COLUMN last_login_ip VARCHAR(45),
 ADD COLUMN kvkk_approved_at TIMESTAMP,
 ADD COLUMN contract_version VARCHAR(20) DEFAULT 'v2.0';
@@ -2711,7 +2670,7 @@ CREATE TABLE user_rewards_log (
     id BIGSERIAL PRIMARY KEY,
     user_id BIGINT REFERENCES users(id),
     career_level INT NOT NULL,
-    reward_type VARCHAR(50), -- 'RANK_UP_GIFT', 'FAST_START'
+    reward_type VARCHAR(50), -- 'RANK_UP_GIFT'
     reward_description VARCHAR(255),
     cash_value NUMERIC(15,2) DEFAULT 0.00,
     is_delivered BOOLEAN DEFAULT FALSE,
@@ -2733,7 +2692,7 @@ CREATE TABLE notification_outbox (
           </div>
         )}
 
-        {/* TAB 8: V2.2 6 ALTIN REVİZYON (LİDERLİK EŞLEŞME, DİNAMİK SIKIŞTIRMA, FAST-ROI +%15, B2C PERAKENDE & VEYA ÇEKİM KURALI) */}
+        {/* TAB 8: V2.2 ALTIN REVİZYONLAR (LİDERLİK EŞLEŞME, DİNAMİK SIKIŞTIRMA, B2C PERAKENDE & VEYA ÇEKİM KURALI) */}
         {activeV2Tab === 'V22_GOLDEN_REVISIONS' && (
           <div className="space-y-6">
             <div className="p-5 bg-gradient-to-r from-slate-900 via-indigo-950 to-emerald-950 text-white rounded-2xl border border-emerald-500/30 space-y-5">
@@ -2743,7 +2702,7 @@ CREATE TABLE notification_outbox (
                     🛠️ V2.2 6 ALTIN REVİZYON · OPTİMUM %40 ŞİRKET NET KÂRI &amp; %60 SAHA DAĞITIM MİMARİSİ
                   </div>
                   <h4 className="text-lg font-bold text-white mt-0.5">
-                    Monoline 7 Derinlik Duvarı Kırıldı · 3 Getir Bedavaya Getir (%105 ROI) · Esnek &ldquo;VEYA&rdquo; Çekim Kuralı
+                    Monoline 7 Derinlik Dağıtımı · Esnek &ldquo;VEYA&rdquo; Çekim Kuralı
                   </h4>
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -2757,11 +2716,6 @@ CREATE TABLE notification_outbox (
                       key: 'matching_bonus_enabled' as const,
                       label: '2. %10-%25 Eşleşme Bonusu',
                       val: effectiveV2Config.matching_bonus_enabled !== false,
-                    },
-                    {
-                      key: 'fast_roi_3x15_enabled' as const,
-                      label: '3. +%15 Fast-ROI (3 Getir)',
-                      val: effectiveV2Config.fast_roi_3x15_enabled !== false,
                     },
                   ].map((item) => (
                     <button
@@ -2799,11 +2753,11 @@ CREATE TABLE notification_outbox (
                     2. SAHA DAĞITIMI (%60 OPTİMUM MOTİVASYON)
                   </div>
                   <div className="text-lg font-extrabold text-white">
-                    %25 Monoline + %20 Sponsor + Fast-ROI
+                    %25 Monoline + %20 Direkt Sponsor
                   </div>
                   <p className="font-sans text-emerald-100 text-[11px] leading-relaxed">
                     • <strong>%25 Monoline 7 Derinlik (7,5,4,3,2,2,2):</strong> Dinamik Sıkıştırmalı
-                    <br />• <strong>%20 Direkt Sponsor + %15 Fast-ROI:</strong> 3 Getir Bedavaya Getir
+                    <br />• <strong>%20 Direkt Sponsor:</strong> Doğrudan satış primi
                     <br />• <strong>%10-%25 Eşleşme:</strong> Zirve Lider Kaldıracı
                   </p>
                 </div>
@@ -2877,7 +2831,7 @@ const canWithdraw =
                     CANLI V2.2 SİMÜLASYON KANITI (1. ÜYEDEN 7. KARİYER KÂMİLE&apos;YE)
                   </div>
                   <h4 className="text-sm font-bold text-slate-900 mt-0.5">
-                    Liderlerin V2.2 (6 Altın Revizyon Sonrası) Canlı Cüzdan Kazançları
+                    Liderlerin Güncel V2.2 Kurallarıyla Canlı Cüzdan Kazançları
                   </h4>
                 </div>
 
@@ -2886,7 +2840,7 @@ const canWithdraw =
                     <thead>
                       <tr className="bg-slate-100 border-b border-slate-200 text-slate-600">
                         <th className="py-2 px-2.5">Lider / Mertebe</th>
-                        <th className="py-2 px-2.5 text-right">Sponsor + ROI</th>
+                        <th className="py-2 px-2.5 text-right">Sponsor bakiyesi</th>
                         <th className="py-2 px-2.5 text-right">Monoline Cüzdanı</th>
                         <th className="py-2 px-2.5 text-right">Eşleşme + Havuz</th>
                         <th className="py-2 px-2.5 text-right">V2.2 Toplam Nakit</th>
@@ -2936,21 +2890,21 @@ const canWithdraw =
               </div>
             </div>
 
-            {/* 🚀 SİSTEMİ MÜKEMMELLEŞTİRECEK 5 STRATEJİK İYİLEŞTİRME & ADMIN KONTROL PANELİ */}
+            {/* 🚀 SİSTEMİ MÜKEMMELLEŞTİRECEK 4 STRATEJİK İYİLEŞTİRME & ADMIN KONTROL PANELİ */}
             <div className="p-5 bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white rounded-2xl border border-indigo-500/40 space-y-5">
               <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-3">
                 <div>
                   <span className="px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-400/40 font-mono text-[11px] font-bold">
-                    🚀 BÜYÜMEYİ 2-3 KATINA ÇIKARAN 5 STRATEJİK İYİLEŞTİRME ÖNERİSİ (CANLI MODÜLLER)
+                    🚀 4 STRATEJİK İYİLEŞTİRME ÖNERİSİ (CANLI MODÜLLER)
                   </span>
                   <h4 className="text-base sm:text-lg font-extrabold text-white mt-1">
-                    1️⃣ 48s FOMO Sayacı · 2️⃣ Hibrit Dinamik Sıkıştırma · 3️⃣ P2P &amp; Kupon · 4️⃣ İlk 30 Gün Duble Bonus · 5️⃣ WhatsApp Business Story
+                    1️⃣ 48s FOMO Sayacı · 2️⃣ Hibrit Dinamik Sıkıştırma · 3️⃣ P2P &amp; Kupon · 4️⃣ WhatsApp Business Story
                   </h4>
                 </div>
               </div>
 
-              {/* 5 Stratejik İyileştirme Admin Kontrol Kartları */}
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3">
+              {/* Stratejik iyileştirme admin kontrol kartları */}
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
                 {/* 1️⃣ 48 Saatlik Geri Sayım & FOMO */}
                 <div className="p-3.5 rounded-xl bg-red-950/50 border border-red-500/40 space-y-2 flex flex-col justify-between">
                   <div className="space-y-1">
@@ -3043,44 +2997,12 @@ const canWithdraw =
                   </button>
                 </div>
 
-                {/* 4️⃣ İlk 30 Gün Hoş Geldin Duble Bonusu */}
-                <div className="p-3.5 rounded-xl bg-purple-950/50 border border-purple-500/40 space-y-2 flex flex-col justify-between">
-                  <div className="space-y-1">
-                    <div className="text-[11px] font-mono font-bold text-purple-300">
-                      4️⃣ İLK 30 GÜN DUBLE BONUS (2X)
-                    </div>
-                    <p className="text-[11px] text-slate-200 leading-relaxed">
-                      14 günlük 2.500 $ Fast-Start süresini <strong>30 güne esnetir</strong> ve <strong>5.000 $ Hoş Geldin Duble Bonusu</strong> verir.
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    disabled={v2Busy}
-                    onClick={() =>
-                      handleUpdateV2Config({
-                        welcome_30d_double_bonus_enabled:
-                          effectiveV2Config.welcome_30d_double_bonus_enabled === false,
-                        fast_start_window_days:
-                          effectiveV2Config.welcome_30d_double_bonus_enabled === false ? 30 : 14,
-                      })
-                    }
-                    className={`w-full py-1.5 rounded-lg text-[11px] font-bold cursor-pointer ${
-                      effectiveV2Config.welcome_30d_double_bonus_enabled !== false
-                        ? 'bg-amber-400 text-slate-950'
-                        : 'bg-slate-700 text-slate-300'
-                    }`}
-                  >
-                    {effectiveV2Config.welcome_30d_double_bonus_enabled !== false
-                      ? '✓ 30 Gün Duble Bonus (5.000 $): AÇIK'
-                      : 'Standart 14 Gün (2.500 $): AÇIK'}
-                  </button>
-                </div>
 
-                {/* 5️⃣ WhatsApp Business API & Push Story */}
+                {/* 4️⃣ WhatsApp Business API & Push Story */}
                 <div className="p-3.5 rounded-xl bg-emerald-950/60 border border-emerald-500/40 space-y-2 flex flex-col justify-between">
                   <div className="space-y-1">
                     <div className="text-[11px] font-mono font-bold text-emerald-300">
-                      5️⃣ WHATSAPP BUSINESS &amp; STORY
+                      4️⃣ WHATSAPP BUSINESS &amp; STORY
                     </div>
                     <p className="text-[11px] text-slate-200 leading-relaxed">
                       Komisyon yattığı an bayiye <strong>WhatsApp Business API</strong> mesajı ve <strong>Instagram/WA Story kartı</strong> gönderir.

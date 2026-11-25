@@ -875,22 +875,6 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
     }
   };
 
-  const handleAdminTriggerWelcomeDoubleBonus = async () => {
-    setStrategicBusy(true);
-    try {
-      const res = await fetch('/api/v1/admin/rewards/trigger-welcome-double-bonus', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_id: strategicTargetUserId }),
-      });
-      const data = await res.json();
-      showStrategicFeedback(data.message || 'İlk 30 Gün Duble Bonus tanımlandı.');
-      if (onRefreshState) await onRefreshState();
-    } finally {
-      setStrategicBusy(false);
-    }
-  };
-
   const handleAdminTriggerWhatsAppPush = async () => {
     setStrategicBusy(true);
     try {
@@ -980,11 +964,9 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
   ];
   const plannedCommissionRate = commissionRateRows.reduce((sum, row) => sum + row.rate, 0);
   const financeRows = sortedMembers.map((member) => {
-    const fastRoi = member.wallets.fast_roi_wallet || 0;
     const matching = member.wallets.matching_wallet || 0;
     const breakdown = [
-      Math.max(0, (member.wallets.sponsor_wallet || 0) - fastRoi),
-      fastRoi,
+      member.wallets.sponsor_wallet || 0,
       member.wallets.unilevel_wallet || 0,
       member.wallets.monoline_incentive_wallet || 0,
       member.wallets.infinity_wallet || 0,
@@ -1008,14 +990,13 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
       row.breakdown.forEach((amount, index) => {
         totals[index] = (totals[index] || 0) + amount;
       });
-      totals[7] = (totals[7] || 0) + row.other;
+      totals[6] = (totals[6] || 0) + row.other;
       return totals;
     },
     [] as number[]
   );
   const financeCategoryLabels = [
-    'Sponsor ve başlangıç bonusları',
-    'FAST-ROI',
+    'Direkt sponsor',
     'Unilevel',
     'Monoline teşvik',
     'Unilevel Infinity',
@@ -1719,17 +1700,17 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
           {accountingCredentialMessage && <p role="status" className={`text-sm font-semibold ${accountingCredentialMessage.type === 'success' ? 'text-emerald-700' : 'text-red-700'}`}>{accountingCredentialMessage.text}</p>}
         </section>
       )}
-      {/* SECTION: 🚀 BÜYÜMEYİ 2-3 KATINA ÇIKARAN 5 STRATEJİK İYİLEŞTİRME ÖNERİSİ & V2.2 SİSTEM AYARLARI */}
+      {/* SECTION: STRATEJİK İYİLEŞTİRME ÖNERİLERİ & V2.2 SİSTEM AYARLARI */}
       {adminSection === 'strategic_growth' && (
         <section className="space-y-6">
           <div className="min-w-0 bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-900 text-white rounded-2xl p-4 sm:p-6 space-y-6 border border-indigo-500/30 shadow-md">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-white/10 pb-5">
               <div>
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 border border-amber-400/40 text-amber-300 text-xs font-bold mb-2">
-                  <span>🚀 YÖNETİCİ KONTROL MERKEZİ · BÜYÜMEYİ 2-3 KATINA ÇIKARAN 5 STRATEJİK İYİLEŞTİRME ÖNERİSİ (CANLI MODÜLLER)</span>
+                  <span>🚀 YÖNETİCİ KONTROL MERKEZİ · 4 STRATEJİK İYİLEŞTİRME ÖNERİSİ (CANLI MODÜLLER)</span>
                 </div>
                 <h3 className="text-lg sm:text-xl font-bold text-white break-words">
-                  1️⃣ 48s FOMO Sayacı · 2️⃣ Hibrit Dinamik Sıkıştırma · 3️⃣ P2P &amp; Kupon · 4️⃣ İlk 30 Gün Duble Bonus · 5️⃣ WhatsApp Business Story
+                  1️⃣ 48s FOMO Sayacı · 2️⃣ Hibrit Dinamik Sıkıştırma · 3️⃣ P2P &amp; Kupon · 4️⃣ WhatsApp Business Story
                 </h3>
                 <p className="text-xs text-slate-300 mt-1">
                   Bayi panelinde yer almaması gereken tüm stratejik büyüme motoru ayarları, V2.2 altın revizyon şalterleri, P2P kupon üretimi ve İade/Cayma (Clawback) yönetimi yalnızca bu Yönetici Paneli sekmesinden kontrol edilir.
@@ -1781,59 +1762,6 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
             )}
 
             {/* V2.2 Global Sistem Şalterleri */}
-            {v2Config && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                <div className="bg-white/5 border border-white/10 rounded-xl p-3.5 flex items-center justify-between gap-2">
-                  <div>
-                    <div className="text-xs font-bold text-white">%10+%5 Hızlı Başlangıç (Fast-Start)</div>
-                    <div className="text-[11px] text-slate-400">
-                      2. ve 3. kademe sponsor hızlı amortisman primi
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    disabled={strategicBusy}
-                    onClick={() =>
-                      handleAdminToggleV2Config({
-                        fast_roi_3x15_enabled: !v2Config.fast_roi_3x15_enabled,
-                      })
-                    }
-                    className={`px-3 py-2.5 sm:py-1.5 rounded-lg text-xs font-bold cursor-pointer ${
-                      v2Config.fast_roi_3x15_enabled
-                        ? 'bg-emerald-500 text-slate-950'
-                        : 'bg-slate-700 text-slate-300'
-                    }`}
-                  >
-                    {v2Config.fast_roi_3x15_enabled ? 'AKTİF' : 'PASİF'}
-                  </button>
-                </div>
-
-                <div className="bg-white/5 border border-white/10 rounded-xl p-3.5 flex items-center justify-between gap-2">
-                  <div>
-                    <div className="text-xs font-bold text-white">İlk 30 Gün Duble Bonus (%25)</div>
-                    <div className="text-[11px] text-slate-400">
-                      Yeni bayilere ilk 30 gün %25 sponsor + 2.000 $ ödül
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    disabled={strategicBusy}
-                    onClick={() =>
-                      handleAdminToggleV2Config({
-                        welcome_30d_double_bonus_enabled: !v2Config.welcome_30d_double_bonus_enabled,
-                      })
-                    }
-                    className={`px-3 py-2.5 sm:py-1.5 rounded-lg text-xs font-bold cursor-pointer ${
-                      v2Config.welcome_30d_double_bonus_enabled
-                        ? 'bg-amber-400 text-slate-950'
-                        : 'bg-slate-700 text-slate-300'
-                    }`}
-                  >
-                    {v2Config.welcome_30d_double_bonus_enabled ? 'AKTİF' : 'PASİF'}
-                  </button>
-                </div>
-              </div>
-            )}
 
             {/* 5 Stratejik Modül Kartları */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
@@ -2128,41 +2056,22 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                 </div>
               </div>
 
-              {/* 4️⃣ İlk 30 Gün Duble Bonus & 5️⃣ WhatsApp Business API + İade/Clawback */}
+              {/* 4️⃣ WhatsApp Business API + İade/Clawback */}
               <div className="lg:col-span-5 min-w-0 bg-white/5 border border-white/15 rounded-2xl p-4 sm:p-5 space-y-4">
                 <div className="space-y-3">
                   <div>
                     <span className="px-2 py-0.5 rounded bg-amber-500/30 text-amber-200 text-[10px] font-mono font-bold">
-                      4️⃣ &amp; 5️⃣ STRATEJİK ÖNERİ + CLAWBACK KONTROLÜ
+                      4️⃣ STRATEJİK ÖNERİ + CLAWBACK KONTROLÜ
                     </span>
                     <h4 className="text-base font-bold text-white mt-1">
-                      İlk 30 Gün Duble Bonus, WhatsApp Business API &amp; İade/Cayma (Clawback)
+                      WhatsApp Business API &amp; İade/Cayma (Clawback)
                     </h4>
-                  </div>
-
-                  <div className="p-3 rounded-xl bg-slate-900/90 border border-amber-400/30 flex flex-wrap items-center justify-between gap-2 min-w-0 text-xs">
-                    <div className="min-w-0 flex-1 break-words">
-                      <div className="font-bold text-amber-300">
-                        4️⃣ İlk 30 Gün Duble Bonus (+2.000 $ Hoşgeldin)
-                      </div>
-                      <div className="text-[11px] text-slate-400">
-                        Seçili bayiye İlk 30 Gün 2 Aktif Üye +2.000 $ nakit ödülünü anında tanımla
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      disabled={strategicBusy}
-                      onClick={handleAdminTriggerWelcomeDoubleBonus}
-                      className="w-full sm:w-auto px-3 py-2.5 sm:py-2 rounded-lg bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold text-xs cursor-pointer shrink-0"
-                    >
-                      +2.000 $ Tanımla
-                    </button>
                   </div>
 
                   <div className="p-3 rounded-xl bg-slate-900/90 border border-emerald-400/30 flex flex-wrap items-center justify-between gap-2 min-w-0 text-xs">
                     <div className="min-w-0 flex-1 break-words">
                       <div className="font-bold text-emerald-300">
-                        5️⃣ WhatsApp Business API &amp; Story Bildirimi
+                        4️⃣ WhatsApp Business API &amp; Story Bildirimi
                       </div>
                       <div className="text-[11px] text-slate-400">
                         Seçili bayiye otomatik WhatsApp Business tebrik mesajı gönder ({notificationOutbox.length} kayıt)
@@ -3510,7 +3419,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                 <div className="max-h-[32rem] overflow-auto rounded-lg border border-slate-200">
                   <table className="w-full min-w-[1500px] text-left text-[11px] tabular-nums">
                     <thead className="sticky top-0 bg-slate-100 text-slate-600"><tr>
-                      <th className="p-2">Bayi / ID</th><th className="p-2 text-right">Sponsor</th><th className="p-2 text-right">FAST-ROI</th><th className="p-2 text-right">Unilevel</th><th className="p-2 text-right">Monoline</th><th className="p-2 text-right">Infinity</th><th className="p-2 text-right">Eşleşme</th><th className="p-2 text-right">Kariyer/havuz</th><th className="p-2 text-right">Diğer</th><th className="p-2 text-right">Toplam kazanım</th><th className="p-2 text-right">Bekleyen</th><th className="p-2 text-right">Çekilebilir</th><th className="p-2 text-right">Çekilmiş</th>
+                      <th className="p-2">Bayi / ID</th><th className="p-2 text-right">Direkt sponsor</th><th className="p-2 text-right">Unilevel</th><th className="p-2 text-right">Monoline</th><th className="p-2 text-right">Infinity</th><th className="p-2 text-right">Eşleşme</th><th className="p-2 text-right">Kariyer/havuz</th><th className="p-2 text-right">Diğer</th><th className="p-2 text-right">Toplam kazanım</th><th className="p-2 text-right">Bekleyen</th><th className="p-2 text-right">Çekilebilir</th><th className="p-2 text-right">Çekilmiş</th>
                     </tr></thead>
                     <tbody className="divide-y divide-slate-100">
                       {visibleFinanceRows.map(({ member, breakdown, other, total }) => (
@@ -3524,7 +3433,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                           <td className="p-2 text-right">{formatFinanceAmount(member.wallets.total_withdrawn)}</td>
                         </tr>
                       ))}
-                      {visibleFinanceRows.length === 0 && <tr><td colSpan={13} className="p-5 text-center text-slate-500">Aramaya uygun bayi bulunamadı.</td></tr>}
+                      {visibleFinanceRows.length === 0 && <tr><td colSpan={12} className="p-5 text-center text-slate-500">Aramaya uygun bayi bulunamadı.</td></tr>}
                     </tbody>
                   </table>
                 </div>
@@ -3758,7 +3667,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                 <div className="flex items-start justify-between gap-2 border-b border-slate-200 pb-3">
                   <div>
                     <div className="text-xs font-mono text-emerald-700 font-bold">
-                      BAYİ VERGİ İADESİ FATURA BELGESİ · {previewInvoice.refund_code}
+                      BAYİ VERGİ BELGESİ İNCELEMESİ · {previewInvoice.refund_code}
                     </div>
                     <h4 className="text-base font-bold text-slate-900 break-words">
                       {previewInvoice.user_full_name} — Fatura No: {previewInvoice.invoice_no} (
@@ -3782,9 +3691,9 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                     </div>
                   </div>
                   <div>
-                    <div className="text-slate-500">Kesilen %20 Vergi (Sistem Fonu)</div>
+                    <div className="text-slate-500">Sunucuda kaydedilen stopaj tutarı</div>
                     <div className="font-extrabold text-emerald-700 text-sm">
-                      +{previewInvoice.tax_deducted_amount.toLocaleString('tr-TR')} $ (İade Talebi)
+                      {previewInvoice.tax_deducted_amount.toLocaleString('tr-TR')} $ (belge incelemesi)
                     </div>
                   </div>
                   <div>
@@ -3904,9 +3813,9 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                     <th className="whitespace-nowrap py-2.5 px-3">Üye &amp; Monoline Sırası</th>
                     <th className="whitespace-nowrap py-2.5 px-3">Banka &amp; IBAN</th>
                     <th className="whitespace-nowrap py-2.5 px-3 text-right">Brüt Tutar</th>
-                    <th className="whitespace-nowrap py-2.5 px-3 text-right">Stopaj Ön Hesaplama</th>
-                    <th className="whitespace-nowrap py-2.5 px-3 text-right">Tahmini Net</th>
-                    <th className="whitespace-nowrap py-2.5 px-3">%20 Vergi İadesi Faturası</th>
+                    <th className="whitespace-nowrap py-2.5 px-3 text-right">Kaydedilen stopaj</th>
+                    <th className="whitespace-nowrap py-2.5 px-3 text-right">Kaydedilen net</th>
+                    <th className="whitespace-nowrap py-2.5 px-3">Belge durumu</th>
                     <th className="whitespace-nowrap py-2.5 px-3">Çekim Durumu</th>
                     <th className="whitespace-nowrap py-2.5 pl-3 text-right">Yönetici Aksiyonu</th>
                   </tr>
@@ -3914,8 +3823,8 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                 <tbody className="divide-y divide-slate-200 font-mono tabular-nums">
                   {withdrawalRequests.map((w) => {
                     const gross = w.gross_amount ?? w.amount;
-                    const tax = w.tax_deduction ?? Math.round(gross * 0.2 * 100) / 100;
-                    const net = w.net_amount ?? Math.round((gross - tax) * 100) / 100;
+                    const tax = w.tax_deduction;
+                    const net = w.net_amount;
                     const linkedInv = taxRefundInvoices.find(
                       (inv) =>
                         inv.id === w.tax_refund_invoice_id ||
@@ -3946,10 +3855,10 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                           {gross.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} $
                         </td>
                         <td className="py-3 px-3 text-right font-bold text-rose-700">
-                          -{tax.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} $
+                          {tax === undefined ? 'Kaydedilmedi' : `${tax.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} $`}
                         </td>
                         <td className="py-3 px-3 text-right font-extrabold text-emerald-800 text-sm">
-                          {net.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} $
+                          {net === undefined ? 'Kaydedilmedi' : `${net.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} $`}
                         </td>
                         <td className="py-3 px-3 font-sans">
                           {linkedInv ? (
@@ -3973,7 +3882,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                               )}
                               {linkedInv.status === 'APPROVED_CREDITED' && (
                                 <span className="text-[10px] font-bold text-emerald-700 block">
-                                  ✓ +{tax.toLocaleString('tr-TR')} $ İade Edildi
+                                  ✓ Belge/iade kaydı onaylandı{tax ? ` · ${tax.toLocaleString('tr-TR')} $` : ''}
                                 </span>
                               )}
                             </div>
@@ -4139,9 +4048,8 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                   Yönetici Tarafından Belirlenen Kariyer Bonusları & Tek Tıkla Cüzdanlara Anında Aktarım
                 </h3>
                 <p className="text-xs text-slate-600 mt-0.5">
-                  Her kariyer mertebesi için bayi başına ödenecek bonus tutarını ($) belirleyin.{' '}
-                  <strong>"Kariyer Bonusunu Anında Cüzdanlara Aktar"</strong> butonuna tıkladığınızda tutar
-                  anında ilgili bayilerin çekilebilir cüzdan hesaplarına yatırılır.
+                  Bu alan kariyer matrisi sabit bonusunu yönetir; ilk terfide oluşan tek seferlik RANK_UP_GIFT ödülünden ayrıdır.{' '}
+                  <strong>"Kariyer Matrisi Bonusunu Cüzdanlara Aktar"</strong> seçildiğinde belirlenen tutar, seçili eşleşme moduna göre ilgili bayilerin çekilebilir cüzdanına aktarılır.
                 </p>
               </div>
 
@@ -4183,7 +4091,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                   className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-xs cursor-pointer disabled:opacity-50"
                 >
                   <Zap className="w-4 h-4" />
-                  <span>Tüm 7 Kariyer Bonuslarını Tek Tıkla Cüzdanlara Aktar</span>
+                  <span>Tüm 7 Kariyer Matrisi Bonusunu Aktar</span>
                 </button>
               </div>
             </div>
@@ -4195,8 +4103,8 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                     <th className="whitespace-nowrap py-3 pr-3">Kariyer Mertebesi</th>
                     <th className="whitespace-nowrap py-3 px-3">Bu Mertebedeki Aktif Bayiler</th>
                     <th className="whitespace-nowrap py-3 px-3">Hızlı Bayi Kariyer Atama</th>
-                    <th className="whitespace-nowrap py-3 px-3">Yönetici Belirlenen Kariyer Bonusu ($ / Bayi)</th>
-                    <th className="whitespace-nowrap py-3 px-3 text-right">Toplam Aktarılacak</th>
+                    <th className="whitespace-nowrap py-3 px-3">Kariyer Matrisi Sabit Bonusu ($ / Bayi)</th>
+                    <th className="whitespace-nowrap py-3 px-3 text-right">Bu Aktarımdaki Toplam</th>
                     <th className="whitespace-nowrap py-3 pl-3 text-right">Anında Cüzdana Aktar</th>
                   </tr>
                 </thead>

@@ -1023,10 +1023,10 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({ isOpen, onClose 
               <section className="rounded-2xl border border-indigo-500/30 bg-indigo-50 p-5">
                 <h3 className="font-bold text-indigo-800">Komisyon, bekleme ve çekim</h3>
                 <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                  <p className="rounded-xl bg-white/70 p-4 text-xs leading-relaxed text-slate-700"><strong className="text-slate-900">Varsayılan komisyon yapısı:</strong> Kodda doğrudan sponsor için %20; Unilevel derinliklerinde %7, %5, %4, %3 ve sonraki üç derinlikte %2 oranları tanımlıdır. Global Monoline sırası için de ayrı, toplamı %5 olan oranlar bulunur. Uygulanabilirlik; sipariş, hesap aktifliği, kariyer ve güncel yönetim kurallarına bağlıdır.</p>
+                  <p className="rounded-xl bg-white/70 p-4 text-xs leading-relaxed text-slate-700"><strong className="text-slate-900">Varsayılan komisyon yapısı:</strong> Direkt sponsor için %20; sponsor ağacındaki Unilevel derinliklerinde %7, %5, %4, %3 ve sonraki üç derinlikte %2; sponsor ağacından bağımsız küresel Monoline üst sıralarında toplam %5 oran tanımlıdır. Matching, doğrudan alt bayinin aynı siparişte kazandığı uygun komisyonlar üzerinden kariyer seviyesine göre %10, %15, %20 veya %25 olabilir. Aktiflik, kariyer ve yönetici ayarları uygunluğu etkiler.</p>
                   <p className="rounded-xl bg-white/70 p-4 text-xs leading-relaxed text-slate-700"><strong className="text-slate-900">Ödeme zamanlaması:</strong> Komisyonlar önce bekleyen bakiyede tutulabilir; kodda varsayılan bekleme süresi 14 gündür. Vade, iade/inceleme durumu ve hesap uygunluğu çekilebilir bakiyeyi etkiler. Paneldeki bekleyen tutarı çekilebilir bakiye saymayın.</p>
                 </div>
-                <p className="mt-3 text-xs leading-relaxed text-amber-800">Gösterilen oranlar varsayılan teknik kurallardır; kazanç, yatırım geri dönüşü veya ödeme garantisi değildir. Geçerli kural, bakiye ve çekim koşulları için işlem anındaki panel bilgilerini ve resmi koşulları esas alın.</p>
+                <p className="mt-3 text-xs leading-relaxed text-amber-800">Komisyonlar sipariş ve uygunluk koşullarına göre hesaplanır; uygun olmayan pay havuza devredilebilir. Kariyer matrisindeki sabit bonus ile terfi anında ayrı kaydedilen tek seferlik rank-up hediyesi farklı kalemlerdir. Gösterilen oranlar varsayılan teknik kurallardır; kazanç, yatırım geri dönüşü veya ödeme garantisi değildir. Geçerli kural, bakiye ve çekim koşulları için işlem anındaki panel bilgilerini ve resmi koşulları esas alın.</p>
               </section>
             </div>
           )}
@@ -1055,7 +1055,7 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({ isOpen, onClose 
                   ['İnceleme kuyruğu', 'Bayi siparişleri ve kayıtları mali müşavir incelemesine kadar ayrı gösterilir; bunlar otomatik olarak yevmiye veya gelir toplamına dahil edilmez. Demo/test kayıtlarını silmeden önce seçiminizi dikkatle kontrol edin.'],
                   ['Belgeler ve yevmiye', 'Yüklenen vergi iadesi faturalarını inceleyin, yevmiye satırlarını ve gider pusulalarını görüntüleyin. Taslak veya bekleyen kayıt resmi onay anlamına gelmez.'],
                   ['Banka ekstresi', 'Banka ekranında CSV dosyasını içe aktarın, banka ve hesap etiketini girin, tarih/açıklama/tutar sütunlarını eşleyip dosyayı doğrulayın. CSV kullanıcı tarafından sağlanır; otomatik banka bağlantısı değildir.'],
-                  ['Vergi ve stopaj', 'Vergi, stopaj ve beyan görünümlerindeki değerleri ön hesaplama olarak değerlendirin. Oranları, resmî yükümlülükleri ve beyanları mali müşavirle teyit edin.'],
+                  ['Vergi ve stopaj', 'Sunucu çekim talebinde stopajı 0 ve net tutarı brüt tutara eşit kaydeder; belge yüklemek kesinti veya iade onayı değildir. Gerçek vergi yükümlülüğünü mali müşavirle teyit edin.'],
                   ['Çekim durumu', 'Yönetici çekim onayı ile gerçek banka transferi ayrı durumlardır. Banka çıkışı dekont veya sağlayıcı referansı ile ayrıca doğrulanmalıdır.'],
                 ].map(([title, description]) => (
                   <article key={title} className="space-y-1 rounded-2xl border border-slate-200 bg-white/60 p-4">

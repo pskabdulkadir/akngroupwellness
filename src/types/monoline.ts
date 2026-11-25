@@ -59,7 +59,7 @@ const RAW_FREKANS_PACKAGES: Array<Omit<PackageDefinition, 'features' | 'unitSess
     defaultPrice: 101,
     perSessionCostLabel: '$1.00/seans',
     rankOrder: 1,
-    equivalentTierLabel: 'Paket A (1–2. Kariyer Uygunluğu)',
+    equivalentTierLabel: 'Paket A (Başlangıç Paketi)',
     imageUrl: IMAGE_ASSETS.tierStarter,
     description:
       'Bireysel frekans analizi ve temel seans uygulamalarına giriş için tasarlanmış başlangıç kredi havuzu paketi.',
@@ -67,7 +67,7 @@ const RAW_FREKANS_PACKAGES: Array<Omit<PackageDefinition, 'features' | 'unitSess
       '101 Bayi Seans Kredisi Havuzu (1.00 $/seans birim maliyet)',
       'Temel Biyo-Frekans Kamera & Spektrum Analiz Modülü Erişimi',
       'Monoline Küresel Tek Hat Sıra Kaydı & %20 Direkt Sponsorluk Hakkı',
-      '1. Kariyer (Emmâre) ve 2. Kariyer (Levvâme) Kişisel Hacim Şartı',
+      'Kariyer seviyesi paket sırasına bağlı değildir. Varsayılan matriste tüm seviyeler için minimum paket Mini, kişisel hacim şartı $0’dır; aktiflik ve seviyeye özgü organizasyon şartları geçerlidir.',
     ],
   },
   {
@@ -80,7 +80,7 @@ const RAW_FREKANS_PACKAGES: Array<Omit<PackageDefinition, 'features' | 'unitSess
     defaultPrice: 201,
     perSessionCostLabel: '$1.00/seans',
     rankOrder: 1,
-    equivalentTierLabel: 'Paket A+ (1–2. Kariyer Uygunluğu)',
+    equivalentTierLabel: 'Paket A+ (Başlangıç Paketi)',
     imageUrl: IMAGE_ASSETS.tierStarter,
     description:
       'Bireysel uygulayıcılar için 201 seanslık kredi havuzu ve danışan takip paneli.',
@@ -88,7 +88,7 @@ const RAW_FREKANS_PACKAGES: Array<Omit<PackageDefinition, 'features' | 'unitSess
       '201 Bayi Seans Kredisi Havuzu (1.00 $/seans birim maliyet)',
       'Danışan Biyo-Rezonans Raporlama & PDF Çıktı Modülü',
       'Monoline Tek Hat Komisyon Motoru Aktif Entegrasyonu',
-      'Emmâre & Levvâme Mertebeleri Kişisel Hacim Uygunluğu',
+      'Kariyer seviyesi paket sırasına bağlı değildir. Varsayılan matriste tüm seviyeler için minimum paket Mini, kişisel hacim şartı $0’dır; aktiflik ve seviyeye özgü organizasyon şartları geçerlidir.',
     ],
   },
   {
@@ -101,14 +101,14 @@ const RAW_FREKANS_PACKAGES: Array<Omit<PackageDefinition, 'features' | 'unitSess
     defaultPrice: 302,
     perSessionCostLabel: '$1.00/seans',
     rankOrder: 2,
-    equivalentTierLabel: 'Paket B (3–4. Kariyer Uygunluğu)',
+    equivalentTierLabel: 'Paket B (Orta Seviye Paket)',
     imageUrl: IMAGE_ASSETS.tierStarter,
     description:
       'Aktif terapistler için 302 seans kredisi ve çoklu frekans protokolü kütüphanesi.',
     includedFeatures: [
       '302 Bayi Seans Kredisi Havuzu (1.00 $/seans birim maliyet)',
       'Gelişmiş Terapist Frekans Protokolleri ve Seans Geçmişi',
-      '3. Kariyer (Mülhime) & 4. Kariyer (Mutmainne) Paket B Alışveriş Şartı',
+      'Kariyer seviyesi paket sırasına bağlı değildir. Varsayılan matriste tüm seviyeler için minimum paket Mini, kişisel hacim şartı $0’dır; aktiflik ve seviyeye özgü organizasyon şartları geçerlidir.',
       '4. Üst Derinliğe Kadar Monoline Komisyon Kilidi Altyapısı',
     ],
   },
@@ -122,14 +122,14 @@ const RAW_FREKANS_PACKAGES: Array<Omit<PackageDefinition, 'features' | 'unitSess
     defaultPrice: 402,
     perSessionCostLabel: '$1.00/seans',
     rankOrder: 2,
-    equivalentTierLabel: 'Paket B+ (3–4. Kariyer Uygunluğu)',
+    equivalentTierLabel: 'Paket B+ (Orta Seviye Paket)',
     imageUrl: IMAGE_ASSETS.tierStarter,
     description:
       'Yoğun danışan trafiğine sahip terapist ve pratisyenler için 402 seanslık kredi paketi.',
     includedFeatures: [
       '402 Bayi Seans Kredisi Havuzu (1.00 $/seans birim maliyet)',
       'Kamera Tabanlı Aura & Frekans Spektrum Analiz Paketi',
-      'Mülhime & Mutmainne Kariyer Mertebeleri Paket B Alışveriş Desteği',
+      'Kariyer seviyesi paket sırasına bağlı değildir. Varsayılan matriste tüm seviyeler için minimum paket Mini, kişisel hacim şartı $0’dır; aktiflik ve seviyeye özgü organizasyon şartları geçerlidir.',
       'Bayi Alt Ekip (Unilevel 7 Derinlik) İzleme Paneli',
     ],
   },
@@ -143,14 +143,14 @@ const RAW_FREKANS_PACKAGES: Array<Omit<PackageDefinition, 'features' | 'unitSess
     defaultPrice: 503,
     perSessionCostLabel: '$1.00/seans',
     rankOrder: 3,
-    equivalentTierLabel: 'Paket C (5–6. Kariyer Uygunluğu)',
+    equivalentTierLabel: 'Paket C (İleri Seviye Paket)',
     imageUrl: IMAGE_ASSETS.tierClinical,
     description:
       'Profesyonel yaşam koçları ve bütünsel sağlık danışmanları için 503 seanslık paket.',
     includedFeatures: [
       '503 Bayi Seans Kredisi Havuzu (1.00 $/seans birim maliyet)',
       'Altın Seviye Holistik Frekans & Rezonans Sentezleyici',
-      '5. Kariyer (Râziye) & 6. Kariyer (Marziyye) Paket C Alışveriş Şartı',
+      'Kariyer seviyesi paket sırasına bağlı değildir. Varsayılan matriste tüm seviyeler için minimum paket Mini, kişisel hacim şartı $0’dır; aktiflik ve seviyeye özgü organizasyon şartları geçerlidir.',
       '%6 ve %8 Kariyer Fonu Ek Havuz Payı Adaylık Yetkisi',
     ],
   },
@@ -164,7 +164,7 @@ const RAW_FREKANS_PACKAGES: Array<Omit<PackageDefinition, 'features' | 'unitSess
     defaultPrice: 603,
     perSessionCostLabel: '$1.00/seans',
     rankOrder: 3,
-    equivalentTierLabel: 'Paket C+ (5–6. Kariyer Uygunluğu)',
+    equivalentTierLabel: 'Paket C+ (İleri Seviye Paket)',
     imageUrl: IMAGE_ASSETS.tierClinical,
     isPopular: true,
     description:
@@ -172,7 +172,7 @@ const RAW_FREKANS_PACKAGES: Array<Omit<PackageDefinition, 'features' | 'unitSess
     includedFeatures: [
       '603 Bayi Seans Kredisi Havuzu (1.00 $/seans birim maliyet)',
       'Pro Kamera Biyo-Frekans Tarama + Otomatik Seans Planlayıcı',
-      '5. Kariyer (Râziye) & 6. Kariyer (Marziyye) Paket C Tam Uygunluğu',
+      'Kariyer seviyesi paket sırasına bağlı değildir. Varsayılan matriste tüm seviyeler için minimum paket Mini, kişisel hacim şartı $0’dır; aktiflik ve seviyeye özgü organizasyon şartları geçerlidir.',
       'Dinamik Kampanya QR Üreteci ve Öncelikli Çekim Onayı',
     ],
   },
@@ -186,15 +186,15 @@ const RAW_FREKANS_PACKAGES: Array<Omit<PackageDefinition, 'features' | 'unitSess
     defaultPrice: 1005,
     perSessionCostLabel: '$1.00/seans',
     rankOrder: 4,
-    equivalentTierLabel: 'Paket D (7. Kariyer Kâmile Uygunluğu)',
+    equivalentTierLabel: 'Paket D (Kurumsal Paket)',
     imageUrl: IMAGE_ASSETS.tierClinical,
     description:
       'Uzman klinikler ve çoklu terapist merkezleri için 1.005 seans kredili kurumsal başlangıç paketi.',
     includedFeatures: [
       '1.005 Bayi Seans Kredisi Havuzu (1.00 $/seans birim maliyet)',
       'Çoklu Operatör / Terapist Alt Hesap Tanımlama Desteği',
-      '7. Kariyer (Kâmile) Paket D Alışveriş Şartı Tam Uygunluğu',
-      '7 Derinlik (%25) ve %10 Kâmile Kariyer Havuz Payı Uygunluğu',
+      'Kariyer seviyesi paket sırasına bağlı değildir. Varsayılan matriste tüm seviyeler için minimum paket Mini, kişisel hacim şartı $0’dır; aktiflik ve seviyeye özgü organizasyon şartları geçerlidir.',
+      'Derinlik ve kariyer havuz payı kariyer matrisi şartlarına tabidir.',
     ],
   },
   {
@@ -207,14 +207,14 @@ const RAW_FREKANS_PACKAGES: Array<Omit<PackageDefinition, 'features' | 'unitSess
     defaultPrice: 1206,
     perSessionCostLabel: '$1.00/seans',
     rankOrder: 4,
-    equivalentTierLabel: 'Paket D (7. Kariyer Kâmile Uygunluğu)',
+    equivalentTierLabel: 'Paket D (Kurumsal Paket)',
     imageUrl: IMAGE_ASSETS.tierGemstone,
     description:
       'Kurumsal sağlıklı yaşam merkezleri için 1.206 seans kredisi.',
     includedFeatures: [
       '1.206 Bayi Seans Kredisi Havuzu (1.00 $/seans birim maliyet)',
       'Safir Kurumsal Marka Başlığı ile Özelleştirilmiş Danışan Raporları',
-      '7. Kariyer (Kâmile) Paket D Alışveriş Uygunluğu',
+      'Kariyer seviyesi paket sırasına bağlı değildir. Varsayılan matriste tüm seviyeler için minimum paket Mini, kişisel hacim şartı $0’dır; aktiflik ve seviyeye özgü organizasyon şartları geçerlidir.',
       'Kurumsal IBAN Hızlı Komisyon Mutabakatı',
     ],
   },
@@ -228,14 +228,14 @@ const RAW_FREKANS_PACKAGES: Array<Omit<PackageDefinition, 'features' | 'unitSess
     defaultPrice: 1407,
     perSessionCostLabel: '$1.00/seans',
     rankOrder: 4,
-    equivalentTierLabel: 'Paket D (7. Kariyer Kâmile Uygunluğu)',
+    equivalentTierLabel: 'Paket D (Kurumsal Paket)',
     imageUrl: IMAGE_ASSETS.tierGemstone,
     description:
       'Yüksek kapasiteli master klinikler için 1.407 seans kredisi ve gelişmiş spektral veri analitiği.',
     includedFeatures: [
       '1.407 Bayi Seans Kredisi Havuzu (1.00 $/seans birim maliyet)',
       'Zümrüt Master Frekans Kütüphanesi & Özel Rezonans Algoritmaları',
-      '7. Kariyer (Kâmile) Zirve Mertebesi Paket D Uygunluğu',
+      'Kariyer seviyesi paket sırasına bağlı değildir. Varsayılan matriste tüm seviyeler için minimum paket Mini, kişisel hacim şartı $0’dır; aktiflik ve seviyeye özgü organizasyon şartları geçerlidir.',
       'Bölgesel Alt Bayi Yetiştirme & Sponsorluk Yetkisi',
     ],
   },
@@ -249,15 +249,15 @@ const RAW_FREKANS_PACKAGES: Array<Omit<PackageDefinition, 'features' | 'unitSess
     defaultPrice: 1608,
     perSessionCostLabel: '$1.00/seans',
     rankOrder: 4,
-    equivalentTierLabel: 'Paket D (7. Kariyer Kâmile Uygunluğu)',
+    equivalentTierLabel: 'Paket D (Kurumsal Paket)',
     imageUrl: IMAGE_ASSETS.tierGemstone,
     description:
       'Elit sağlık ve bütünsel terapi merkezleri için 1.608 seanslık kredi paketi.',
     includedFeatures: [
       '1.608 Bayi Seans Kredisi Havuzu (1.00 $/seans birim maliyet)',
       'VIP Danışan Portföy Yönetimi & Uzaktan Seans Senkronizasyonu',
-      '7. Kariyer (Kâmile) Zirve Mertebesi Paket D Uygunluğu',
-      'Yüksek Tutarlı Siparişlerde Anında %20 Sponsor + %25 Ağ Dağıtımı',
+      'Kariyer seviyesi paket sırasına bağlı değildir. Varsayılan matriste tüm seviyeler için minimum paket Mini, kişisel hacim şartı $0’dır; aktiflik ve seviyeye özgü organizasyon şartları geçerlidir.',
+      'Yüksek tutarlı siparişlerde sponsor ve ağ payları, yürürlükteki komisyon ve uygunluk şartlarına göre hesaplanır.',
     ],
   },
   {
@@ -270,14 +270,14 @@ const RAW_FREKANS_PACKAGES: Array<Omit<PackageDefinition, 'features' | 'unitSess
     defaultPrice: 1809,
     perSessionCostLabel: '$1.00/seans',
     rankOrder: 4,
-    equivalentTierLabel: 'Paket D (7. Kariyer Kâmile Uygunluğu)',
+    equivalentTierLabel: 'Paket D (Kurumsal Paket)',
     imageUrl: IMAGE_ASSETS.tierGemstone,
     description:
       'Tamamlayıcı ve entegre tıp merkezleri için 1.809 seans kredisi ve API/Webhook entegrasyon desteği.',
     includedFeatures: [
       '1.809 Bayi Seans Kredisi Havuzu (1.00 $/seans birim maliyet)',
       'Klinik CRM Sistemleri ile Doğrudan Webhook & API Senkronizasyonu',
-      '7. Kariyer (Kâmile) Zirve Mertebesi Paket D Uygunluğu',
+      'Kariyer seviyesi paket sırasına bağlı değildir. Varsayılan matriste tüm seviyeler için minimum paket Mini, kişisel hacim şartı $0’dır; aktiflik ve seviyeye özgü organizasyon şartları geçerlidir.',
       'Özel Teknik Destek ve Klinik Kurulum Danışmanlığı',
     ],
   },
@@ -298,7 +298,7 @@ const RAW_FREKANS_PACKAGES: Array<Omit<PackageDefinition, 'features' | 'unitSess
     includedFeatures: [
       '2.010 Bayi Seans Kredisi Havuzu (1.00 $/seans birim maliyet)',
       'Bölge Distribütörlüğü Lisansı & Alt Bayi Seans Kredisi Tahsisi',
-      '7. Kariyer (Kâmile) + %10 Kariyer Fonu Havuz Payı Önceliği',
+      'Kariyer ve havuz hak edişleri paket sırasına değil, aktiflik ve ilgili kariyer matrisi şartlarına göre belirlenir.',
       'Bölgesel Pazarlama & QR Kampanya Yönetim Konsolu',
     ],
   },
@@ -319,7 +319,7 @@ const RAW_FREKANS_PACKAGES: Array<Omit<PackageDefinition, 'features' | 'unitSess
     includedFeatures: [
       '4.021 Bayi Seans Kredisi Havuzu (1.00 $/seans birim maliyet)',
       'Çoklu Şube Merkezi Yönetim Paneli & Sınırsız Terapist Alt Hesabı',
-      '7. Kariyer (Kâmile) Zirve Yetkisi ve Kurumsal Havuz Payı',
+      'Kariyer ve havuz hak edişleri paket sırasına değil, aktiflik ve ilgili kariyer matrisi şartlarına göre belirlenir.',
       'White-Label Raporlama ve Özel Etki Alanı (Domain) Yönlendirmesi',
     ],
   },
@@ -340,7 +340,7 @@ const RAW_FREKANS_PACKAGES: Array<Omit<PackageDefinition, 'features' | 'unitSess
     includedFeatures: [
       '6.031 Bayi Seans Kredisi Havuzu (1.00 $/seans birim maliyet)',
       'Enterprise Ölçekte Sınırsız Şube ve Uluslararası Monoline Ağ Desteği',
-      '7. Kariyer (Kâmile) + Özel Kurumsal SLA ve Dedicated Sunucu Hattı',
+      'Kurumsal SLA ve Dedicated Sunucu Hattı',
       'Tüm Alt Ağ Ciro ve Komisyon Analitiği (Real-Time BI Export)',
     ],
   },
@@ -1080,7 +1080,6 @@ export interface SystemDistributionParameters {
   depth_percentages: number[];
   unilevel_depth_percentages?: number[]; // Motor 1: Sponsorlu Unilevel (%25)
   monoline_incentive_percentages?: number[]; // Motor 2: Küresel Monoline Sıra Teşviki (%5)
-  fast_roi_bonus_percent?: number;
   career_pool_percent?: number;
 }
 
@@ -1118,7 +1117,6 @@ export interface MonolineMember {
   joined_at: string;
   sponsor_id: string | null;
   sponsor_db_id: number | null; // SQL: users.sponsor_id (BigInt, FK -> users.id)
-  fast_start_awarded?: boolean;
   highest_package_id: Exclude<PackageId, 'CUSTOM'> | null;
   session_credits: number;
   personal_volume: number;
@@ -1147,7 +1145,6 @@ export interface MonolineMember {
     monoline_incentive_wallet?: number; // Motor 2: Küresel Monoline Sıra Teşvik Cüzdanı
     infinity_wallet?: number; // V2.2: Unilevel Sonsuzluk Fark Primi (%2..%10)
     matching_wallet?: number; // V2.2: Liderlik Eşleşme Bonusu (%10..%25)
-    fast_roi_wallet?: number; // V2.2: "3 Getir Bedavaya Getir" +%15 Amortisman Bonusu
     total_earnings: number;
     system_fund_balance: number; // SQL: wallets.system_fund_balance (Decimal(15,2), Default: 0)
     total_withdrawn: number;
@@ -1301,11 +1298,8 @@ export interface V2ArchitectureConfig {
   dynamic_compression_mode?: 'FULL_COMPRESSION' | 'HYBRID_50_50' | 'FUND_SWEEP'; // 2️⃣ Hibrit Dinamik Sıkıştırma Modu
   unilevel_infinity_enabled?: boolean; // V2.2 Revizyon 1: %10 Unilevel Sonsuzluk Fark Primi
   matching_bonus_enabled?: boolean; // V2.2 Revizyon 2: %10..%25 Liderlik Eşleşme Bonusu
-  fast_roi_3x15_enabled?: boolean; // V2.2 Revizyon 3: "3 Getir Bedavaya Getir" +%15 Amortisman Bonusu
   fomo_48h_countdown_enabled?: boolean; // 1️⃣ Geri Sayım Sayacı (48 Saat) ve FOMO Bildirim Sistemi
   p2p_voucher_transfer_enabled?: boolean; // 3️⃣ P2P İç Bakiye Transferi & Aktivasyon Kodu (Voucher)
-  fast_start_window_days?: number; // 4️⃣ Hızlı Başlangıç (Fast-Start) Süresi (14 Gün veya 30 Gün)
-  welcome_30d_double_bonus_enabled?: boolean; // 4️⃣ İlk 30 Gün Hoş Geldin Duble Bonusu (Admin Aç/Kapat)
   whatsapp_business_push_enabled?: boolean; // 5️⃣ Anlık WhatsApp Business API & Push Bildirim Entegrasyonu
 }
 
@@ -1362,8 +1356,7 @@ export interface CommissionLogRecord {
     | 'MONOLINE_DEPTH'
     | 'SYSTEM_POOL'
     | 'UNILEVEL_INFINITY'
-    | 'MATCHING_BONUS'
-    | 'FAST_ROI_BONUS'; // Dual-Engine: 'UNILEVEL_COMMISSION', 'MONOLINE_INCENTIVE'
+    | 'MATCHING_BONUS'; // Dual-Engine: 'UNILEVEL_COMMISSION', 'MONOLINE_INCENTIVE'
   commission_type:
     | 'SPONSOR'
     | 'UNILEVEL_COMMISSION'
@@ -1372,8 +1365,7 @@ export interface CommissionLogRecord {
     | 'CAREER_POOL'
     | 'SYSTEM_POOL'
     | 'UNILEVEL_INFINITY'
-    | 'MATCHING_BONUS'
-    | 'FAST_ROI_BONUS';
+    | 'MATCHING_BONUS';
   depth_level: number | null; // Int, Nullable (1 ile 7 arası derinlik seviyesi)
   region?: MemberRegion; // Komisyonu üreten alımın bölgesi (cüzdan yönlendirmesi için)
   amount_usd?: number; // Bölgesel USD cüzdanına yazılan tutar
@@ -1398,9 +1390,9 @@ export interface WithdrawalRequestRecord {
   career_level?: number;
   amount: number; // Decimal(15,2) (= gross_amount)
   gross_amount?: number; // V2.1 NUMERIC(15,2) NOT NULL -- Talep edilen Brüt
-  tax_deduction?: number; // V2.1 NUMERIC(15,2) DEFAULT 0.00 -- %20 Stopaj Kesintisi
-  net_amount?: number; // V2.1 NUMERIC(15,2) NOT NULL -- Bankaya Yatacak Net Tutar
-  tax_rate_percent?: number; // %20 (Şahıs / Gider Pusulası) veya %0 (Vergi Mükellefi Şirket)
+  tax_deduction?: number; // Sunucu tarafından çekim kaydına yazılan kesinti; güncel akışta 0
+  net_amount?: number; // Sunucu çekim kaydındaki net tutar; güncel akışta brüt tutara eşit
+  tax_rate_percent?: number; // Vergi oranı mali inceleme/uygulama tarafından ayrıca belirlenir
   has_tax_company?: boolean;
   tc_identity_no?: string;
   method: 'IBAN' | 'TRC20';
@@ -1490,7 +1482,7 @@ export interface UserRewardLogRecord {
   user_full_name: string;
   career_level: number; // INT NOT NULL
   career_title: string;
-  reward_type: 'RANK_UP_GIFT' | 'FAST_START'; // VARCHAR(50)
+  reward_type: 'RANK_UP_GIFT'; // VARCHAR(50)
   reward_description: string; // VARCHAR(255)
   cash_value: number; // NUMERIC(15,2) DEFAULT 0.00
   is_delivered: boolean; // BOOLEAN DEFAULT FALSE
@@ -1513,8 +1505,6 @@ export interface NotificationOutboxRecord {
     | 'FOMO_LOST_COMMISSION'
     | 'FOMO_48H_COUNTDOWN_ALERT'
     | 'RANK_UP_REWARD'
-    | 'FAST_START_BONUS'
-    | 'WELCOME_30D_DOUBLE_BONUS'
     | 'P2P_VOUCHER_RECEIVED'
     | 'FRAUD_ALERT';
   order_amount?: number;
@@ -1848,7 +1838,6 @@ export interface SystemStateResponse {
     total_career_pool_bonuses_paid: number;
     total_infinity_bonuses_paid?: number;
     total_matching_bonuses_paid?: number;
-    total_fast_roi_bonuses_paid?: number;
     total_field_payout_amount?: number;
     company_net_profit_amount?: number;
     company_net_profit_percent?: number;

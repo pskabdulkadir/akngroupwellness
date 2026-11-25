@@ -297,7 +297,7 @@ export const TechnicalReportModal: React.FC<TechnicalReportModalProps> = ({
                   <span>13. 💎 Monoline 7 Nefis MLM &amp; Komisyon Motoru</span>
                 </div>
                 <p className="text-xs text-slate-400">
-                  Varsayılan oranlar: %20 direkt sponsor, sponsor ağacında toplam nominal %25 Unilevel, küresel sırada toplam nominal %5 Monoline ve %5 sistem fonu. Hak ediş aktiflik ve kariyer gibi koşullara bağlıdır; gelir veya anında ödeme garantisi değildir.
+                  Varsayılan oranlar: %20 direkt sponsor, sponsor ağacında toplam nominal %25 Unilevel, küresel sırada toplam nominal %5 Monoline ve %5 sistem fonu. Matching, doğrudan sponsor olunan üyenin aynı siparişteki uygun Unilevel/Monoline komisyonları üzerinden kariyere göre %10–%25 hesaplanabilir. Sabit kariyer bonusu ile tek seferlik terfi hediyesi ayrı kalemlerdir; hak ediş aktiflik ve sistem koşullarına bağlıdır.
                 </p>
               </div>
 

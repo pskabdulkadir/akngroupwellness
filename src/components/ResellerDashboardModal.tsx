@@ -278,7 +278,6 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
   const [presCalcCareer, setPresCalcCareer] = useState<number>(4);
   const [presCalcPackagePrice, setPresCalcPackagePrice] = useState<number>(30000);
   const [presIncludeMatching, setPresIncludeMatching] = useState<boolean>(true);
-  const [presIncludeFastRoi, setPresIncludeFastRoi] = useState<boolean>(true);
 
   // Presentation Multi-Way Earnings Formulas (V2.2)
   const presMonthlySessionRevenue = presCalcClients * presCalcPrice;
@@ -294,8 +293,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
   );
   const presMatchingRate = presCalcCareer >= 6 ? 0.20 : presCalcCareer >= 5 ? 0.15 : presCalcCareer >= 3 ? 0.10 : 0;
   const presMonthlyMatching = presIncludeMatching && presCalcCareer >= 3 ? Math.round(presMonthlyMonoline * presMatchingRate) : 0;
-  const presMonthlyFastRoi = presIncludeFastRoi && presCalcDirects >= 3 ? Math.round(3 * presCalcPackagePrice * 0.15) : 0;
-  const presTotalMonthlyEarnings = presMonthlySessionProfit + presMonthlyDirectSponsor + presMonthlyMonoline + presMonthlyCareerPool + presMonthlyMatching + presMonthlyFastRoi;
+  const presTotalMonthlyEarnings = presMonthlySessionProfit + presMonthlyDirectSponsor + presMonthlyMonoline + presMonthlyCareerPool + presMonthlyMatching;
   const presYearlyEarnings = presTotalMonthlyEarnings * 12;
 
   useEffect(() => {
@@ -2506,9 +2504,9 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                       <Receipt className="w-4 h-4" />
                     </div>
                     <div>
-                      <div className="text-xs font-bold text-slate-100">%20 Stopaj / Fatura İadesi</div>
+                      <div className="text-xs font-bold text-slate-100">Çekim Kaydı ve Belge İncelemesi</div>
                       <div className="text-[11px] text-slate-400 mt-0.5 leading-snug">
-                        Fatura kesen şirket sahibi bayiler %20 vergi kesintisini geri alır.
+                        Sunucu çekim talebinde stopajı 0 kaydeder. Fatura yüklemek iade veya ödeme onayı anlamına gelmez; vergi uygulaması mali incelemeye tabidir.
                       </div>
                     </div>
                   </div>
@@ -2601,7 +2599,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                       <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 text-[11px] text-slate-300 space-y-1">
                         <div className="text-emerald-400 font-semibold">• Biyo-Rezonans, 302+ Frekans, 50+ Hastalık &amp; MindSpace Stüdyo</div>
                         <div className="text-amber-300 font-semibold">• Monoline 7 Nefis MLM (%20 Sponsor • %25 Tek Hat • %5 Sistem Fonu)</div>
-                        <div className="text-indigo-300 font-semibold">• Liderlik Eşleşme (%20) • Fast-ROI (%75 İade)</div>
+                        <div className="text-indigo-300 font-semibold">• Liderlik Eşleşme (%20)</div>
                         <div className="text-slate-400">• {FREKANS_PACKAGES.length} Resmi Alışveriş Paketi (96 Krediden 6.031 Krediye)</div>
                       </div>
                     </div>
@@ -2759,15 +2757,6 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                           />
                           <span className="text-purple-300 font-semibold text-[11px]">Matching (%10..%20)</span>
                         </label>
-                        <label className="flex items-center gap-2 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={presIncludeFastRoi}
-                            onChange={(e) => setPresIncludeFastRoi(e.target.checked)}
-                            className="accent-emerald-500 rounded"
-                          />
-                          <span className="text-emerald-300 font-semibold text-[11px]">Fast-ROI (+%15 İade)</span>
-                        </label>
                       </div>
                     </div>
 
@@ -2793,12 +2782,6 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                           <div className="flex items-center justify-between gap-3 border-b border-slate-800 pb-1.5">
                             <span className="text-slate-400">Matching Bonus:</span>
                             <span className="font-mono font-bold text-purple-300">+{formatUsd(presMonthlyMatching)}</span>
-                          </div>
-                        )}
-                        {presMonthlyFastRoi > 0 && (
-                          <div className="flex items-center justify-between gap-3 border-b border-slate-800 pb-1.5">
-                            <span className="text-slate-400">Fast-ROI Bonusu:</span>
-                            <span className="font-mono font-bold text-emerald-300">+{formatUsd(presMonthlyFastRoi)}</span>
                           </div>
                         )}
                       </div>
@@ -2893,10 +2876,10 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                   <div className="p-4 rounded-2xl bg-slate-950/70 border border-slate-800 space-y-1.5 hover:border-blue-500/40 transition-all">
                     <div className="text-xs font-bold text-blue-300 flex items-center gap-1.5">
                       <Receipt className="w-4 h-4 text-blue-400" />
-                      <span>8. TR IBAN &amp; %20 Vergi İadesi</span>
+                      <span>8. TR IBAN ve Belge İncelemesi</span>
                     </div>
                     <p className="text-[11px] text-slate-400 leading-relaxed">
-                      Ad-soyad kontrollü resmi TR IBAN çekimi ve kurumsal e-fatura yüklemesiyle %20 stopaj iadesi.
+                      Ad-soyad kontrollü TR IBAN çekim talebi ve isteğe bağlı fatura/vergisel belge incelemesi. Sunucu şu anda stopajı 0 kaydeder; iade tutarı veya banka ödemesi garantisi yoktur.
                     </p>
                   </div>
                 </div>

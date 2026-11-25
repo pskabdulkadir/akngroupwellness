@@ -141,8 +141,9 @@ export function downloadTechnicalReportWord(): void {
     <ul>
       <li><strong>Direkt sponsor:</strong> Kodda varsayılan nominal oran %20 olarak tanımlıdır.</li>
       <li><strong>Unilevel:</strong> Varsayılan derinlik oranları %7, %5, %4, %3, %2, %2 ve %2'dir.</li>
-      <li><strong>Global Monoline:</strong> Kodda yedi sıra için toplam nominal %5 oran bulunur.</li>
-      <li><strong>Kariyer/havuz:</strong> Kariyer, aktiflik, sipariş ve diğer sistem kuralları hesaplamayı etkiler.</li>
+      <li><strong>Global Monoline:</strong> Sponsor ağacından bağımsız yedi üst sıra için toplam nominal %5 oran bulunur; uygun olmayan pay havuza aktarılabilir.</li>
+      <li><strong>Matching:</strong> Doğrudan sponsor olunan üyenin aynı siparişteki uygun Unilevel ve Monoline komisyonları üzerinden kariyer seviyesine göre %10, %15, %20 veya %25 hesaplanabilir.</li>
+      <li><strong>Kariyer/havuz:</strong> Kariyer, aktiflik, sipariş ve diğer sistem kuralları hesaplamayı etkiler. Sabit kariyer bonusu ile terfi sırasında kaydedilen tek seferlik rank-up hediyesi ayrı kalemlerdir.</li>
       <li><strong>Ödeme ve çekim:</strong> Komisyon hak edişi, çekilebilir bakiye, yönetici onayı ve banka transferi farklı durumlardır. Onay, transferin gerçekleştiğini kanıtlamaz.</li>
       <li><strong>Simülatör:</strong> Örnek sonuçlar kullanıcı girdilerine ve basitleştirilmiş varsayımlara dayanır; gerçek kazanç veya yatırım geri dönüşü öngörüsü değildir.</li>
     </ul>
@@ -374,8 +375,9 @@ export function downloadTechnicalReportPDF(): void {
   const mlmItems = [
     'Varsayilan nominal direkt sponsor orani: %20.',
     'Unilevel derinlik oranlari: %7, %5, %4, %3, %2, %2 ve %2.',
-    'Yedi Global Monoline sirasi icin toplam nominal %5 oran tanimlidir.',
-    'Kariyer, aktiflik, siparis ve sistem kosullari hak edisi etkiler.',
+    'Yedi Global Monoline ust sirasi icin toplam nominal %5 oran tanimlidir; uygun olmayan pay havuza aktarilabilir.',
+    'Matching, dogrudan sponsor olunan uyenin ayni siparisteki uygun Unilevel ve Monoline komisyonlari uzerinden kariyere gore %10, %15, %20 veya %25 olabilir.',
+    'Sabit kariyer bonusu ve terfi sirasinda kaydedilen tek seferlik rank-up hediyesi ayri odul kalemleridir.',
     'Komisyon, cekilebilir bakiye, yonetici onayi ve banka transferi farkli durumlardir.',
     'Simulator sonuclari ornek hesaptir; gelir, ROI veya odeme garantisi degildir.',
     'Kart odemesi sandbox test ortamidir; canli POS ve sertifikasyon dogrulanmamistir.',

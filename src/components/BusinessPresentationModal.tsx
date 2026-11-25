@@ -56,7 +56,7 @@ import {
   getResellerByCode, 
   detectAndSaveReferralCodeFromUrl 
 } from '../utils/resellerManager';
-import { CAREER_TIERS, FREKANS_PACKAGES, MONOLINE_DEPTH_RATES } from '../types/monoline';
+import { CAREER_TIERS, FREKANS_PACKAGES, MONOLINE_DEPTH_RATES, UNILEVEL_INFINITY_RULES } from '../types/monoline';
 import { HEALING_CATEGORIES, TOTAL_HEALING_COUNT } from '../data/healingLibrary';
 import { downloadTechnicalReportWord, downloadTechnicalReportPDF } from '../utils/technicalReportExport';
 
@@ -121,7 +121,6 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
   const [calcMonolineTeamOrders, setCalcMonolineTeamOrders] = useState<number>(12);
   const [calcCareerLevel, setCalcCareerLevel] = useState<number>(4);
   const [includeMatchingBonus, setIncludeMatchingBonus] = useState<boolean>(true);
-  const [includeFastRoi, setIncludeFastRoi] = useState<boolean>(true);
 
   // Active Referral Code Determination
   const urlReferralCode = typeof window !== 'undefined'
@@ -251,34 +250,26 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
   const monthlySessionProfit = monthlySessionRevenue - monthlySessionCost;
   const monthlyDirectSponsorCommission = (calcReferredMembers * calcAvgPackagePrice * 20) / 100;
 
-  // Monoline 7 depth commission across unlocked depths
   const unlockedRatesSum = (MONOLINE_DEPTH_RATES || []).slice(0, calcCareerLevel).reduce((s, r) => s + r.percentage, 0);
   const avgDepthRate = calcCareerLevel > 0 ? unlockedRatesSum / 7 : 0;
-  const monthlyMonolineCommission = Math.round((calcMonolineTeamOrders * calcAvgPackagePrice * avgDepthRate) / 100);
+  const monthlyUnilevelCommission = Math.round((calcMonolineTeamOrders * calcAvgPackagePrice * avgDepthRate) / 100);
 
   const selectedCareerTier = CAREER_TIERS.find((t) => t.level === calcCareerLevel) || CAREER_TIERS[3];
   const monthlyCareerPoolBonus = Math.round(
     ((calcReferredMembers + calcMonolineTeamOrders) * calcAvgPackagePrice * 0.5) * selectedCareerTier.poolBonusRate
   );
 
-  // Liderlik Eşleşme (Matching Bonus: %10 + %5 + %5 = max %20)
-  const matchingRate = calcCareerLevel >= 6 ? 0.20 : calcCareerLevel >= 5 ? 0.15 : calcCareerLevel >= 3 ? 0.10 : 0;
-  const monthlyMatchingBonus = includeMatchingBonus && calcCareerLevel >= 3
-    ? Math.round(monthlyMonolineCommission * matchingRate)
-    : 0;
-
-  // Fast-ROI bonus: If referred members >= 3, +15% ekstra ikramiye (toplam %75 nakit geri dönüş)
-  const monthlyFastRoiBonus = includeFastRoi && calcReferredMembers >= 3
-    ? Math.round(3 * calcAvgPackagePrice * 0.15)
+  const matchingRate = (UNILEVEL_INFINITY_RULES.find((rule) => rule.career_level === calcCareerLevel)?.matching_bonus_percent || 0) / 100;
+  const monthlyMatchingBonus = includeMatchingBonus && matchingRate > 0
+    ? Math.round(monthlyUnilevelCommission * matchingRate)
     : 0;
 
   const totalMonthlyEarnings =
     monthlySessionProfit +
     monthlyDirectSponsorCommission +
-    monthlyMonolineCommission +
+    monthlyUnilevelCommission +
     monthlyCareerPoolBonus +
-    monthlyMatchingBonus +
-    monthlyFastRoiBonus;
+    monthlyMatchingBonus;
 
   const yearlyProjectedEarnings = totalMonthlyEarnings * 12;
   const activeSlideIndex = PRESENTATION_SLIDES.indexOf(activeSection);
@@ -816,8 +807,8 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
               {/* Action Funnel */}
               <div className="p-5 rounded-2xl bg-gradient-to-r from-emerald-50 to-slate-50 border border-emerald-500/40 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-lg">
                 <div>
-                  <h4 className="text-sm font-bold text-slate-900">Monoline 7 Nefis MLM &amp; Bayi Gelir Modelini Keşfedin</h4>
-                  <p className="text-xs text-slate-600">Danışan seans kârı, %20 Direkt Sponsor, %25 Monoline Tek Hat ve %5 Sistem / Kariyer Fonu gelirlerini inceleyin.</p>
+                  <h4 className="text-sm font-bold text-slate-900">Unilevel, Monoline ve Kariyer Modelini Keşfedin</h4>
+                  <p className="text-xs text-slate-600">Danışan seans kârı, %20 Direkt Sponsor, Unilevel, Monoline sıra dağıtımı ve kariyer koşullu Matching modelini inceleyin.</p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <button
@@ -849,7 +840,7 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
                   <span>Çift Motorlu Hibrit Komisyon Mimarisi &amp; 7 Nefis Mertebesi MLM Kazanç Planı</span>
                 </div>
                 <h3 className="text-xl sm:text-2xl font-black text-slate-900 leading-tight">
-                  Danışan Seans Geliri + %20 Direkt Sponsor + Motor 1: %25 Unilevel (7 Derinlik) + Motor 2: %5 Küresel Sıra Teşviki + %5 Sistem Fonu
+                  Varsayılan oranlar: %20 Direkt Sponsor + %25 Unilevel + %5 Monoline sıra dağıtımı; kariyer havuzu ve Matching ayrı koşullara tabidir
                 </h3>
                 <p className="text-xs sm:text-sm text-slate-700 leading-relaxed max-w-4xl">
                   Sistemimizin finansal sürdürülebilirliğini sağlamak, çalışan liderleri ödüllendirmek ve pasif üyeleri sistemde tutabilmek amacıyla komisyon altyapısı <strong>Çift Motorlu Hibrit Model</strong> ile güçlendirilmiştir. Bir sipariş gerçekleştiğinde iki bağımsız motor eşzamanlı olarak tetiklenir.
@@ -975,12 +966,12 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
                       1. GELİR KAPISI
                     </span>
                   </div>
-                  <h4 className="text-sm font-black text-slate-900">1. Danışan Seans Başı %1000'e Varan Perakende Kâr</h4>
+                  <h4 className="text-sm font-black text-slate-900">1. Danışan Seansı Perakende Geliri</h4>
                   <p className="text-xs text-slate-600 leading-relaxed">
-                    14 kademeli seans kredi paketlerinde birim seans maliyetiniz <strong>$1.00</strong> olarak sabitlenirken, danışanlarınıza uygulayacağınız seansları <strong>$30 – $70</strong> arasında ücretlendirerek doğrudan perakende kâr sağlarsınız.
+                    Katalog paketlerinde bir seans kredisinin nominal maliyeti <strong>$1.00</strong> olarak gösterilir. Seans satış fiyatını işletme belirler; gerçek marj diğer maliyetlere ve satış koşullarına bağlıdır.
                   </p>
                   <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-500/30 text-[11px] font-bold text-amber-700">
-                    Örn: 30 Seans x $30 = $905 Aylık Seans Geliri
+                    Örnek: 30 × $30 = $900 ciro; $30 kredi maliyeti sonrası $870, diğer giderlerden önce
                   </div>
                 </div>
 
@@ -1031,7 +1022,7 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
                   </div>
                   <h4 className="text-sm font-black text-slate-900">4. Motor 2: Küresel Monoline Sıra Teşviki (%5)</h4>
                   <p className="text-xs text-slate-600 leading-relaxed">
-                    Sponsorluk bağından bağımsız olarak dünyada sisteme giren her siparişte, sipariş veren üyenin arkasındaki ilk 7 üst sıraya <strong>%1.50, %1.00, %0.80, %0.60, %0.50, %0.30, %0.30</strong> sembolik sıra teşviki ödenir.
+                    Sponsorluk ağacından bağımsız olarak, sipariş veren üyenin global sıra numarasının üzerindeki en yakın 7 pozisyon için toplam nominal %5 dağıtım hesaplanır. Uygun olmayan veya bulunmayan alıcı payları havuza aktarılabilir.
                   </p>
                   <div className="p-2.5 rounded-xl bg-teal-50 border border-teal-500/30 text-[11px] font-bold text-teal-700">
                     1. Sıra %1.50 · 2. %1.00 · 3. %0.80 · 4. %0.60 · 5. %0.50 · 6-7. %0.30
@@ -1044,10 +1035,10 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
                       <Award className="w-5 h-5" />
                     </div>
                     <span className="px-2.5 py-0.5 rounded-full bg-purple-500/20 text-purple-700 text-[10px] font-black border border-purple-500/30">
-                      5. GELİR KAPISI (%5 FON)
+                      5. KARİYER HAVUZU (MATRİS ORANI)
                     </span>
                   </div>
-                  <h4 className="text-sm font-black text-slate-900">5. 7 Nefis Kariyer Havuzu &amp; Cüzdan Bonusları</h4>
+                  <h4 className="text-sm font-black text-slate-900">5. 7 Nefis Kariyer Havuzu ve Sabit Kariyer Bonusu</h4>
                   <p className="text-xs text-slate-600 leading-relaxed">
                     Sistem, yapılandırılmış oranları ve kariyer koşullarını kullanarak komisyon/havuz hesaplamaları sunar. Gerçek hak ediş, kullanılabilir bakiye veya ödeme bu ekrandaki simülasyonla garanti edilmez; güncel kurallar panelden doğrulanmalıdır.
                   </p>
@@ -1062,35 +1053,18 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
                       <Users className="w-5 h-5" />
                     </div>
                     <span className="px-2.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-700 text-[10px] font-black border border-indigo-500/30">
-                      5. GELİR KAPISI (%20 MATCHING)
+                      6. LİDERLİK EŞLEŞME (MATCHING)
                     </span>
                   </div>
-                  <h4 className="text-sm font-black text-slate-900">5. Liderlik Eşleşme Bonusu (Matching %20)</h4>
+                  <h4 className="text-sm font-black text-slate-900">6. Liderlik Eşleşme Bonusu (Matching %10–%25)</h4>
                   <p className="text-xs text-slate-600 leading-relaxed">
-                    Kodda liderlik eşleşmesi için kariyer seviyesine göre oranlar tanımlıdır. Hak ediş ve cüzdanda kullanılabilir bakiye; sistem koşulları ve onaylı işlemlere bağlıdır.
+                    Matching, doğrudan sponsor olunan üyenin aynı siparişte kazandığı uygun Unilevel ve Monoline komisyonları üzerinden hesaplanır. Sponsor kariyerine göre oran %10, %15, %20 veya %25 olabilir; aktiflik ve sistem ayarları geçerlidir.
                   </p>
                   <div className="p-2.5 rounded-xl bg-indigo-50 border border-indigo-500/30 text-[11px] font-bold text-indigo-700">
-                    1. Nesil %10 (Mülhime+) · 2. Nesil %5 (Râzıye+) · 3. Nesil %5 (Mardıyye+)
+                    Mülhime %10 · Mutmainne %15 · Râziye %20 · Marziyye ve Kâmile %25
                   </div>
                 </div>
 
-                <div className="p-5 rounded-2xl bg-white/80 border border-emerald-500/30 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-700">
-                      <Zap className="w-5 h-5" />
-                    </div>
-                    <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-700 text-[10px] font-black border border-emerald-500/30">
-                      6. ÖRNEK BONUS SENARYOSU
-                    </span>
-                  </div>
-                  <h4 className="text-sm font-black text-slate-900">6. &ldquo;3 Getir Bedavaya Getir&rdquo; Fast-ROI İkramiyesi</h4>
-                  <p className="text-xs text-slate-600 leading-relaxed">
-                    Simülatör, belirli kullanıcı girdileriyle bu örnek bonus senaryosunu hesaplar. Gerçek hak ediş; onaylı sipariş, aktiflik, kariyer ve güncel kurallara bağlıdır; paket maliyetinin geri kazanılacağı veya ödeme yapılacağı garanti edilmez.
-                  </p>
-                  <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-500/30 text-[11px] font-bold text-emerald-700">
-                    Varsayımsal hesaplama; gelir ve iade garantisi değildir
-                  </div>
-                </div>
 
               </div>
 
@@ -1288,10 +1262,10 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
                   <span>Çok Boyutlu Finansal Kazanç &amp; Amortisman (ROI) Hesaplayıcı</span>
                 </div>
                 <h3 className="text-xl sm:text-2xl font-black text-slate-900 leading-tight">
-                  Danışan Seansı + %20 Direkt Sponsor + %25 Monoline + %5 Sistem Fonu + Ekstra Prim Simülatörü
+                  Danışan Seansı + Direkt Sponsor + Varsayımsal Unilevel + Kariyer Koşullu Matching Senaryosu
                 </h3>
                 <p className="text-xs sm:text-sm text-slate-700 leading-relaxed">
-                  Uyguladığınız danışan seansları, direkt davet ettiğiniz üyeler, küresel tek hat (Monoline) siparişleri ve Nefis kariyer mertebenize göre aylık net gelirinizi ve yatırım geri dönüş (ROI) sürenizi canlı simüle edin.
+                  Bu araç, kullanıcı girdileriyle basitleştirilmiş bir senaryo toplamı üretir; Unilevel ve Matching tahminleri sunucu hak ediş hesabının, vergilerin, iadelerin veya gerçek ödeme zamanlamasının birebir karşılığı değildir. Matching motoru doğrudan sponsor olunan üyenin uygun Unilevel ve Monoline komisyonlarını baz alır.
                 </p>
               </div>
 
@@ -1397,7 +1371,7 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
 
                   {/* Bonus Toggles */}
                   <div className="pt-2 border-t border-slate-850 space-y-2">
-                    <span className="text-[11px] font-bold text-slate-600 block">Ekstra Liderlik ve Hızlı Başlangıç Primleri:</span>
+                    <span className="text-[11px] font-bold text-slate-600 block">Ek Liderlik Primi:</span>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                       <label className="flex items-center gap-2 p-2 rounded-xl bg-slate-50/80 border border-slate-200 cursor-pointer hover:bg-slate-50">
                         <input
@@ -1406,16 +1380,7 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
                           onChange={(e) => setIncludeMatchingBonus(e.target.checked)}
                           className="accent-purple-500 rounded"
                         />
-                        <span className="text-purple-700 font-semibold text-[11px]">Matching (%20)</span>
-                      </label>
-                      <label className="flex items-center gap-2 p-2 rounded-xl bg-slate-50/80 border border-slate-200 cursor-pointer hover:bg-slate-50">
-                        <input
-                          type="checkbox"
-                          checked={includeFastRoi}
-                          onChange={(e) => setIncludeFastRoi(e.target.checked)}
-                          className="accent-emerald-500 rounded"
-                        />
-                        <span className="text-emerald-700 font-semibold text-[11px]">Fast-ROI (+%15)</span>
+                        <span className="text-purple-700 font-semibold text-[11px]">Matching (%{Math.round(matchingRate * 100)})</span>
                       </label>
                     </div>
                   </div>
@@ -1442,30 +1407,22 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
                     </div>
                     <div className="flex items-center justify-between border-b border-slate-200 pb-2">
                       <span className="text-xs text-teal-700 font-bold">
-                        3. Monoline Tek Hat Primi ({calcCareerLevel} Derinlik):
+                        3. Varsayımsal Unilevel Derinlik Primi (ortalama senaryo):
                       </span>
-                      <span className="text-sm font-mono font-black text-teal-700">+{formatUsd(monthlyMonolineCommission)}</span>
+                      <span className="text-sm font-mono font-black text-teal-700">+{formatUsd(monthlyUnilevelCommission)}</span>
                     </div>
                     <div className="flex items-center justify-between border-b border-slate-200 pb-2">
                       <span className="text-xs text-amber-700 font-bold">
-                        4. {selectedCareerTier.title} Kariyer Havuz Payı:
+                        4. {selectedCareerTier.title} Kariyer Havuz Senaryosu:
                       </span>
                       <span className="text-sm font-mono font-black text-amber-700">+{formatUsd(monthlyCareerPoolBonus)}</span>
                     </div>
                     {monthlyMatchingBonus > 0 && (
                       <div className="flex items-center justify-between border-b border-slate-200 pb-2">
                         <span className="text-xs text-purple-700 font-bold">
-                          5. Liderlik Eşleşme (Matching %{Math.round(matchingRate * 100)}):
+                          5. Varsayımsal Matching (%{Math.round(matchingRate * 100)}):
                         </span>
                         <span className="text-sm font-mono font-black text-purple-700">+{formatUsd(monthlyMatchingBonus)}</span>
-                      </div>
-                    )}
-                    {monthlyFastRoiBonus > 0 && (
-                      <div className="flex items-center justify-between border-b border-slate-200 pb-2">
-                        <span className="text-xs text-emerald-700 font-bold">
-                          6. Fast-ROI Hızlı İkramiye (+%15):
-                        </span>
-                        <span className="text-sm font-mono font-black text-emerald-700">+{formatUsd(monthlyFastRoiBonus)}</span>
                       </div>
                     )}
                   </div>
@@ -1473,7 +1430,7 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
                   {/* Highlighted Results Box */}
                   <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-500/60 space-y-2 text-center shadow-lg">
                     <div className="text-xs text-emerald-700 font-bold uppercase tracking-wider">
-                      Tahmini Toplam Aylık Net Gelir
+                      Varsayımsal Aylık Toplam (garanti değildir)
                     </div>
                     <div className="text-3xl font-black text-slate-900 font-mono">
                       {formatUsd(totalMonthlyEarnings)}
@@ -1482,7 +1439,7 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
                       <span>Yıllık: <strong>{formatUsd(yearlyProjectedEarnings)}</strong></span>
                       <span>·</span>
                       <span className="text-amber-700 font-bold">
-                        Yatırım Geri Dönüş (ROI): ~{estimatedRoiDays} Günde Amorti!
+                        Basitleştirilmiş amortisman senaryosu: ~{estimatedRoiDays} gün
                       </span>
                     </div>
                   </div>

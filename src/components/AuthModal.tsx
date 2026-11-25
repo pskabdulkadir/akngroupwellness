@@ -933,7 +933,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               )}
 
               <p className="text-[10px] text-slate-400">
-                AuraBio Frekans sistemi kurumsal lisanslama ve teknik danışmanlık hizmetleri yetkili bayi ağı üzerinden sağlanmaktadır.
+                Bu formda geçerli bayi referans kodu zorunludur. Yalnızca bu ekran dışından sponsor bilgisi olmadan gönderilen kayıt isteklerinde sunucu, mevcut kural gereği son kayıtlı üyeyi sponsor olarak atar; bu davranış formdaki zorunluluğu değiştirmez. AuraBio Frekans sistemi kurumsal lisanslama ve teknik danışmanlık hizmetleri yetkili bayi ağı üzerinden sağlanmaktadır.
               </p>
 
               {/* Kol Yerleşimi Tercihi (Sol Kol / Sağ Kol / Otomatik Dengeleyici) */}

@@ -208,8 +208,6 @@ let distributionParams: SystemDistributionParameters = {
   depth_percentages: [...MONOLINE_DEPTH_PERCENTAGES],
   unilevel_depth_percentages: [...UNILEVEL_DEPTH_PERCENTAGES],
   monoline_incentive_percentages: [...MONOLINE_INCENTIVE_PERCENTAGES],
-
-  fast_roi_bonus_percent: 15,
   career_pool_percent: 5,
 };
 let usdTryRate = 0;
@@ -249,13 +247,38 @@ let v2ArchitectureConfig: V2ArchitectureConfig = {
   dynamic_compression_mode: 'FULL_COMPRESSION',
   unilevel_infinity_enabled: false,
   matching_bonus_enabled: true,
-  fast_roi_3x15_enabled: true,
   fomo_48h_countdown_enabled: true,
   p2p_voucher_transfer_enabled: true,
-  fast_start_window_days: 30,
-  welcome_30d_double_bonus_enabled: true,
   whatsapp_business_push_enabled: true,
 };
+
+function applyV2ArchitectureConfig(config: Partial<V2ArchitectureConfig>) {
+  v2ArchitectureConfig = {
+    use_rolling_30d_pgv: config.use_rolling_30d_pgv ?? v2ArchitectureConfig.use_rolling_30d_pgv,
+    use_dynamic_active_career: config.use_dynamic_active_career ?? v2ArchitectureConfig.use_dynamic_active_career,
+    async_queue_enabled: config.async_queue_enabled ?? v2ArchitectureConfig.async_queue_enabled,
+    dynamic_compression_enabled: config.dynamic_compression_enabled ?? v2ArchitectureConfig.dynamic_compression_enabled,
+    dynamic_compression_mode: config.dynamic_compression_mode ?? v2ArchitectureConfig.dynamic_compression_mode,
+    unilevel_infinity_enabled: false,
+    matching_bonus_enabled: config.matching_bonus_enabled ?? v2ArchitectureConfig.matching_bonus_enabled,
+    fomo_48h_countdown_enabled: config.fomo_48h_countdown_enabled ?? v2ArchitectureConfig.fomo_48h_countdown_enabled,
+    p2p_voucher_transfer_enabled: config.p2p_voucher_transfer_enabled ?? v2ArchitectureConfig.p2p_voucher_transfer_enabled,
+    whatsapp_business_push_enabled: config.whatsapp_business_push_enabled ?? v2ArchitectureConfig.whatsapp_business_push_enabled,
+  };
+}
+
+function applyDistributionParams(config: Partial<SystemDistributionParameters>) {
+  distributionParams = {
+    system_fund_percent: config.system_fund_percent ?? distributionParams.system_fund_percent,
+    direct_sponsor_percent: config.direct_sponsor_percent ?? distributionParams.direct_sponsor_percent,
+    monoline_total_percent: config.monoline_total_percent ?? distributionParams.monoline_total_percent,
+    depth_percentages: config.depth_percentages ?? distributionParams.depth_percentages,
+    unilevel_depth_percentages: config.unilevel_depth_percentages ?? distributionParams.unilevel_depth_percentages,
+    monoline_incentive_percentages: config.monoline_incentive_percentages ?? distributionParams.monoline_incentive_percentages,
+    career_pool_percent: config.career_pool_percent ?? distributionParams.career_pool_percent,
+  };
+}
+
 let withdrawalRequests: WithdrawalRequestRecord[] = [];
 let taxRefundInvoices: TaxRefundInvoiceRecord[] = [];
 let nextTaxRefundId = 1;
@@ -717,11 +740,7 @@ async function hydrateApplicationState() {
   const state = stored as Record<string, any>;
   applyPersistentState(state);
   if (state.v2ArchitectureConfig) {
-    v2ArchitectureConfig = {
-      ...v2ArchitectureConfig,
-      ...state.v2ArchitectureConfig,
-      unilevel_infinity_enabled: false,
-    };
+    applyV2ArchitectureConfig(state.v2ArchitectureConfig);
   }
   return true;
 }
@@ -766,7 +785,7 @@ function applyPersistentState(state: Record<string, any>) {
   }
   if (state.ethicsGuidelinesContent) ethicsGuidelinesContent = state.ethicsGuidelinesContent;
   if (state.systemWallet) systemWallet = state.systemWallet;
-  if (state.distributionParams) distributionParams = state.distributionParams;
+  if (state.distributionParams) applyDistributionParams(state.distributionParams);
   if (state.activeBusinessRules) Object.assign(activeBusinessRules, state.activeBusinessRules);
   if (Array.isArray(state.memberCredentials)) {
     memberCredentials.clear();
@@ -893,68 +912,6 @@ function awardRankUpGiftIfNeeded(member: MonolineMember, newCareerLevel: number)
   }
 }
 
-function awardFastStartBonusIfQualified(sponsor: MonolineMember) {
-  if (sponsor.fast_start_awarded) return;
-  if (v2ArchitectureConfig.fast_roi_3x15_enabled === false) return;
-
-  const sponsorPkgFloor = Math.max(5000, sponsor.personal_volume || 5000);
-  const qualifyingDirects = members.filter(
-    (m) =>
-      (m.sponsor_id === sponsor.user_id || m.sponsor_db_id === sponsor.id) &&
-      m.is_active &&
-      (m.personal_volume || 0) >= 5000
-  );
-  if (qualifyingDirects.length < 3) return;
-
-  const joinedMs = sponsor.joined_at ? new Date(sponsor.joined_at).getTime() : Date.now();
-  const daysSinceJoin = Math.max(0, (Date.now() - joinedMs) / 86400000);
-  // V2.2 Revizyon 3: İlk 30 gün içinde 3 aktif direkt referans getiren bayiye +%15 Fast-ROI Amortisman Bonusu
-  if (daysSinceJoin <= (v2ArchitectureConfig.fast_start_window_days || 30)) {
-    sponsor.fast_start_awarded = true;
-    const first3Sum = qualifyingDirects
-      .slice(0, 3)
-      .reduce((sum, d) => sum + (d.personal_volume || 5000), 0);
-    const amortized3xVolume = Math.min(sponsorPkgFloor * 3, first3Sum);
-    const fastRoiRate = (distributionParams.fast_roi_bonus_percent ?? 15) / 100;
-    const fastStartCash = roundCurrency(amortized3xVolume * fastRoiRate);
-
-    creditMemberWallet(sponsor, 'FAST_ROI_BONUS', fastStartCash, true);
-
-    const nowIso = new Date().toISOString();
-    logComm(
-      `FAST-ROI-${sponsor.user_id}`,
-      sponsor,
-      sponsor,
-      'FAST_ROI_BONUS',
-      null,
-      fastStartCash,
-      'PENDING_14D',
-      new Date(Date.now() + CLAWBACK_PROTECTION_DAYS * 86400000).toISOString(),
-      nowIso
-    );
-
-    userRewardsLog.unshift({
-      id: nextRewardLogId++,
-      user_id: sponsor.id,
-      external_user_id: sponsor.user_id,
-      user_full_name: sponsor.full_name,
-      career_level: sponsor.career_level,
-      career_title: sponsor.career_title,
-      reward_type: 'FAST_START',
-      reward_description: `"3 Getir Bedavaya Getir" (Fast-ROI +%15 Amortisman Bonusu · 3 × ${sponsorPkgFloor.toLocaleString('tr-TR')} $ = ${amortized3xVolume.toLocaleString('tr-TR')} $ × %15 = +${fastStartCash.toLocaleString('tr-TR')} $)`,
-      cash_value: fastStartCash,
-      is_delivered: true,
-      earned_at: nowIso,
-    });
-
-    enqueueNotification({
-      member: sponsor,
-      channel: 'WHATSAPP',
-      trigger_type: 'FAST_START_BONUS',
-      message: `Tebrikler ${sponsor.full_name}! İlk 30 gün içinde 3 aktif direkt referans ("3 Getir Bedavaya Getir") şartını tamamladınız ve +%15 Fast-ROI Amortisman Bonusu olarak ${fastStartCash.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} $ kazandınız! (%20 Sponsor Primi + %15 Fast-ROI ile paketiniz %105 amorti edildi!)`,
-    });
-  }
-}
 
 let activityLogs: ActivityLogRecord[] = [];
 
@@ -1238,13 +1195,13 @@ function recalculateAllCareers(
     }
   }
 
-  // Trigger Rank-Up Gifts and Fast-Start Bonuses after all 7 passes have converged
+  // Trigger Rank-Up Gifts after all 7 passes have converged
   for (const member of members) {
     const currMax = member.max_career_level || member.career_level || 1;
     if (currMax >= 2) {
       awardRankUpGiftIfNeeded(member, currMax);
     }
-    awardFastStartBonusIfQualified(member);
+
   }
 
   const upgrades: Array<{
@@ -1393,8 +1350,7 @@ type CommissionWalletType =
   | 'MONOLINE_DEPTH'
   | 'CAREER_POOL'
   | 'UNILEVEL_INFINITY'
-  | 'MATCHING_BONUS'
-  | 'FAST_ROI_BONUS';
+  | 'MATCHING_BONUS';
 
 function adjustCommissionCounters(
   member: MonolineMember,
@@ -1406,9 +1362,6 @@ function adjustCommissionCounters(
     Math.max(0, roundCurrency((current || 0) + change));
   if (walletType === 'SPONSOR') {
     wallets.sponsor_wallet = bump(wallets.sponsor_wallet, delta);
-  } else if (walletType === 'FAST_ROI_BONUS') {
-    wallets.sponsor_wallet = bump(wallets.sponsor_wallet, delta);
-    wallets.fast_roi_wallet = bump(wallets.fast_roi_wallet, delta);
   } else if (walletType === 'UNILEVEL_COMMISSION') {
     wallets.unilevel_wallet = bump(wallets.unilevel_wallet, delta);
     wallets.monoline_wallet = bump(wallets.monoline_wallet, delta);
@@ -1472,8 +1425,7 @@ function logComm(
     | 'MONOLINE_DEPTH'
     | 'SYSTEM_POOL'
     | 'UNILEVEL_INFINITY'
-    | 'MATCHING_BONUS'
-    | 'FAST_ROI_BONUS',
+    | 'MATCHING_BONUS',
   depth: number | null,
   amount: number,
   status: CommissionLogStatusType,
@@ -1483,7 +1435,7 @@ function logComm(
 ) {
   const isPaidPending = status === 'PENDING_14D';
   const isPaidReleased = status === 'RELEASED' && type !== 'SYSTEM_POOL';
-  const isWinnerBonus = type === 'MATCHING_BONUS' || type === 'FAST_ROI_BONUS';
+  const isWinnerBonus = type === 'MATCHING_BONUS';
   const region = resolveMemberRegion(
     isWinnerBonus && targetMember ? targetMember.country_code : sourceMember.country_code
   );
@@ -1651,7 +1603,7 @@ function calculateSingleUserActiveCareer(userId: number | string) {
   if (newMaxLevel >= 2) {
     awardRankUpGiftIfNeeded(user, newMaxLevel);
   }
-  awardFastStartBonusIfQualified(user);
+
 
   return {
     user_id: user.user_id,
@@ -1810,7 +1762,7 @@ function processOrderCommission(
       kvkk_approved_at: payload.timestamp || new Date().toISOString(),
       contract_version: 'v2.0',
       daily_withdrawal_limit: DAILY_WITHDRAWAL_LIMITS_BY_CAREER[1],
-      fast_start_awarded: false,
+
     };
     members.push(autoMember);
     buyerIndex = members.length - 1;
@@ -2000,8 +1952,7 @@ function processOrderCommission(
     }
   }
 
-  // 3.5. Kariyer Terfilerini ve "3 Getir Bedavaya Getir" (Fast-ROI +%15) kontrolünü komisyon dağıtımından hemen önce çalıştır
-  // Böylece bu siparişle terfi eden üst liderler yeni kariyerlerinin derinlik ve Eşleşme haklarından aynı işlemde yararlanır.
+  // Kariyer terfilerini komisyon dağıtımından önce hesapla.
   const careerUpgrades = calculateActiveCareer(buyer.id);
 
   const nowIso = processedAt;
@@ -2778,10 +2729,6 @@ function processOrderCommission(
 
   transactions.unshift(tx);
 
-  // Sponsor için "3 Getir Bedavaya Getir" (Fast-ROI +%15) kontrolünü tetikle
-  if (sponsorMember) {
-    awardFastStartBonusIfQualified(sponsorMember);
-  }
 
   const processingMs = Math.max(4, Date.now() - startMs + Math.floor(Math.random() * 10));
 
@@ -2931,8 +2878,6 @@ function resetToCleanSlate(includeAdmin = true) {
     direct_sponsor_percent: DIRECT_SPONSOR_PERCENT,
     monoline_total_percent: 25,
     depth_percentages: [...MONOLINE_DEPTH_PERCENTAGES],
-  
-    fast_roi_bonus_percent: 15,
     career_pool_percent: 5,
   };
   transactions = [];
@@ -3016,7 +2961,7 @@ function resetToCleanSlate(includeAdmin = true) {
             monoline_commission_wallet: 0,
             unilevel_infinity_wallet: 0,
             career_pool_wallet: 0,
-            fast_roi_wallet: 0,
+
             pending_clawback_wallet: 0,
             total_earned: 0,
             total_withdrawn: 0,
@@ -3699,7 +3644,7 @@ function runFullCareerJourneySimulation() {
     },
 
     // ========================================================================
-    // KOL 6 ALT AĞACI (USR-1007 Caner Özkan -> 2. Kariyer Levvâme + "3 Getir Bedavaya Getir" %105 Fast-ROI Testi: 3 x 10.000 $ = 30.000 $ PGV)
+    // KOL 6 ALT AĞACI (USR-1007 Caner Özkan -> 2. Kariyer Levvâme testi: 3 x 10.000 $ = 30.000 $ PGV)
     // ========================================================================
     {
       user_id: 'USR-1056',
@@ -3768,7 +3713,7 @@ function runFullCareerJourneySimulation() {
         career_pool_wallet: 0,
         infinity_wallet: 0,
         matching_wallet: 0,
-        fast_roi_wallet: 0,
+
         total_earnings: 0,
 
         system_fund_balance: 0,
@@ -3799,7 +3744,7 @@ function runFullCareerJourneySimulation() {
       kvkk_approved_at: orderTimestamp,
       contract_version: 'v2.2',
       daily_withdrawal_limit: DAILY_WITHDRAWAL_LIMITS_BY_CAREER[1],
-      fast_start_awarded: false,
+
     };
     members.push(preMember);
   });
@@ -3814,14 +3759,14 @@ function runFullCareerJourneySimulation() {
     m.rolling_30d_personal_volume = 0;
     m.rolling_30d_pgv = 0;
     m.session_credits = 0;
-    m.fast_start_awarded = false;
+
     m.wallets = {
       sponsor_wallet: 0,
       monoline_wallet: 0,
       career_pool_wallet: 0,
       infinity_wallet: 0,
       matching_wallet: 0,
-      fast_roi_wallet: 0,
+
       total_earnings: 0,
 
       system_fund_balance: 0,
@@ -3862,7 +3807,7 @@ function runFullCareerJourneySimulation() {
   const gen1Marziyye = members.find((m) => m.user_id === 'USR-1002');
   if (rootKamile && gen1Marziyye) {
     const zeynepBaseComm = roundCurrency(
-      (gen1Marziyye.wallets.sponsor_wallet - (gen1Marziyye.wallets.fast_roi_wallet || 0)) +
+      gen1Marziyye.wallets.sponsor_wallet +
         (gen1Marziyye.wallets.monoline_wallet - (gen1Marziyye.wallets.infinity_wallet || 0))
     );
     const targetRootMatchOnZeynep = roundCurrency(zeynepBaseComm * 0.25);
@@ -4420,9 +4365,7 @@ function buildStateResponse(
   const totalMatchingPaid = roundCurrency(
     stateMembers.reduce((acc, m) => acc + (m.wallets.matching_wallet || 0), 0)
   );
-  const totalFastRoiPaid = roundCurrency(
-    stateMembers.reduce((acc, m) => acc + (m.wallets.fast_roi_wallet || 0), 0)
-  );
+
   const totalFieldPayoutAmount = roundCurrency(
     stateMembers.reduce((acc, m) => acc + m.wallets.total_earnings, 0)
   );
@@ -4468,7 +4411,9 @@ function buildStateResponse(
       .reduce((acc, w) => acc + (w.tax_deduction || 0), 0)
   );
   const totalRewardsCashValue = roundCurrency(
-    userRewardsLog.reduce((acc, r) => acc + (r.cash_value || 0), 0)
+    userRewardsLog
+      .filter((reward) => reward.reward_type === 'RANK_UP_GIFT')
+      .reduce((acc, reward) => acc + (reward.cash_value || 0), 0)
   );
   const fraudReviewCount = fraudAlerts.filter((f) => f.status === 'FRAUD_REVIEW').length;
 
@@ -4491,7 +4436,7 @@ function buildStateResponse(
     deliveredOrdersLog = ordersLog.slice(0, 150);
     deliveredTaxRefunds = taxRefundInvoices;
     deliveredP2PTransfers = p2pTransfers.slice(0, 100);
-    deliveredRewardsLog = userRewardsLog.slice(0, 100);
+    deliveredRewardsLog = userRewardsLog.filter((reward) => reward.reward_type === 'RANK_UP_GIFT').slice(0, 100);
     deliveredNotifications = notificationOutbox.slice(0, 150);
     deliveredFomoAlerts = fomoCountdownAlerts.slice(0, 50);
   } else if (memberUid) {
@@ -4519,7 +4464,7 @@ function buildStateResponse(
     deliveredP2PTransfers = p2pTransfers
       .filter((p) => p.from_user_id === targetId || p.to_user_id === targetId || String(p.from_user_id) === memberUid || String(p.to_user_id) === memberUid)
       .slice(0, 100);
-    deliveredRewardsLog = userRewardsLog.filter((r) => r.user_id === targetId || (r as any).external_user_id === memberUid).slice(0, 50);
+    deliveredRewardsLog = userRewardsLog.filter((r) => r.reward_type === 'RANK_UP_GIFT' && (r.user_id === targetId || (r as any).external_user_id === memberUid)).slice(0, 50);
     deliveredNotifications = notificationOutbox.filter((n) => n.user_id === targetId || (n as any).external_user_id === memberUid).slice(0, 50);
     deliveredFomoAlerts = fomoCountdownAlerts
       .filter((f) => f.external_user_id === memberUid || f.user_id === targetId)
@@ -4576,7 +4521,7 @@ function buildStateResponse(
       total_career_pool_bonuses_paid: totalCareerPoolPaid,
       total_infinity_bonuses_paid: totalInfinityPaid,
       total_matching_bonuses_paid: totalMatchingPaid,
-      total_fast_roi_bonuses_paid: totalFastRoiPaid,
+
       total_field_payout_amount: totalFieldPayoutAmount,
       company_net_profit_amount: companyNetProfitAmount,
       company_net_profit_percent: companyNetProfitPercent,
@@ -5240,7 +5185,7 @@ async function hydrateStateFromPostgres(): Promise<void> {
             kvkk_approved_at: new Date().toISOString(),
             contract_version: 'v2.0',
             daily_withdrawal_limit: 5000,
-            fast_start_awarded: false,
+      
             assigned_leg: (row.assigned_leg as any) || 'LEFT',
             left_leg_volume: Number(row.left_leg_volume) || 0,
             right_leg_volume: Number(row.right_leg_volume) || 0,
@@ -5664,7 +5609,7 @@ async function startServer(options: { listen?: boolean } = {}) {
             kvkk_approved_at: new Date().toISOString(),
             contract_version: 'v2.0',
             daily_withdrawal_limit: 5000,
-            fast_start_awarded: false,
+      
             assigned_leg: 'LEFT',
             left_leg_volume: 0,
             right_leg_volume: 0,
@@ -8418,7 +8363,7 @@ async function startServer(options: { listen?: boolean } = {}) {
         contract_version: undefined,
         daily_withdrawal_limit:
           DAILY_WITHDRAWAL_LIMITS_BY_CAREER[manualCareer || 1] || 5000,
-        fast_start_awarded: false,
+  
         assigned_leg: finalLeg,
         left_leg_volume: 0,
         right_leg_volume: 0,
@@ -10106,8 +10051,7 @@ async function startServer(options: { listen?: boolean } = {}) {
           log.type === 'SPONSOR' ||
           log.type === 'MONOLINE_DEPTH' ||
           log.type === 'UNILEVEL_INFINITY' ||
-          log.type === 'MATCHING_BONUS' ||
-          log.type === 'FAST_ROI_BONUS'
+          log.type === 'MATCHING_BONUS'
         ) {
           const recipient = members.find(
             (m) => m.id === log.target_user_id || m.user_id === log.target_external_id
@@ -10277,11 +10221,10 @@ async function startServer(options: { listen?: boolean } = {}) {
       dynamic_compression_enabled,
       dynamic_compression_mode,
       matching_bonus_enabled,
-      fast_roi_3x15_enabled,
+
       fomo_48h_countdown_enabled,
       p2p_voucher_transfer_enabled,
-      fast_start_window_days,
-      welcome_30d_double_bonus_enabled,
+
       whatsapp_business_push_enabled,
     } = req.body || {};
 
@@ -10313,10 +10256,7 @@ async function startServer(options: { listen?: boolean } = {}) {
         typeof matching_bonus_enabled === 'boolean'
           ? matching_bonus_enabled
           : v2ArchitectureConfig.matching_bonus_enabled,
-      fast_roi_3x15_enabled:
-        typeof fast_roi_3x15_enabled === 'boolean'
-          ? fast_roi_3x15_enabled
-          : v2ArchitectureConfig.fast_roi_3x15_enabled,
+
       fomo_48h_countdown_enabled:
         typeof fomo_48h_countdown_enabled === 'boolean'
           ? fomo_48h_countdown_enabled
@@ -10325,14 +10265,7 @@ async function startServer(options: { listen?: boolean } = {}) {
         typeof p2p_voucher_transfer_enabled === 'boolean'
           ? p2p_voucher_transfer_enabled
           : v2ArchitectureConfig.p2p_voucher_transfer_enabled,
-      fast_start_window_days:
-        fast_start_window_days !== undefined
-          ? Math.max(7, Math.min(60, Number(fast_start_window_days) || 30))
-          : v2ArchitectureConfig.fast_start_window_days || 30,
-      welcome_30d_double_bonus_enabled:
-        typeof welcome_30d_double_bonus_enabled === 'boolean'
-          ? welcome_30d_double_bonus_enabled
-          : v2ArchitectureConfig.welcome_30d_double_bonus_enabled,
+
       whatsapp_business_push_enabled:
         typeof whatsapp_business_push_enabled === 'boolean'
           ? whatsapp_business_push_enabled
@@ -10448,7 +10381,7 @@ async function startServer(options: { listen?: boolean } = {}) {
   // V2.1 ENTERPRISE MODULES:
   // 1. Hukuki ve Mali Uyum (Stopaj %20, KVKK/EULA Onay Logu, TC Kimlik & Şirket Durumu)
   // 2. Anti-Fraud & Risk Engine (Self-Referral Lock, IP/Cihaz Çakışması >3/24s, Velocity Limits)
-  // 3. Gamification & Retention (İlk 14 Gün Fast-Start Bonusu & Rank-Up Tek Seferlik Ödüller)
+  // 3. Gamification & Retention (Kariyer Terfi Tek Seferlik Ödülleri)
   // 4. Notification Outbox (WHATSAPP/SMS/EMAIL) & Banka Toplu Ödeme CSV (Garanti/İş/QNB/Papara)
   // ============================================================================
 
@@ -10586,82 +10519,10 @@ async function startServer(options: { listen?: boolean } = {}) {
     }
   });
 
-  // V2.1: Gamification — Hızlı Başlangıç Bonusu (FAST_START) & Kariyer Ödülü Teslimat Yönetimi
-  app.post('/api/v1/admin/rewards/trigger-fast-start', requireAdminJwt, (req, res) => {
-    const targetMember = members.find((m) => m.user_id === req.body?.user_id);
-    if (!targetMember) {
-      res.status(404).json({ status: 'error', message: 'Üye bulunamadı.' });
-      return;
-    }
-    if (targetMember.fast_start_awarded) {
-      res.status(409).json({
-        status: 'error',
-        code: 'FAST_START_ALREADY_AWARDED',
-        message: 'Bu üyeye Hızlı Başlangıç bonusu daha önce tanımlanmış.',
-      });
-      return;
-    }
-    const windowDays = v2ArchitectureConfig.fast_start_window_days || 30;
-    const joinedMs = targetMember.joined_at ? new Date(targetMember.joined_at).getTime() : NaN;
-    const daysSinceJoin = (Date.now() - joinedMs) / 86400000;
-    if (!Number.isFinite(daysSinceJoin) || daysSinceJoin > windowDays) {
-      res.status(422).json({
-        status: 'error',
-        code: 'FAST_START_WINDOW_EXPIRED',
-        message: `Bu bonus üyelik tarihinden itibaren ${windowDays} gün içinde tanımlanabilir.`,
-      });
-      return;
-    }
-
-    const fastStartCash = Number(req.body?.cash_value) || 2500;
-    targetMember.fast_start_awarded = true;
-    targetMember.wallets.sponsor_wallet = roundCurrency(
-      (targetMember.wallets.sponsor_wallet || 0) + fastStartCash
-    );
-    targetMember.wallets.total_earnings = roundCurrency(
-      (targetMember.wallets.total_earnings || 0) + fastStartCash
-    );
-    const fastStartRegion = resolveMemberRegion(targetMember.country_code);
-    const fastStartPendingKey = getRegionPendingKey(fastStartRegion);
-    targetMember.wallets[fastStartPendingKey] = roundCurrency(
-      (targetMember.wallets[fastStartPendingKey] || 0) +
-        toUsdForRegion(fastStartCash, fastStartRegion)
-    );
-
-    const newReward: UserRewardLogRecord = {
-      id: nextRewardLogId++,
-      user_id: targetMember.id,
-      external_user_id: targetMember.user_id,
-      user_full_name: targetMember.full_name,
-      career_level: targetMember.career_level,
-      career_title: targetMember.career_title,
-      reward_type: 'FAST_START',
-      reward_description:
-        `İlk ${v2ArchitectureConfig.fast_start_window_days || 30} Gün 3 Aktif Direkt Referans Hızlı Başlangıç Bonusu (+%5 Ekstra Sponsorluk & Nakit Ödül)`,
-      cash_value: fastStartCash,
-      is_delivered: true,
-      earned_at: new Date().toISOString(),
-    };
-    userRewardsLog.unshift(newReward);
-
-    enqueueNotification({
-      member: targetMember,
-      channel: 'WHATSAPP',
-      trigger_type: 'FAST_START_BONUS',
-      message: `Tebrikler ${targetMember.full_name}! İlk ${v2ArchitectureConfig.fast_start_window_days || 30} gün içinde 3 aktif direkt referans getirerek ${fastStartCash.toLocaleString('tr-TR')} $ Hızlı Başlangıç Bonusu (FAST_START) kazandınız!`,
-    });
-
-    res.json({
-      status: 'success',
-      message: `${targetMember.full_name} için İlk ${v2ArchitectureConfig.fast_start_window_days || 30} Gün Hızlı Başlangıç Bonusu (${fastStartCash.toLocaleString('tr-TR')} $) user_rewards_log tablosuna işlendi ve bildirim gönderildi.`,
-      reward: newReward,
-      state: buildStateResponse(),
-    });
-  });
 
   app.post('/api/v1/admin/rewards/:id/deliver', requireAdminJwt, (req, res) => {
     const rewardId = Number(req.params.id);
-    const reward = userRewardsLog.find((r) => r.id === rewardId);
+    const reward = userRewardsLog.find((r) => r.id === rewardId && r.reward_type === 'RANK_UP_GIFT');
     if (!reward) {
       res.status(404).json({ status: 'error', message: 'Ödül kaydı bulunamadı.' });
       return;
@@ -10725,12 +10586,12 @@ async function startServer(options: { listen?: boolean } = {}) {
   });
 
   // ============================================================================
-  // 5 STRATEJİK İYİLEŞTİRME ÖNERİSİ — CANLI API ENDPOINT'LERİ
+  // 4 STRATEJİK İYİLEŞTİRME ÖNERİSİ — CANLI API ENDPOINT'LERİ
   // 1️⃣ 48 Saatlik Geri Sayım Sayacı & FOMO Kurtarma (fomo/trigger-48h-alert & fomo/rescue-commission)
   // 2️⃣ Hibrit Dinamik Sıkıştırma Modu (FULL_COMPRESSION / HYBRID_50_50 / FUND_SWEEP)
   // 3️⃣ P2P İç Bakiye Transferi & Aktivasyon Kupon Kodu (p2p/transfer, p2p/create-voucher, p2p/redeem-voucher)
-  // 4️⃣ İlk 30 Gün Hoş Geldin Duble Bonusu (admin/rewards/trigger-welcome-double-bonus)
-  // 5️⃣ Anlık WhatsApp Business API & Story Bildirim Tetikleyici (notifications/send-whatsapp-story)
+
+  // 4️⃣ Anlık WhatsApp Business API & Story Bildirim Tetikleyici (notifications/send-whatsapp-story)
   // ============================================================================
 
   // 1️⃣ A: Yeni 48 Saatlik FOMO Geri Sayım Uyarısı Tetikle (Admin Protected)
@@ -11163,74 +11024,6 @@ async function startServer(options: { listen?: boolean } = {}) {
     }
   });
 
-  // 4️⃣ "İlk 30 Gün Hoş Geldin Duble Bonusu" & Esnek Fast-Start İkramiyesi Tetikleme
-  app.post('/api/v1/admin/rewards/trigger-welcome-double-bonus', requireAdminJwt, (req, res) => {
-    const targetMember = members.find(
-      (m) => m.user_id === req.body?.user_id || String(m.id) === String(req.body?.user_id)
-    );
-    if (!targetMember) {
-      res.status(404).json({ status: 'error', message: 'Üye bulunamadı.' });
-      return;
-    }
-    if (targetMember.fast_start_awarded) {
-      res.status(409).json({
-        status: 'error',
-        code: 'FAST_START_ALREADY_AWARDED',
-        message: 'Bu üyeye Hızlı Başlangıç / 30 gün bonusu daha önce tanımlanmış.',
-      });
-      return;
-    }
-    const windowDays = v2ArchitectureConfig.fast_start_window_days || 30;
-    const joinedMs = targetMember.joined_at ? new Date(targetMember.joined_at).getTime() : NaN;
-    const daysSinceJoin = (Date.now() - joinedMs) / 86400000;
-    if (!Number.isFinite(daysSinceJoin) || daysSinceJoin > windowDays) {
-      res.status(422).json({
-        status: 'error',
-        code: 'FAST_START_WINDOW_EXPIRED',
-        message: `Bu bonus üyelik tarihinden itibaren ${windowDays} gün içinde tanımlanabilir.`,
-      });
-      return;
-    }
-    targetMember.fast_start_awarded = true;
-
-    const isDoubleActive = v2ArchitectureConfig.welcome_30d_double_bonus_enabled !== false;
-    const baseFastStart = 2500;
-    const awardAmount = isDoubleActive ? baseFastStart * 2 : baseFastStart; // 5.000 $ Duble Bonus veya 2.500 $ Standart
-
-    creditMemberWallet(targetMember, 'FAST_ROI_BONUS', awardAmount, true);
-
-    const newReward: UserRewardLogRecord = {
-      id: nextRewardLogId++,
-      user_id: targetMember.id,
-      external_user_id: targetMember.user_id,
-      user_full_name: targetMember.full_name,
-      career_level: targetMember.career_level,
-      career_title: targetMember.career_title,
-      reward_type: 'FAST_START',
-      reward_description: isDoubleActive
-        ? `İlk ${windowDays} Gün Hoş Geldin DUBLE Bonusu (2.500 $ × 2 = 5.000 $ Nakit İkramiye + %15 Fast-ROI Amortisman)`
-        : `İlk ${windowDays} Gün Hızlı Başlangıç (Fast-Start) İkramiyesi (2.500 $)`,
-      cash_value: awardAmount,
-      is_delivered: true,
-      earned_at: new Date().toISOString(),
-    };
-    userRewardsLog.unshift(newReward);
-
-    enqueueNotification({
-      member: targetMember,
-      channel: 'WHATSAPP',
-      trigger_type: 'WELCOME_30D_DOUBLE_BONUS',
-      commission_amount: awardAmount,
-      message: `Tebrikler Sayın ${targetMember.full_name}! İlk ${windowDays} gün içinde 3 aktif direkt referans hedefini tamamlayarak ${awardAmount.toLocaleString('tr-TR')} $ "${isDoubleActive ? 'İlk 30 Gün Hoş Geldin Duble Bonusu (2X)' : 'Hızlı Başlangıç İkramiyesi'}" kazandınız!`,
-    });
-
-    res.json({
-      status: 'success',
-      message: `🚀 ${targetMember.full_name} hesabına ${awardAmount.toLocaleString('tr-TR')} $ (${isDoubleActive ? 'İlk 30 Gün Hoş Geldin Duble Bonusu — 2X' : '14 Gün Hızlı Başlangıç Bonusu'}) tanımlandı ve WhatsApp bildirimi gönderildi!`,
-      reward: newReward,
-      state: buildStateResponse(),
-    });
-  });
 
   // 5️⃣ Anlık WhatsApp Business API & Push Story Paylaşım Bildirimi Gönder
   app.post('/api/v1/notifications/send-whatsapp-story', (req, res) => {
@@ -12285,23 +12078,19 @@ async function startServer(options: { listen?: boolean } = {}) {
         systemWallet = payload.systemWallet;
       }
       if (payload.distributionParams) {
-        distributionParams = {
+        applyDistributionParams({
           ...payload.distributionParams,
           system_fund_percent: SYSTEM_FUND_PERCENT,
           direct_sponsor_percent: DIRECT_SPONSOR_PERCENT,
           monoline_total_percent: 25,
           depth_percentages: [...MONOLINE_DEPTH_PERCENTAGES],
-        };
+        });
       }
       if (payload.careerTiers) {
         careerTiers = payload.careerTiers;
       }
       if (payload.v2ArchitectureConfig) {
-        v2ArchitectureConfig = {
-          ...v2ArchitectureConfig,
-          ...payload.v2ArchitectureConfig,
-          unilevel_infinity_enabled: false,
-        };
+        applyV2ArchitectureConfig(payload.v2ArchitectureConfig);
       }
       if (Array.isArray(payload.adminAuditLogs)) {
         adminAuditLogs = payload.adminAuditLogs;
