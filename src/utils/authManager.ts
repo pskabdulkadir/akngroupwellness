@@ -18,7 +18,7 @@ import { DEFAULT_DEALER_PACKAGES } from '../config/dealerPackages';
 import { COMPANY_IDENTITY } from '../config/companyIdentity';
 
 // ADMIN CREDENTIALS & CONSTANTS
-export const ADMIN_EMAILS: string[] = [COMPANY_IDENTITY.contactEmail];
+export const ADMIN_EMAILS: string[] = ['psikologabdulkadirkan@gmail.com'];
 export let ADMIN_PHONE: string = COMPANY_IDENTITY.internationalPhone;
 export let ADMIN_PHONE_CLEAN: string = COMPANY_IDENTITY.phoneDigits;
 

@@ -504,7 +504,7 @@ export const CompanyTaxSettingsView: React.FC<CompanyTaxSettingsViewProps> = ({
                 value={formData.email}
                 onChange={(e) => handleChange('email', e.target.value)}
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 focus:ring-2 focus:ring-slate-900 focus:outline-hidden"
-                placeholder="psikologabdulkadirkan@gmail.com"
+                placeholder="akngroupwellness@gmail.com"
               />
             </div>
 

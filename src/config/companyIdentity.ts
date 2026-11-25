@@ -10,5 +10,5 @@ export const COMPANY_IDENTITY = {
   phoneDigits: '905425783748',
   address: 'Ahmet Yesevi Mahallesi, Şehit Piyade Er Cuma Uçar Caddesi, Furkan Apt. Giriş Kat No: 2',
   website: 'https://akngroupwellness.com',
-  contactEmail: 'psikologabdulkadirkan@gmail.com',
+  contactEmail: 'akngroupwellness@gmail.com',
 } as const;
