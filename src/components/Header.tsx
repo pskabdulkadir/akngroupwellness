@@ -68,6 +68,8 @@ interface HeaderProps {
   onOpenAuthModal: (mode?: 'login' | 'register' | 'dealer') => void;
   onOpenDealerModal?: () => void;
   onOpenEncyclopedia?: () => void;
+  onOpenDua?: () => void;
+  isDuaOpen?: boolean;
   onOpenBerhetiyye?: () => void;
   onOpenParanormalArchive?: () => void;
   onOpenSOSModal?: () => void;
@@ -103,6 +105,8 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenAuthModal,
   onOpenDealerModal,
   onOpenEncyclopedia,
+  onOpenDua,
+  isDuaOpen,
   onOpenBerhetiyye,
   onOpenParanormalArchive,
   onOpenSOSModal,
@@ -836,6 +840,20 @@ export const Header: React.FC<HeaderProps> = ({
                         </div>
                         <div className="text-[11px] text-slate-400 mt-0.5">Biyo-akustik tarama & 10 sn öncesi/sonrası</div>
                       </div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-emerald-400 shrink-0" />
+                  </button>
+                )}
+
+                {onOpenDua && (!menuSearchQuery || 'dualar dua kuran sure ayet meditasyon'.includes(menuSearchQuery.toLocaleLowerCase('tr'))) && (
+                  <button
+                    onClick={() => { setIsMobileMenuOpen(false); onOpenDua(); }}
+                    aria-pressed={isDuaOpen}
+                    className={`w-full flex items-center justify-between p-3 rounded-2xl border text-left transition-all active:scale-[0.99] shadow-md ${isDuaOpen ? 'bg-gradient-to-r from-emerald-950 via-slate-900 to-slate-900 border-emerald-400/70 ring-1 ring-emerald-400/30' : 'bg-gradient-to-r from-emerald-950/60 via-slate-900 to-slate-900 border-emerald-500/50'}`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="p-2.5 rounded-xl bg-emerald-500/20 border border-emerald-500/40 shrink-0"><BookOpen className="w-4 h-4 text-emerald-300" /></div>
+                      <div><div className="text-xs font-bold text-emerald-200">Dualar</div><div className="text-[11px] text-slate-400 mt-0.5">Ayetler, frekans ve tefekkür</div></div>
                     </div>
                     <ChevronRight className="w-4 h-4 text-emerald-400 shrink-0" />
                   </button>

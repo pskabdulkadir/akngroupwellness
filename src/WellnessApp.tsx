@@ -32,6 +32,7 @@ import { AncientHealingMatrix } from './components/AncientHealingMatrix';
 import { TechnicalReportModal } from './components/TechnicalReportModal';
 import { BusinessPresentationModal } from './components/BusinessPresentationModal';
 import { HealingEncyclopediaModal } from './components/HealingEncyclopediaModal';
+import { DuaModal } from './components/DuaModal';
 import { ParanormalArchiveModal } from './components/ParanormalArchiveModal';
 import { DiseaseDetailModal } from './components/DiseaseDetailModal';
 import { AcousticSessionWorkflowModal, WorkflowStep } from './components/AcousticSessionWorkflowModal';
@@ -179,6 +180,7 @@ export default function WellnessApp({
   const [isSOSModalOpen, setIsSOSModalOpen] = useState<boolean>(() => initialNav.activeModal === 'sos');
   const [isSleepModalOpen, setIsSleepModalOpen] = useState<boolean>(() => initialNav.activeModal === 'sleep');
   const [isEncyclopediaOpen, setIsEncyclopediaOpen] = useState<boolean>(() => initialNav.activeModal === 'encyclopedia');
+  const [isDuaOpen, setIsDuaOpen] = useState(false);
   const [isParanormalArchiveOpen, setIsParanormalArchiveOpen] = useState(false);
   const [isWearableModalOpen, setIsWearableModalOpen] = useState<boolean>(() => initialNav.activeModal === 'wearable');
   const [isJourneyModalOpen, setIsJourneyModalOpen] = useState<boolean>(() => initialNav.activeModal === 'journey');
@@ -419,6 +421,7 @@ export default function WellnessApp({
     }
 
     // 5. Open Tool & Guide Modals Step-Back -> Closes modal
+    if (isDuaOpen) { setIsDuaOpen(false); return; }
     if (isEncyclopediaOpen) { setIsEncyclopediaOpen(false); return; }
     if (isUserGuideOpen) { setIsUserGuideOpen(false); return; }
     if (isTechnicalReportOpen) { setIsTechnicalReportOpen(false); return; }
@@ -466,6 +469,7 @@ export default function WellnessApp({
     selectedDiseaseDetail,
     comparisonPair,
     currentReport,
+    isDuaOpen,
     isEncyclopediaOpen,
     isUserGuideOpen,
     isTechnicalReportOpen,
@@ -914,6 +918,7 @@ export default function WellnessApp({
     selectedDiseaseDetail ||
     scanWorkflowDisease ||
     comparisonPair ||
+    isDuaOpen ||
     isEncyclopediaOpen ||
     isParanormalArchiveOpen ||
     isUserGuideOpen ||
@@ -961,6 +966,8 @@ export default function WellnessApp({
           }
         }}
         onOpenEncyclopedia={() => setIsEncyclopediaOpen(true)}
+        onOpenDua={() => setIsDuaOpen(true)}
+        isDuaOpen={isDuaOpen}
         onOpenBerhetiyye={() => handleNavigate('berhetiyye')}
         onOpenParanormalArchive={() => setIsParanormalArchiveOpen(true)}
         onOpenSOSModal={() => setIsSOSModalOpen(true)}
@@ -1309,6 +1316,7 @@ export default function WellnessApp({
        !isTechnicalReportOpen &&
        !isUserGuideOpen &&
        !isEncyclopediaOpen &&
+       !isDuaOpen &&
        !isAdminOpen &&
        !isPaymentModalOpen && 
        !isAuthModalOpen && (
@@ -1418,6 +1426,8 @@ export default function WellnessApp({
           setScanWorkflowDisease(disease);
         }}
       />
+
+      {isDuaOpen && <DuaModal onClose={() => setIsDuaOpen(false)} />}
 
       <ParanormalArchiveModal
         isOpen={isParanormalArchiveOpen}
