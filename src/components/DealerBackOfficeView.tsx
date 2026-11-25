@@ -232,6 +232,20 @@ function generateQrMatrix(text: string): boolean[][] {
   return grid;
 }
 
+function formatPendingCountdown(releaseAt: string | null | undefined, nowMs: number): string {
+  const releaseAtMs = Date.parse(releaseAt || '');
+  if (!Number.isFinite(releaseAtMs)) return 'Vade tarihi kayıtlı değil';
+
+  const remainingMs = Math.max(0, releaseAtMs - nowMs);
+  if (remainingMs === 0) return 'Vadesi geldi · aktarım bekliyor';
+
+  const days = Math.floor(remainingMs / 86400000);
+  const hours = Math.floor((remainingMs % 86400000) / 3600000);
+  const minutes = Math.floor((remainingMs % 3600000) / 60000);
+  const seconds = Math.floor((remainingMs % 60000) / 1000);
+  return `${days}g ${hours}sa ${minutes}dk ${seconds}sn`;
+}
+
 export const DealerBackOfficeView: React.FC<DealerBackOfficeViewProps> = ({
   subTab,
   onSubTabChange: setSubTab,
@@ -1562,6 +1576,9 @@ export const DealerBackOfficeView: React.FC<DealerBackOfficeViewProps> = ({
   const memberCommissionLogs = commissionLogs.filter(
     (c) => c.target_external_id === member.user_id
   );
+  const pendingCommissionLogs = memberCommissionLogs
+    .filter((commission) => commission.status === 'PENDING_14D')
+    .sort((a, b) => (Date.parse(a.release_at || '') || Infinity) - (Date.parse(b.release_at || '') || Infinity));
   const visibleMemberCommissionLogs = memberCommissionLogs.filter(
     (c) => c.commission_type !== 'UNILEVEL_INFINITY'
   );
@@ -2203,18 +2220,40 @@ export const DealerBackOfficeView: React.FC<DealerBackOfficeViewProps> = ({
             </div>
             <div className="text-[11px] text-amber-800 font-medium">
               {getMemberRegionalPendingUsd(member) > 0 ? (
-                isAdminAuthenticated ? (
-                  <button
-                    type="button"
-                    disabled={isSubmitting}
-                    onClick={() => onReleasePendingBalance(member.user_id)}
-                    className="text-xs font-semibold text-slate-900 underline hover:text-emerald-700 cursor-pointer"
-                  >
-                    [Yönetici] Vadesi Gelenleri Aktar →
-                  </button>
-                ) : (
-                  'Sponsor, Unilevel ve Monoline kazançları 14 gün sonunda cüzdana aktarılır.'
-                )
+                <>
+                  <p>Sponsor, Unilevel, Monoline ve Matching kazançları vade tarihine kadar bekleyen bakiyede tutulur.</p>
+                  {isAdminAuthenticated && (
+                    <button
+                      type="button"
+                      disabled={isSubmitting}
+                      onClick={() => onReleasePendingBalance(member.user_id)}
+                      className="mt-1 text-xs font-semibold text-slate-900 underline hover:text-emerald-700 cursor-pointer"
+                    >
+                      [Yönetici] Vadesi Gelenleri Aktar →
+                    </button>
+                  )}
+                  {pendingCommissionLogs.length > 0 ? (
+                    <div className="mt-2 max-h-36 space-y-1.5 overflow-y-auto border-t border-amber-200 pt-2">
+                      {pendingCommissionLogs.map((commission) => (
+                        <div key={commission.id} className="flex items-start justify-between gap-2 rounded-lg bg-amber-100/70 px-2 py-1.5">
+                          <div className="min-w-0">
+                            <div className="font-semibold text-amber-950">
+                              {commission.commission_type === 'SPONSOR' ? 'Direkt sponsor' : commission.commission_type === 'UNILEVEL_COMMISSION' ? 'Unilevel' : commission.commission_type === 'MONOLINE_INCENTIVE' ? 'Monoline' : commission.commission_type === 'MATCHING_BONUS' ? 'Matching' : 'Komisyon'} · {formatUsd(commission.amount, 2)}
+                            </div>
+                            <div className="text-[10px] text-amber-800">
+                              Vade: {commission.release_at && Number.isFinite(Date.parse(commission.release_at)) ? new Date(commission.release_at).toLocaleString('tr-TR') : 'Tarih bilgisi yok'}
+                            </div>
+                          </div>
+                          <span className="shrink-0 font-mono font-bold tabular-nums text-amber-950">
+                            {formatPendingCountdown(commission.release_at, nowMs)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="mt-2 border-t border-amber-200 pt-2 text-[10px]">Bekleyen bakiye var ancak bu hesap için vade ayrıntısı bulunamadı.</p>
+                  )}
+                </>
               ) : (
                 'Tüm hakedişler çekilebilir bakiyede'
               )}
