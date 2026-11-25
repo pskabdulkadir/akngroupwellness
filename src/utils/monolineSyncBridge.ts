@@ -657,6 +657,9 @@ export async function mirrorMonolineStateBackToFrekans(
         (r as any).resellerId !== nextResellerId ||
         (r as any).careerLevel !== m.career_level ||
         (r as any).careerTitle !== m.career_title ||
+        (r as any).maxCareerLevel !== m.max_career_level ||
+        (r as any).activeCareerLevel !== m.active_career_level ||
+        (r as any).unlockedDepth !== m.unlocked_depth ||
         (r as any).monolinePosition !== m.global_line_id ||
         (r as any).isActive !== m.is_active ||
         (r as any).activityExpiresAt !== m.activity_expires_at ||
@@ -676,8 +679,10 @@ export async function mirrorMonolineStateBackToFrekans(
           totalReferredUsers: nextReferredUsers,
           careerLevel: m.career_level,
           careerTitle: m.career_title,
-          monolinePosition: m.global_line_id,
+          maxCareerLevel: m.max_career_level,
+          activeCareerLevel: m.active_career_level,
           unlockedDepth: m.unlocked_depth,
+          monolinePosition: m.global_line_id,
           isActive: m.is_active,
           activityExpiresAt: m.activity_expires_at,
           welcomeBonusGranted: false,
@@ -706,13 +711,23 @@ export async function mirrorMonolineStateBackToFrekans(
         matchedActive &&
         (matchedActive.creditsBalance !== undefined ||
           (matchedActive as any).isActive !== (activeRes as any).isActive ||
-          (matchedActive as any).activityExpiresAt !== (activeRes as any).activityExpiresAt)
+          (matchedActive as any).activityExpiresAt !== (activeRes as any).activityExpiresAt ||
+          (matchedActive as any).careerLevel !== (activeRes as any).careerLevel ||
+          (matchedActive as any).careerTitle !== (activeRes as any).careerTitle ||
+          (matchedActive as any).maxCareerLevel !== (activeRes as any).maxCareerLevel ||
+          (matchedActive as any).activeCareerLevel !== (activeRes as any).activeCareerLevel ||
+          (matchedActive as any).unlockedDepth !== (activeRes as any).unlockedDepth)
       ) {
         setActiveResellerSession({
           ...activeRes,
           creditsBalance: undefined,
           isActive: (matchedActive as any).isActive,
           activityExpiresAt: (matchedActive as any).activityExpiresAt,
+          careerLevel: (matchedActive as any).careerLevel,
+          careerTitle: (matchedActive as any).careerTitle,
+          maxCareerLevel: (matchedActive as any).maxCareerLevel,
+          activeCareerLevel: (matchedActive as any).activeCareerLevel,
+          unlockedDepth: (matchedActive as any).unlockedDepth,
           updatedAt: new Date().toISOString(),
         });
         resellersChanged = true;

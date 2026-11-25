@@ -411,6 +411,11 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
               pendingEarnings: getMemberRegionalPendingUsd(matched),
               isActive: matched.is_active,
               activityExpiresAt: matched.activity_expires_at,
+              careerLevel: matched.career_level,
+              careerTitle: matched.career_title,
+              maxCareerLevel: matched.max_career_level,
+              activeCareerLevel: matched.active_career_level,
+              unlockedDepth: matched.unlocked_depth,
             };
           });
         }

@@ -1164,7 +1164,10 @@ function recalculateAllCareers(
       const newMaxLevel = Math.max(prevMaxLevel, evalResult.level);
       const newMaxTier = careerTiers.find((t) => t.level === newMaxLevel) || careerTiers[0];
 
-      const periodicActiveLevel = member.is_active ? newMaxLevel : 1;
+      const manualTier = careerTiers.find((tier) => tier.level === member.manual_career_override);
+      const assignedLevel = manualTier?.level ?? newMaxLevel;
+      const assignedTier = manualTier ?? newMaxTier;
+      const periodicActiveLevel = member.is_active ? assignedLevel : 1;
       const periodicActiveTier =
         careerTiers.find((t) => t.level === periodicActiveLevel) || careerTiers[0];
 
@@ -1175,11 +1178,11 @@ function recalculateAllCareers(
 
       const effectiveLevel = v2ArchitectureConfig.use_dynamic_active_career
         ? periodicActiveLevel
-        : newMaxLevel;
+        : assignedLevel;
       const effectiveTier = careerTiers.find((t) => t.level === effectiveLevel) || careerTiers[0];
 
-      member.career_level = newMaxLevel;
-      member.career_title = newMaxTier.title;
+      member.career_level = assignedLevel;
+      member.career_title = assignedTier.title;
       member.unlocked_depth = member.is_active ? effectiveTier.unlockedDepth : 0;
       member.daily_withdrawal_limit = DAILY_WITHDRAWAL_LIMITS_BY_CAREER[effectiveLevel] || 5000;
 
@@ -1239,6 +1242,24 @@ function recalculateAllCareers(
   }
 
   return upgrades;
+}
+
+function syncMemberCareerToPostgres(member: MonolineMember) {
+  if (!getIsPostgresAvailable()) return;
+
+  const careerData = {
+    career_title: member.career_title,
+    max_career_title: member.max_career_title,
+    active_career_title: member.active_career_title,
+    manual_career_override: member.manual_career_override,
+    unlocked_depth: member.unlocked_depth,
+    daily_withdrawal_limit: member.daily_withdrawal_limit,
+  };
+  pgQuery(
+    `UPDATE users SET career_level = $1, max_career_level = $2, active_career_level = $3,
+       member_data = COALESCE(member_data, '{}'::jsonb) || $4::jsonb WHERE user_id = $5`,
+    [member.career_level, member.max_career_level, member.active_career_level, JSON.stringify(careerData), member.user_id]
+  ).catch((err: any) => console.warn('[Postgres career sync notice]:', err.message));
 }
 
 function toUsdForRegion(baseAmount: number, region: MemberRegion): number {
@@ -1582,7 +1603,10 @@ function calculateSingleUserActiveCareer(userId: number | string) {
   // UPDATE users SET active_career_level = $1, max_career_level = GREATEST(max_career_level, $1) WHERE id = $2
   const prevMaxLevel = user.max_career_level || user.career_level || 1;
   const newMaxLevel = Math.max(prevMaxLevel, targetActiveLevel);
-  const effectiveActive = user.is_active ? newMaxLevel : 1;
+  const manualTier = careerTiers.find((tier) => tier.level === user.manual_career_override);
+  const assignedLevel = manualTier?.level ?? newMaxLevel;
+  const assignedTier = manualTier ?? careerTiers.find((tier) => tier.level === newMaxLevel) ?? careerTiers[0];
+  const effectiveActive = user.is_active ? assignedLevel : 1;
   const activeTier = careerTiers.find((t) => t.level === effectiveActive) || careerTiers[0];
   const maxTier = careerTiers.find((t) => t.level === newMaxLevel) || careerTiers[0];
 
@@ -1593,10 +1617,10 @@ function calculateSingleUserActiveCareer(userId: number | string) {
 
   const chosenLevel = v2ArchitectureConfig.use_dynamic_active_career
     ? effectiveActive
-    : newMaxLevel;
+    : assignedLevel;
   const chosenTier = careerTiers.find((t) => t.level === chosenLevel) || careerTiers[0];
-  user.career_level = newMaxLevel;
-  user.career_title = maxTier.title;
+  user.career_level = assignedLevel;
+  user.career_title = assignedTier.title;
   user.unlocked_depth = user.is_active ? chosenTier.unlockedDepth : 0;
   user.daily_withdrawal_limit = DAILY_WITHDRAWAL_LIMITS_BY_CAREER[chosenLevel] || 5000;
 
@@ -9035,15 +9059,12 @@ async function startServer(options: { listen?: boolean } = {}) {
 
     recalculateAllCareers('MANUAL_ADMIN');
 
+    syncMemberCareerToPostgres(member);
     if (getIsPostgresAvailable()) {
-      try {
-        pgQuery(
-          'UPDATE users SET is_active = $1, career_level = $2, sponsor_id = $3, monoline_position = $4 WHERE user_id = $5',
-          [member.is_active, member.career_level, member.sponsor_id, member.global_line_id, member.user_id]
-        ).catch((err: any) => console.warn('[Postgres users sync notice]:', err.message));
-      } catch (e: any) {
-        // non-blocking
-      }
+      pgQuery(
+        'UPDATE users SET is_active = $1, sponsor_id = $2, monoline_position = $3 WHERE user_id = $4',
+        [member.is_active, member.sponsor_id, member.global_line_id, member.user_id]
+      ).catch((err: any) => console.warn('[Postgres users sync notice]:', err.message));
     }
 
     res.json({
@@ -10369,6 +10390,7 @@ async function startServer(options: { listen?: boolean } = {}) {
 
     member.manual_career_override = tier.level;
     recalculateAllCareers('MANUAL_ADMIN');
+    syncMemberCareerToPostgres(member);
 
     res.json({
       status: 'success',
