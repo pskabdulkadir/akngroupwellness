@@ -453,7 +453,7 @@ export const DiseaseDetailModal: React.FC<DiseaseDetailModalProps> = ({
         {/* Footer Actions */}
         <div className="p-4 sm:p-5 bg-slate-950 border-t border-slate-800 flex flex-wrap items-center justify-between gap-3 shrink-0">
           <div className="text-[11px] text-slate-500">
-            AKN GLOBAL GROUP LTD • Şifa Ansiklopedisi
+            AKN GLOBAL GROUP • Şifa Ansiklopedisi
           </div>
 
           <div className="flex items-center gap-2">

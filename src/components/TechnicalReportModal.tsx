@@ -86,7 +86,7 @@ export const TechnicalReportModal: React.FC<TechnicalReportModalProps> = ({
             <div>
               <div className="flex flex-wrap items-center gap-2">
                 <span className="px-2 py-0.5 rounded-md bg-emerald-400/10 text-emerald-400 font-bold text-xs border border-emerald-500/30 tracking-wider">
-                  AKN GLOBAL GROUP LTD
+                  AKN Global Group
                 </span>
                 <span className="px-2 py-0.5 rounded-md bg-indigo-500/20 text-indigo-300 font-bold text-[10px] border border-indigo-500/40">
                   Teknik rapor &amp; Monoline
@@ -458,7 +458,7 @@ export const TechnicalReportModal: React.FC<TechnicalReportModalProps> = ({
         <div className="p-4 sm:p-5 bg-slate-950 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
           <div className="text-[11px] text-slate-400 flex items-center gap-1.5">
             <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-            <span>AKN GLOBAL GROUP LTD • Kurumsal ve teknik bilgilendirme</span>
+            <span>AKN Global Group • Kurumsal ve teknik bilgilendirme</span>
           </div>
 
           <div className="flex items-center gap-2 w-full sm:w-auto">

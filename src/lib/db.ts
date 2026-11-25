@@ -1,6 +1,6 @@
 /**
  * Unified Local Client Data Layer & PostgreSQL-18 API Bridge
- * AKN Global Group Ltd. - Quantum Resonance & Monoline MLM Platform
+ * AKN Global Group - Quantum Resonance & Monoline MLM Platform
  *
  * 100% Free of Firebase & Neon. Operates locally with full reactive pub/sub
  * and backend REST synchronization to PostgreSQL-18.

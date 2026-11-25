@@ -796,7 +796,7 @@ export const DealerBackOfficeView: React.FC<DealerBackOfficeViewProps> = ({
         ctx.fillStyle = '#64748b';
         ctx.font = '13px monospace';
         ctx.fillText(
-          `AuraBio Frekans Teknolojileri Ltd. Şti. · Kariyer Onur Plaketi · Tescil Kodu: ${documentCertNo}`,
+          `AKN Global Group · Kariyer Onur Plaketi · Tescil Kodu: ${documentCertNo}`,
           centerX,
           1250
         );
@@ -1056,7 +1056,7 @@ export const DealerBackOfficeView: React.FC<DealerBackOfficeViewProps> = ({
 
         ctx.fillStyle = '#94a3b8';
         ctx.font = '12px system-ui, sans-serif';
-        ctx.fillText('AuraBio Frekans Teknolojileri Ltd. Şti. · Kariyer Onur Plaketi', centerX, footerY + 28);
+        ctx.fillText('AKN Global Group · Kariyer Onur Plaketi', centerX, footerY + 28);
 
         ctx.fillStyle = '#fde68a';
         ctx.font = 'bold 13px monospace';
@@ -1226,7 +1226,7 @@ export const DealerBackOfficeView: React.FC<DealerBackOfficeViewProps> = ({
   <text x="1540" y="1124" text-anchor="middle" fill="#fde68a" font-family="monospace" font-size="15" font-weight="bold">Tanzim Tarihi: ${escapeXml(issueDate)}</text>
   
   <!-- Dipnot -->
-  <text x="1000" y="1250" text-anchor="middle" fill="#64748b" font-family="monospace" font-size="13">AuraBio Frekans Teknolojileri Ltd. Şti. · Kariyer Organizasyon Onur Plaketi · Tescil Kodu: ${escapeXml(documentCertNo)}</text>
+  <text x="1000" y="1250" text-anchor="middle" fill="#64748b" font-family="monospace" font-size="13">AKN Global Group · Kariyer Organizasyon Onur Plaketi · Tescil Kodu: ${escapeXml(documentCertNo)}</text>
 </svg>`;
 
     const blob = new Blob([svgContent], { type: 'image/svg+xml;charset=utf-8' });

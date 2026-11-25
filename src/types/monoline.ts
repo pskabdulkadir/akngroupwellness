@@ -1161,8 +1161,11 @@ export interface MonolineMember {
   welcome_bonus_granted?: boolean; // Legacy field retained for historical member records.
   welcome_bonus_credits?: number; // Legacy field retained for historical member records.
   // V2.1 Patch: Hukuki Onay, Vergi/Stopaj ve Güvenlik İzleri (ALTER TABLE users)
-  tc_identity_no?: string; // VARCHAR(11) UNIQUE -- Stopaj ve Fatura için zorunlu
-  has_tax_company?: boolean; // BOOLEAN DEFAULT FALSE -- Şirketi var mı? (Varsa fatura keser, stopaj düşülmez)
+  tc_identity_no?: string; // TCKN or VKN supplied at registration
+  has_tax_company?: boolean;
+  company_name?: string;
+  tax_office?: string;
+  address?: string;
   last_login_ip?: string; // VARCHAR(45)
   device_fingerprint?: string;
   kvkk_approved_at?: string; // TIMESTAMP

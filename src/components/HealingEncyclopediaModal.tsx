@@ -124,7 +124,7 @@ export const HealingEncyclopediaModal: React.FC<HealingEncyclopediaModalProps> =
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-emerald-400">
-                  AKN GLOBAL GROUP LTD • ŞİFA ANSİKLOPEDİSİ
+                  AKN GLOBAL GROUP • ŞİFA ANSİKLOPEDİSİ
                 </span>
                 <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-bold border border-emerald-500/30">
                   {TOTAL_DISEASE_COUNT}+ Evrensel Frekans Matrisi
@@ -344,7 +344,7 @@ export const HealingEncyclopediaModal: React.FC<HealingEncyclopediaModalProps> =
         {/* Footer info */}
         <div className="p-3 sm:p-4 bg-slate-950 border-t border-slate-800 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500 shrink-0">
           <div>
-            AKN GLOBAL GROUP LTD • Evrensel Şifa Frekans Veritabanı
+            AKN GLOBAL GROUP • Evrensel Şifa Frekans Veritabanı
           </div>
           <div className="flex items-center gap-3">
             <span className="text-[11px] text-slate-400">

@@ -16,6 +16,7 @@ import {
 } from '../lib/db';
 import { UserMember, MemberOrder } from './authManager';
 import { DEFAULT_DEALER_PACKAGES, type DealerPackage } from '../config/dealerPackages';
+import { COMPANY_IDENTITY } from '../config/companyIdentity';
 import { isUnknownCommitResponse, verifyRecordedRequest } from './persistenceVerification';
 
 export interface BankInfo {
@@ -2527,7 +2528,7 @@ export async function adminDeleteReseller(resellerId: string): Promise<boolean> 
  */
 export function generateReferralLink(referralCode: string): string {
   if (typeof window === 'undefined') {
-    return `https://akngroupfrekans.web.app/?ref=${encodeURIComponent(referralCode)}`;
+    return `${COMPANY_IDENTITY.website}/?ref=${encodeURIComponent(referralCode)}`;
   }
   const origin = window.location.origin;
   return `${origin}/?ref=${encodeURIComponent(referralCode)}`;
@@ -2539,7 +2540,7 @@ export function generateReferralLink(referralCode: string): string {
  */
 export function generateBusinessPresentationLink(referralCode: string): string {
   if (typeof window === 'undefined') {
-    return `https://akngroupfrekans.web.app/?view=presentation&ref=${encodeURIComponent(referralCode)}`;
+    return `${COMPANY_IDENTITY.website}/?view=presentation&ref=${encodeURIComponent(referralCode)}`;
   }
   const origin = window.location.origin;
   return `${origin}/?view=presentation&ref=${encodeURIComponent(referralCode)}`;
@@ -2551,7 +2552,7 @@ export function generateBusinessPresentationLink(referralCode: string): string {
  */
 export function generateTechnicalReportLink(referralCode: string): string {
   if (typeof window === 'undefined') {
-    return `https://akngroupfrekans.web.app/?view=technical&ref=${encodeURIComponent(referralCode)}`;
+    return `${COMPANY_IDENTITY.website}/?view=technical&ref=${encodeURIComponent(referralCode)}`;
   }
   const origin = window.location.origin;
   return `${origin}/?view=technical&ref=${encodeURIComponent(referralCode)}`;
@@ -2563,7 +2564,7 @@ export function generateTechnicalReportLink(referralCode: string): string {
  */
 export function generateRegisterLink(referralCode: string): string {
   if (typeof window === 'undefined') {
-    return `https://akngroupfrekans.web.app/?view=register&ref=${encodeURIComponent(referralCode)}`;
+    return `${COMPANY_IDENTITY.website}/?view=register&ref=${encodeURIComponent(referralCode)}`;
   }
   const origin = window.location.origin;
   return `${origin}/?view=register&ref=${encodeURIComponent(referralCode)}`;
@@ -2575,7 +2576,7 @@ export function generateRegisterLink(referralCode: string): string {
  */
 export function generateBusinessCardLink(referralCode: string): string {
   if (typeof window === 'undefined') {
-    return `https://akngroupfrekans.web.app/?view=card&ref=${encodeURIComponent(referralCode)}`;
+    return `${COMPANY_IDENTITY.website}/?view=card&ref=${encodeURIComponent(referralCode)}`;
   }
   const origin = window.location.origin;
   return `${origin}/?view=card&ref=${encodeURIComponent(referralCode)}`;

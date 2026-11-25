@@ -76,6 +76,7 @@ import { ClawbackRefundsView } from './components/views/ClawbackRefundsView';
 import { InventoryStockView } from './components/views/InventoryStockView';
 import { InternationalOssView } from './components/views/InternationalOssView';
 import { OpenBankingView } from './components/views/OpenBankingView';
+import { DealerSalesInvoicesPanel } from './components/views/DealerSalesInvoicesPanel';
 import { ExpensesPayrollView } from './components/views/ExpensesPayrollView';
 import { ReconciliationBaBsView } from './components/views/ReconciliationBaBsView';
 import { MonolineIntegrationView } from './components/views/MonolineIntegrationView';
@@ -86,67 +87,32 @@ import { AutonomousCpaModal } from './components/modals/AutonomousCpaModal';
 import { AccountingCopilot } from './components/voice/AccountingCopilot';
 import { OnboardingTourModal } from './components/voice/OnboardingTourModal';
 import { accountingSyncBridge } from './utils/accountingSyncBridge';
+import { COMPANY_IDENTITY } from './config/companyIdentity';
 
-// Canlı Sıfır Bakiye Tahakkuk Şablonları
-const CLEAN_TAX_OFFICE_ACCRUALS: TaxOfficeAccrual[] = [
-  {
-    id: 'thk-0015-101',
-    taxType: 'KDV_1',
-    taxCode: '0015',
-    title: '1 No.lu Katma Değer Vergisi Beyannamesi Tahakkuku',
-    taxOfficeName: 'Büyük Mükellefler V.D. / Kadıköy',
-    taxOfficeCode: '34251',
-    taxPeriod: 'Ekim 2026',
-    taxableBaseTRY: 0,
-    calculatedTaxTRY: 0,
-    deductibleTaxTRY: 0,
-    netTaxTRY: 0,
-    stampDutyTRY: 0,
-    totalDueTRY: 0,
-    statutoryDeadline: '2026-10-28',
-    paymentStatus: 'UNPAID',
-    accrualSlipNumber: 'THK-2026-0015-000001',
-    gibTrackingReference: '9840294829100001',
-  },
-  {
-    id: 'thk-0003-102',
-    taxType: 'MUHTASAR_STOPAJ',
-    taxCode: '0003',
-    title: 'Muhtasar ve Prim Hizmet Beyannamesi (Bayi Stopaj Kesintisi)',
-    taxOfficeName: 'Büyük Mükellefler V.D. / Kadıköy',
-    taxOfficeCode: '34251',
-    taxPeriod: 'Ekim 2026',
-    taxableBaseTRY: 0,
-    calculatedTaxTRY: 0,
-    deductibleTaxTRY: 0,
-    netTaxTRY: 0,
-    stampDutyTRY: 0,
-    totalDueTRY: 0,
-    statutoryDeadline: '2026-10-26',
-    paymentStatus: 'UNPAID',
-    accrualSlipNumber: 'THK-2026-0003-000002',
-    gibTrackingReference: '9840294829100002',
-  },
-  {
-    id: 'thk-0033-103',
-    taxType: 'KURUMLAR_GECICI',
-    taxCode: '0033',
-    title: 'Geçici Vergi / Kurumlar Vergisi Karşılığı (3. Çeyrek)',
-    taxOfficeName: 'Büyük Mükellefler V.D. / Kadıköy',
-    taxOfficeCode: '34251',
-    taxPeriod: '2026/3. Çeyrek',
-    taxableBaseTRY: 0,
-    calculatedTaxTRY: 0,
-    deductibleTaxTRY: 0,
-    netTaxTRY: 0,
-    stampDutyTRY: 0,
-    totalDueTRY: 0,
-    statutoryDeadline: '2026-11-17',
-    paymentStatus: 'SCHEDULED',
-    accrualSlipNumber: 'THK-2026-0033-000003',
-    gibTrackingReference: '9840294829100003',
-  },
-];
+const COMPANY_PROFILE_STORAGE_KEY = 'akn_accounting_company_profile_v1';
+
+function getSavedCompanyProfile(): CompanyProfile {
+  try {
+    const saved = localStorage.getItem(COMPANY_PROFILE_STORAGE_KEY);
+    const profile = saved ? { ...INITIAL_COMPANY_PROFILE, ...JSON.parse(saved) } : INITIAL_COMPANY_PROFILE;
+    return {
+      ...profile,
+      legalName: COMPANY_IDENTITY.legalName,
+      shortName: COMPANY_IDENTITY.brandName,
+      tradeTitle: COMPANY_IDENTITY.legalName,
+      vkn: COMPANY_IDENTITY.taxNumber,
+      address: COMPANY_IDENTITY.address,
+      email: COMPANY_IDENTITY.contactEmail,
+      website: COMPANY_IDENTITY.website,
+      phone: COMPANY_IDENTITY.internationalPhone,
+      directorName: COMPANY_IDENTITY.authorizedPerson,
+    };
+  } catch {
+    return INITIAL_COMPANY_PROFILE;
+  }
+}
+
+const CLEAN_TAX_OFFICE_ACCRUALS: TaxOfficeAccrual[] = [];
 
 const isTestAccountingEvent = (event: any) =>
   event?.event_data?.is_test === true || /^(ORD-SIM-|ORD-DEMO-|TEST-|SIM-)/i.test(String(event?.source_event_id || ''));
@@ -247,7 +213,7 @@ export default function SmartAccountingApp({
   ]);
 
   // Şirket & Vergi Profili Yapılandırması ve Vergi Dairesi Tahakkukları
-  const [companyProfile, setCompanyProfile] = useState<CompanyProfile>(INITIAL_COMPANY_PROFILE);
+  const [companyProfile, setCompanyProfile] = useState<CompanyProfile>(getSavedCompanyProfile);
   const [accruals, setAccruals] = useState<TaxOfficeAccrual[]>(() => (isCleanInitial ? CLEAN_TAX_OFFICE_ACCRUALS : INITIAL_TAX_OFFICE_ACCRUALS));
   const [waybills, setWaybills] = useState<WaybillRecord[]>(() => (isCleanInitial ? [] : INITIAL_WAYBILLS));
 
@@ -320,24 +286,29 @@ export default function SmartAccountingApp({
         setBankCashFlowTotals(Array.isArray(data.bank_cash_flow_totals) ? data.bank_cash_flow_totals : []);
 
         // 1. Üyelerden Bayi Listesini Güncelle
-        if (Array.isArray(data.members) && data.members.length > 0) {
-          const liveDistributors: Distributor[] = data.members.map((m: any, idx: number) => ({
-            id: m.user_id || `DIST-${idx + 1}`,
-            name: m.full_name || 'AKN Bayi Temsilcisi',
-            identityNumber: m.tc_identity_no || '11111111110',
-            isCompany: Boolean(m.has_tax_company || m.is_company),
-            iban: m.bank_iban || m.bank_details?.iban || `TR3300061005111222333444${String(idx + 1).padStart(2, '0')}`,
-            level: 1,
-            status: 'ACTIVE',
-            totalEarningsTRY: m.wallet_try || 0,
-            totalStopajPaidTRY: (m.wallet_try || 0) * 0.20,
-            currentWalletBalanceTRY: m.wallet_try || 0,
+        if (Array.isArray(data.members)) {
+          const liveDistributors: Distributor[] = data.members.map((m: any) => ({
+            id: m.user_id,
+            name: m.full_name || 'Bayi bilgisi eksik',
+            identityNumber: m.tc_identity_no || '',
+            isCompany: Boolean(m.has_tax_company),
+            companyTitle: m.company_name || undefined,
+            taxOffice: m.tax_office || undefined,
+            iban: m.bank_iban || '',
+            country: m.country_code || undefined,
+            level: Number(m.career_level) || 1,
+            status: m.is_active ? (m.tc_identity_no && m.bank_iban ? 'ACTIVE' : 'PENDING_DOCUMENT') : 'SUSPENDED',
+            totalEarningsTRY: 0,
+            totalStopajPaidTRY: 0,
+            currentWalletBalanceTRY: 0,
           }));
           setDistributors(liveDistributors);
+        } else {
+          setDistributors([]);
         }
 
         // 2. Gider Pusulalarından Canlı Komisyon Hakedişlerini Güncelle
-        if (Array.isArray(data.expense_vouchers) && data.expense_vouchers.length > 0) {
+        if (Array.isArray(data.expense_vouchers)) {
           const liveComms: CommissionPayout[] = data.expense_vouchers.map((v: any) => ({
             id: v.voucher_number,
             invoiceId: v.order_id,
@@ -346,23 +317,23 @@ export default function SmartAccountingApp({
             distributorName: v.dealer_full_name,
             isCompany: Boolean(v.is_company),
             tierLevel: 1,
-            commissionRate: 0.20,
+            commissionRate: Number(v.commission_rate ?? 0),
             baseAmountTRY: Number(v.gross_amount),
             grossCommissionTRY: Number(v.gross_amount),
-            withholdingRate: Number(v.withholding_rate || 0.20),
+            withholdingRate: Number(v.withholding_rate ?? 0),
             withholdingAmountTRY: Number(v.withholding_amount || 0),
             netPayableTRY: Number(v.net_amount),
             payoutDate: v.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
             documentType: 'GIDER_PUSULASI',
             documentNumber: v.voucher_number,
             isPaid: v.status === 'PAID_SETTLED',
-            ledgerPosted: true,
+            ledgerPosted: false,
           }));
           setCommissions(liveComms);
         }
 
         // 3. Yevmiye Defterini Güncelle
-        if (Array.isArray(data.journal_entries) && data.journal_entries.length > 0) {
+        if (Array.isArray(data.journal_entries)) {
           const liveLedger: LedgerEntry[] = data.journal_entries.map((j: any, idx: number) => ({
             id: `YEV-${j.id || idx + 1}`,
             date: j.entry_date || new Date().toISOString().split('T')[0],
@@ -414,9 +385,11 @@ export default function SmartAccountingApp({
     refresh();
     const interval = window.setInterval(refresh, 15000);
     const unsubscribe = accountingSyncBridge.subscribe(refresh);
+    window.addEventListener('focus', refresh);
     window.addEventListener('akn-tax-refund-invoice-uploaded', refresh);
     return () => {
       window.clearInterval(interval);
+      window.removeEventListener('focus', refresh);
       window.removeEventListener('akn-tax-refund-invoice-uploaded', refresh);
       unsubscribe();
     };
@@ -429,6 +402,11 @@ export default function SmartAccountingApp({
 
   const handleUpdateCompanyProfile = (profile: CompanyProfile) => {
     setCompanyProfile(profile);
+    try {
+      localStorage.setItem(COMPANY_PROFILE_STORAGE_KEY, JSON.stringify(profile));
+    } catch (error) {
+      console.warn('Şirket profili yerel olarak kaydedilemedi:', error);
+    }
   };
 
   const handleUpdateAccrual = (updated: TaxOfficeAccrual) => {
@@ -1045,6 +1023,7 @@ export default function SmartAccountingApp({
 
           {currentTab === 'invoices' && (
             <div className="space-y-6">
+              <DealerSalesInvoicesPanel />
               <section className="rounded-2xl border border-teal-200 bg-teal-50/60 p-4 shadow-sm sm:p-5">
                 <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
                   <div>

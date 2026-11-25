@@ -1,5 +1,7 @@
 import { Invoice, CommissionPayout, LedgerEntry, CompanyProfile, COMPANY_PROFILE, TaxReportSummary, BaBsItem } from '../types/accounting';
 
+import { COMPANY_IDENTITY } from '../config/companyIdentity';
+
 export interface IntegratorConfig {
   id: 'Logo' | 'Uyumsoft' | 'Parasut' | 'NetGSM';
   name: string;
@@ -16,41 +18,41 @@ export const INTEGRATORS: IntegratorConfig[] = [
     id: 'Uyumsoft',
     name: 'Uyumsoft e-Fatura / e-Arşiv API',
     endpoint: 'https://efatura-test.uyumsoft.com.tr/services/integration',
-    senderTag: 'urn:mail:defaultgb@aknglobal.com',
-    receiverTag: 'urn:mail:defaultpk@aknglobal.com',
-    username: 'aknglobal_cfo_user',
+    senderTag: '',
+    receiverTag: '',
+    username: '',
     isSandbox: true,
-    status: 'CONNECTED',
+    status: 'DISCONNECTED',
   },
   {
     id: 'Logo',
     name: 'Logo Yazılım e-Logo Entegratör API',
     endpoint: 'https://elogo.logoyazilim.com.tr/PostBoxService',
-    senderTag: 'urn:mail:defaultgb@aknglobal.com',
-    receiverTag: 'urn:mail:defaultpk@aknglobal.com',
-    username: 'elogo_client_akn',
+    senderTag: '',
+    receiverTag: '',
+    username: '',
     isSandbox: true,
-    status: 'CONNECTED',
+    status: 'DISCONNECTED',
   },
   {
     id: 'Parasut',
     name: 'Paraşüt e-Fatura v4 REST API',
     endpoint: 'https://api.parasut.com/v4/e_invoices',
-    senderTag: 'urn:mail:defaultgb@aknglobal.com',
-    receiverTag: 'urn:mail:defaultpk@aknglobal.com',
-    username: 'parasut_akn_token',
+    senderTag: '',
+    receiverTag: '',
+    username: '',
     isSandbox: true,
-    status: 'CONNECTED',
+    status: 'DISCONNECTED',
   },
   {
     id: 'NetGSM',
     name: 'Trendyol / NetGSM e-Fatura Portal',
     endpoint: 'https://api.netgsm.com.tr/efatura/v1/send',
-    senderTag: 'urn:mail:defaultgb@aknglobal.com',
-    receiverTag: 'urn:mail:defaultpk@aknglobal.com',
-    username: 'netgsm_akn_portal',
+    senderTag: '',
+    receiverTag: '',
+    username: '',
     isSandbox: true,
-    status: 'CONNECTED',
+    status: 'DISCONNECTED',
   },
 ];
 
@@ -82,7 +84,7 @@ export function generateUblTrXml(invoice: Invoice, companyProfile?: CompanyProfi
   <cac:AccountingSupplierParty>
     <cac:Party>
       <cac:PartyIdentification>
-        <cbc:ID schemeID="VKN">${company.vkn}</cbc:ID>
+        <cbc:ID schemeID="${company.vkn.length === 11 ? 'TCKN' : 'VKN'}">${company.vkn}</cbc:ID>
       </cac:PartyIdentification>
       <cac:PartyName>
         <cbc:Name>${company.legalName}</cbc:Name>
@@ -227,7 +229,7 @@ export function exportKdv1DeclarationXml(summary: TaxReportSummary, companyProfi
     <Donem>${summary.periodMonth}</Donem>
     <MukellefVKN>${comp.vkn}</MukellefVKN>
     <Unvan>${comp.legalName}</Unvan>
-    <Eposta>${comp.email || 'muhasebe@aknglobal.com'}</Eposta>
+    <Eposta>${comp.email || COMPANY_IDENTITY.contactEmail}</Eposta>
   </GenelBilgiler>
   <TevkifatUygulanmayanIslemler>
     <Islem>

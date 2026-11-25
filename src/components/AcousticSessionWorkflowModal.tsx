@@ -461,7 +461,7 @@ export const AcousticSessionWorkflowModal: React.FC<AcousticSessionWorkflowModal
               <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-950/60 via-slate-900 to-slate-950 border border-emerald-500/40 flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wide">
-                    AKN GLOBAL GROUP LTD • ŞİFA RAPORU ({report.id})
+                    AKN GLOBAL GROUP • ŞİFA RAPORU ({report.id})
                   </span>
                   <h4 className="text-base font-bold text-slate-100 mt-0.5">
                     {disease.diseaseName} — Seans Öncesi & Sonrası Analiz

@@ -1,6 +1,7 @@
 import React, { useCallback, useState, useEffect } from 'react';
 import { formatUsd } from '../utils/currency';
 import QRCode from 'qrcode';
+import { COMPANY_IDENTITY } from '../config/companyIdentity';
 import { 
   X,
   ChevronLeft,
@@ -156,7 +157,7 @@ export const BusinessPresentationModal: React.FC<BusinessPresentationModalProps>
     resolveDealer();
   }, [isOpen, currentUser, activeReferralCode]);
 
-  const currentOrigin = typeof window !== 'undefined' ? window.location.origin : 'https://akngroupfrekans.web.app';
+  const currentOrigin = typeof window !== 'undefined' ? window.location.origin : COMPANY_IDENTITY.website;
   const fullShareUrl = `${currentOrigin}/?ref=${encodeURIComponent(activeReferralCode)}&view=presentation`;
 
   // Generate QR Code dynamically

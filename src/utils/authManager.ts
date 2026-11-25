@@ -15,13 +15,12 @@ import { formatUsd } from './currency';
 import { getPackagePriceForRegion, resolveMemberRegion } from './walletRegion';
 import { loginAdmin, loginAdminWithMessage, loginAccountingWithMessage, clearAccountingToken, clearAdminToken } from './adminSession';
 import { DEFAULT_DEALER_PACKAGES } from '../config/dealerPackages';
+import { COMPANY_IDENTITY } from '../config/companyIdentity';
 
 // ADMIN CREDENTIALS & CONSTANTS
-export const ADMIN_EMAILS = [
-  'psikologabdulkadirkan@gmail.com',
-];
-export let ADMIN_PHONE = '+90 542 578 37 48';
-export let ADMIN_PHONE_CLEAN = '905425783748';
+export const ADMIN_EMAILS: string[] = [COMPANY_IDENTITY.contactEmail];
+export let ADMIN_PHONE: string = COMPANY_IDENTITY.internationalPhone;
+export let ADMIN_PHONE_CLEAN: string = COMPANY_IDENTITY.phoneDigits;
 
 export function setAdminPhone(phone: string): void {
   ADMIN_PHONE = phone;
@@ -29,11 +28,11 @@ export function setAdminPhone(phone: string): void {
 }
 
 // BANK & PAYMENT DETAILS (yönetici panelinden güncellenir, bkz. siteContentManager)
-export const BANK_INFO = {
-  bankName: 'QNB Finansbank',
-  accountHolder: 'Abdulkadir Kan',
-  iban: 'TR32 0015 7000 0000 0091 7751 22',
-  ibanClean: 'TR320015700000000091775122'
+export const BANK_INFO: { bankName: string; accountHolder: string; iban: string; ibanClean: string } = {
+  bankName: '',
+  accountHolder: COMPANY_IDENTITY.authorizedPerson,
+  iban: '',
+  ibanClean: ''
 };
 
 export interface MembershipPackage {
@@ -960,7 +959,7 @@ export function getWhatsAppCartOrderUrl(user: UserMember, cartItems: CartItem[])
     : '• 1 Adet Standart Paket';
 
   const message = encodeURIComponent(
-    `Merhaba AuraBio Destek Ekibi,\n\nAuraBio Frekans sistemi için sepetimdeki paketlerin ödemesini gerçekleştirdim.\n\n🛒 Sepet / Paket Detayları:\n${cartSummary}\n\n💰 Toplam Tutar: ${formatUsd(totalPrice)}\n👤 Ad Soyad: ${user.fullName}\n📧 E-Posta: ${user.email}\n📱 Telefon: ${user.phone}\n🆔 Üye No: ${user.uid}\n\n💳 Ödeme Bilgileri:\nBanka: ${BANK_INFO.bankName}\nAlıcı: ${BANK_INFO.accountHolder}\nIBAN: ${BANK_INFO.iban}\n\nÖdeme dekontumu bu mesaja ek olarak iletiyorum. Lütfen ${user.isDealerRequested ? 'bayilik ve seans kredi havuzumu' : 'üyeliğimi'} onaylayınız.`
+    `Merhaba ${COMPANY_IDENTITY.brandName} Destek Ekibi,\n\n${COMPANY_IDENTITY.brandName} sistemi için sepetimdeki paketlerin ödemesini gerçekleştirdim.\n\n🛒 Sepet / Paket Detayları:\n${cartSummary}\n\n💰 Toplam Tutar: ${formatUsd(totalPrice)}\n👤 Ad Soyad: ${user.fullName}\n📧 E-Posta: ${user.email}\n📱 Telefon: ${user.phone}\n🆔 Üye No: ${user.uid}\n\n💳 Ödeme Bilgileri:\nBanka: ${BANK_INFO.bankName}\nAlıcı: ${BANK_INFO.accountHolder}\nIBAN: ${BANK_INFO.iban}\n\nÖdeme dekontumu bu mesaja ek olarak iletiyorum. Lütfen ${user.isDealerRequested ? 'bayilik ve seans kredi havuzumu' : 'üyeliğimi'} onaylayınız.`
   );
   return `https://wa.me/${ADMIN_PHONE_CLEAN}?text=${message}`;
 }
@@ -1234,6 +1233,31 @@ export async function registerMember(
     const regionalPackagePrice = chosenDealerPkg
       ? getPackagePriceForRegion(chosenDealerPkg.price, resolveMemberRegion(cleanCountryCode))
       : undefined;
+
+    if (chosenDealerPkg && regionalPackagePrice !== undefined) {
+      try {
+        const { issueSalesInvoiceForOrder } = await import('./invoiceManager');
+        await issueSalesInvoiceForOrder({
+          orderId: `REG-${uid}`,
+          uid,
+          fullName: cleanFullName,
+          companyName: completeDealerDetails.companyName,
+          taxNumber: completeDealerDetails.taxNumber === 'Belirtilmedi' ? '' : completeDealerDetails.taxNumber,
+          taxOffice: completeDealerDetails.taxOffice === 'Belirtilmedi' ? '' : completeDealerDetails.taxOffice,
+          address: completeDealerDetails.address,
+          email: cleanEmail,
+          phone: cleanPhone,
+          referralCode: personalReferralCode,
+          packageId: chosenDealerPkg.id,
+          packageName: chosenDealerPkg.name,
+          grossAmountUsd: regionalPackagePrice,
+          paid: !isPendingDealerRegistration,
+          notes: 'Bayi kaydı sırasında otomatik oluşturulan satış faturası.',
+        });
+      } catch (invoiceErr) {
+        console.debug('Auto invoice on registration notice:', invoiceErr);
+      }
+    }
 
     const whatsappDealerUrl = getWhatsAppDealerApplicationUrl({
       fullName: cleanFullName,

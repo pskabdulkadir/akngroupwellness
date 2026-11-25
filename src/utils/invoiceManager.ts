@@ -14,6 +14,8 @@ import {
 } from '../lib/db';
 import { formatUsd } from './currency';
 import { ADMIN_PHONE, ADMIN_EMAILS, BANK_INFO } from './authManager';
+import { COMPANY_IDENTITY } from '../config/companyIdentity';
+import { accountingSyncBridge } from './accountingSyncBridge';
 
 export interface InvoiceItem {
   id: string;
@@ -99,17 +101,17 @@ export interface DigitalInvoice {
 }
 
 export const DEFAULT_ISSUER_INFO = {
-  companyName: 'AKN GLOBAL GROUP LTD',
-  title: 'AuraBio Frekans Sistemleri ve Biyorezonans Yazılım Çözümleri',
-  authorizedPerson: 'Abdulkadir Kan',
-  taxNumber: '1420894512',
-  taxOffice: 'Maslak Vergi Dairesi',
-  address: 'Dijital Adres (Karekod)',
-  phone: '05425783748',
-  email: 'psikologabdulkadirkan@gmail.com',
-  web: 'https://akngroupfrekans.web.app/',
-  mersisNo: '0142089451200001',
-  tradeRegistryNo: '849204-5',
+  companyName: COMPANY_IDENTITY.legalName,
+  title: COMPANY_IDENTITY.brandName,
+  authorizedPerson: COMPANY_IDENTITY.authorizedPerson,
+  taxNumber: COMPANY_IDENTITY.taxNumber,
+  taxOffice: COMPANY_IDENTITY.taxOffice,
+  address: COMPANY_IDENTITY.address,
+  phone: COMPANY_IDENTITY.phone,
+  email: COMPANY_IDENTITY.contactEmail,
+  web: COMPANY_IDENTITY.website,
+  mersisNo: '',
+  tradeRegistryNo: '',
   bankName: BANK_INFO.bankName,
   iban: BANK_INFO.iban,
   accountHolder: 'Abdulkadir Kan',
@@ -207,31 +209,7 @@ export function getLocalDigitalInvoices(): DigitalInvoice[] {
   try {
     const raw = localStorage.getItem(STORAGE_INVOICES_KEY);
     if (!raw) return [];
-    const list: DigitalInvoice[] = JSON.parse(raw);
-    let changed = false;
-    const migrated = list.map(inv => {
-      if (!inv.issuer || !inv.issuer.companyName.includes('AKN GLOBAL') || inv.issuer.address.includes('Nurol Plaza')) {
-        changed = true;
-        return {
-          ...inv,
-          issuer: {
-            ...DEFAULT_ISSUER_INFO,
-            ...inv.issuer,
-            companyName: DEFAULT_ISSUER_INFO.companyName,
-            title: DEFAULT_ISSUER_INFO.title,
-            phone: DEFAULT_ISSUER_INFO.phone,
-            web: DEFAULT_ISSUER_INFO.web,
-            address: DEFAULT_ISSUER_INFO.address,
-            accountHolder: DEFAULT_ISSUER_INFO.accountHolder,
-          }
-        };
-      }
-      return inv;
-    });
-    if (changed) {
-      localStorage.setItem(STORAGE_INVOICES_KEY, JSON.stringify(migrated));
-    }
-    return migrated;
+    return JSON.parse(raw) as DigitalInvoice[];
   } catch {
     return [];
   }
@@ -347,6 +325,122 @@ export async function saveDigitalInvoice(invoice: DigitalInvoice): Promise<boole
   }
 }
 
+export interface AutoSalesInvoiceInput {
+  orderId: string;
+  uid?: string;
+  fullName: string;
+  companyName?: string;
+  taxNumber?: string;
+  taxOffice?: string;
+  address?: string;
+  email: string;
+  phone: string;
+  referralCode?: string;
+  packageId?: string;
+  packageName: string;
+  grossAmountUsd: number;
+  paid: boolean;
+  paymentReference?: string;
+  notes?: string;
+}
+
+export async function issueSalesInvoiceForOrder(input: AutoSalesInvoiceInput): Promise<DigitalInvoice | null> {
+  try {
+    const existing = getLocalDigitalInvoices().find((inv) => inv.orderId === input.orderId);
+    if (existing) {
+      if (input.paid && existing.status === 'issued') {
+        const updated = { ...existing, status: 'paid' as const, updatedAt: new Date().toISOString() };
+        await saveDigitalInvoice(updated);
+        await accountingSyncBridge.syncOrderTransaction({
+          orderId: input.orderId,
+          customerName: updated.recipient.companyName,
+          customerEmail: updated.recipient.email,
+          vknTckn: updated.recipient.taxNumber,
+          amountTry: 0,
+          amountUsd: updated.grandTotal,
+          packageId: updated.packageId,
+          packageName: updated.packageName,
+          channel: 'ORDER_PAID',
+          paymentStatus: 'PAID',
+          timestamp: updated.updatedAt,
+        });
+        return updated;
+      }
+      return existing;
+    }
+
+    const vat = calculateVAT(input.grossAmountUsd, 20);
+    const now = new Date();
+    const iso = now.toISOString();
+    const date = iso.slice(0, 10);
+    const time = iso.slice(11, 19);
+    const invoice: DigitalInvoice = {
+      id: generateUUID(),
+      invoiceNumber: generateInvoiceNumber(getLocalDigitalInvoices().length),
+      ettn: generateUUID(),
+      orderId: input.orderId,
+      packageId: input.packageId,
+      packageName: input.packageName,
+      recipient: {
+        uid: input.uid,
+        companyName: (input.companyName || input.fullName).trim(),
+        fullName: input.fullName.trim(),
+        taxNumber: (input.taxNumber || '').trim(),
+        taxOffice: (input.taxOffice || '').trim(),
+        address: (input.address || '').trim(),
+        phone: input.phone.trim(),
+        email: input.email.trim().toLowerCase(),
+        referralCode: input.referralCode,
+      },
+      issuer: { ...DEFAULT_ISSUER_INFO },
+      issueDate: date,
+      issueTime: time,
+      serviceDate: date,
+      currency: 'USD',
+      items: [{
+        id: generateUUID(),
+        description: input.packageName,
+        quantity: 1,
+        unit: 'Adet',
+        unitPrice: vat.netAmount,
+        kdvRate: 20,
+        kdvAmount: vat.vatAmount,
+        totalAmount: vat.grossAmount,
+      }],
+      subtotal: vat.netAmount,
+      kdvTotal: vat.vatAmount,
+      grandTotal: vat.grossAmount,
+      grandTotalInWords: numberToTurkishWords(vat.grossAmount),
+      paymentMethod: 'KREDI_KARTI',
+      paymentReference: input.paymentReference,
+      status: input.paid ? 'paid' : 'issued',
+      invoiceType: 'SATIS',
+      notes: input.notes || '',
+      createdAt: iso,
+      updatedAt: iso,
+    };
+
+    await saveDigitalInvoice(invoice);
+    await accountingSyncBridge.syncOrderTransaction({
+      orderId: input.orderId,
+      customerName: invoice.recipient.companyName,
+      customerEmail: invoice.recipient.email,
+      vknTckn: invoice.recipient.taxNumber,
+      amountTry: 0,
+      amountUsd: vat.grossAmount,
+      packageId: input.packageId,
+      packageName: input.packageName,
+      channel: input.paid ? 'ORDER_PAID' : 'DEALER_REGISTRATION',
+      paymentStatus: input.paid ? 'PAID' : 'PENDING',
+      timestamp: iso,
+    });
+    return invoice;
+  } catch (e) {
+    console.error('Auto sales invoice error:', e);
+    return null;
+  }
+}
+
 /**
  * Delete a digital invoice
  */
@@ -436,12 +530,12 @@ export function generateInvoiceWhatsAppShareUrl(invoice: DigitalInvoice, customP
     ? '90' + targetPhone.substring(1) 
     : (targetPhone.startsWith('90') ? targetPhone : (targetPhone ? '90' + targetPhone : ''));
 
-  const text = `🧾 *AKN GLOBAL GROUP LTD - RESMİ DİJİTAL E-ARŞİV FATURANIZ*
-_${invoice.issuer.title || 'AuraBio Frekans Sistemleri ve Biyorezonans Yazılım Çözümleri'}_
+  const text = `🧾 *${invoice.issuer.companyName} - BELGE BİLGİLENDİRME ÖZETİ*
+_${invoice.issuer.title || COMPANY_IDENTITY.brandName}_
 
 Sayın *${invoice.recipient.companyName || invoice.recipient.fullName}*,
 
-Satın almış olduğunuz bayilik paketi ve seans kredisi için oluşturulan resmi e-Arşiv faturanız detayları aşağıda yer almaktadır:
+Satın almış olduğunuz paket için sistemde kayıtlı belge özeti aşağıdadır:
 
 📄 *Fatura No:* ${invoice.invoiceNumber}
 🔢 *ETTN Takip No:* ${invoice.ettn}

@@ -221,11 +221,11 @@ export const AutonomousCpaModal: React.FC<AutonomousCpaModalProps> = ({
                   AKN Bağımsız Mali Müşavirlik &amp; AI CFO Kokpiti
                 </h3>
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/30 text-emerald-300 border border-emerald-400/50">
-                  Dışarıdan Muhasebeciye Sıfır İhtiyaç
+                  Mali Müşavir İncelemesini Destekler
                 </span>
               </div>
               <p className="text-xs text-slate-300 mt-0.5">
-                Şirketinizin tüm yasal beyannameleri, yevmiye defterleri, stopajları ve resmi GİB bildirimleri tek tıkla otomatik yapılır.
+                Sistem kayıt ve taslakları mali müşavir incelemesi içindir; resmî beyanname veya GİB bildirimi otomatik gönderilmez.
               </p>
             </div>
           </div>

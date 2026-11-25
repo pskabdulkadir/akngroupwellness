@@ -341,7 +341,7 @@ export const CfoExecutiveReportView: React.FC<CfoExecutiveReportViewProps> = ({
         {/* Hitap ve Giriş */}
         <div>
           <p className="font-bold text-slate-900 text-sm">
-            AKN Global Group Ltd. Yönetim Kurulu Başkanlığına,
+            Abdulkadir Kan'a,
           </p>
           <p className="mt-2 text-slate-700">
             Şirketimizin {summary.periodMonth} dönemine ait tüm yurt içi (TRY) ve yurt dışı ($3x$ USD)

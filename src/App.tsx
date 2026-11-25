@@ -2,7 +2,7 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  * 
- * AKN Global Group Ltd. Unified Application Suite
+ * AKN Global Group Unified Application Suite
  * 1. Karşılama Ekranı (Hoş Geldiniz & Buton)
  * 2. AKN Group Wellness & Monoline MLM Platform
  * 3. VergiSync AI - Akıllı Muhasebe, e-Fatura & GİB Vergi Motoru
@@ -30,6 +30,7 @@ import {
   MapPin
 } from 'lucide-react';
 import { LegalContractsModal, LegalContractTab } from './components/LegalContractsModal';
+import { COMPANY_IDENTITY } from './config/companyIdentity';
 import { MedicalDisclaimerModal } from './components/MedicalDisclaimerModal';
 
 export type ActiveAppView = 'welcome' | 'wellness' | 'accounting';
@@ -100,7 +101,7 @@ export default function App() {
         <header className="w-full flex items-center justify-between px-6 py-5 border-b border-slate-200/70 bg-white/80 backdrop-blur-sm">
           <div className="flex items-center gap-3">
             <span className="font-bold tracking-tight text-slate-900 text-base sm:text-lg">
-              AKN Global Group Ltd.
+              {COMPANY_IDENTITY.brandName}
             </span>
             <span className="text-xs text-slate-500 hidden sm:inline">
               · Wellness Platformu
@@ -174,7 +175,7 @@ export default function App() {
                 <span>YASAL ZORUNLU BİLGİLENDİRME: TIBBİ TEŞHİS VE TEDAVİ AMACI TAŞIMAZ</span>
               </div>
               <p className="text-[10px] sm:text-[11px] leading-relaxed text-rose-800/90">
-                AKN Group bünyesindeki Bio-Rezonans, Çakra & Letaif Analiz motorları ve frekans uygulamaları <strong>tıbbi bir cihaz veya tedavi yöntemi DEĞİLDİR</strong>. Hastalıkları teşhis, tedavi veya rehabilite etmez. Sadece bireysel farkındalık, yaşam kalitesi ve enerji dengeleme amaçlı dijital analiz yazılımıdır. Her türlü sağlık sorununuz için lütfen uzman bir <strong>doktora veya sağlık kuruluşuna</strong> başvurunuz.
+                AKN Global Group bünyesindeki Bio-Rezonans, Çakra & Letaif Analiz motorları ve frekans uygulamaları <strong>tıbbi bir cihaz veya tedavi yöntemi DEĞİLDİR</strong>. Hastalıkları teşhis, tedavi veya rehabilite etmez. Sadece bireysel farkındalık, yaşam kalitesi ve enerji dengeleme amaçlı dijital analiz yazılımıdır. Her türlü sağlık sorununuz için lütfen uzman bir <strong>doktora veya sağlık kuruluşuna</strong> başvurunuz.
               </p>
               <div className="pt-1">
                 <button
@@ -252,35 +253,31 @@ export default function App() {
               <div className="space-y-1">
                 <p className="font-bold text-slate-700 flex items-center gap-1.5">
                   <Building2 className="w-3.5 h-3.5 text-slate-500" />
-                  <span>AKN GLOBAL GROUP BİLİŞİM TEKNOLOJİLERİ VE DIŞ TİC. LTD. ŞTİ.</span>
+                  <span>{COMPANY_IDENTITY.legalName}</span>
                 </p>
-                <p>Vergi Dairesi: Beşiktaş V.D. · Vergi Kimlik No (VKN): 0340892341</p>
-                <p>MERSİS No: 0034089234100001 · Ticaret Sicil No: 984521-5</p>
+                <p>T.C. Kimlik No: {COMPANY_IDENTITY.taxNumber}</p>
+                <p>Yetkili: {COMPANY_IDENTITY.authorizedPerson}</p>
               </div>
               <div className="space-y-1 md:text-right">
                 <p className="flex items-center md:justify-end gap-1.5">
                   <MapPin className="w-3.5 h-3.5 text-slate-500" />
-                  <span>Barbaros Bulvarı No: 142/A Beşiktaş / İstanbul</span>
+                  <span>{COMPANY_IDENTITY.address}</span>
                 </p>
                 <p className="flex items-center md:justify-end gap-1.5">
                   <Mail className="w-3.5 h-3.5 text-slate-500" />
-                  <span>destek@akngroupfrekans.com · Tel: +90 (850) 840 00 00</span>
+                  <span>{COMPANY_IDENTITY.contactEmail} · Tel: {COMPANY_IDENTITY.internationalPhone}</span>
                 </p>
                 <p className="text-emerald-600 font-semibold">
-                  T.C. Ticaret Bakanlığı ETBİS Kayıtlı & Sanal POS Uyumlu Sistem
+                  <a href={COMPANY_IDENTITY.website} target="_blank" rel="noreferrer">{COMPANY_IDENTITY.website}</a> · HTTPS
                 </p>
               </div>
             </div>
 
             {/* 4. GÜVENLİ ÖDEME VE ROZETLER */}
             <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-3 text-[10px] text-slate-400 border-t border-slate-200/40 border-slate-800/40">
-              <span>AKN Global Group Ltd. © {new Date().getFullYear()} · Tüm hakları saklıdır.</span>
-              <div className="flex flex-wrap items-center justify-center gap-3 font-semibold text-slate-500">
-                <span className="px-2 py-0.5 rounded bg-slate-200 text-[10px]">256-BIT SSL</span>
-                <span className="px-2 py-0.5 rounded bg-slate-200 text-[10px]">3D SECURE</span>
-                <span className="px-2 py-0.5 rounded bg-slate-200 text-[10px]">VISA</span>
-                <span className="px-2 py-0.5 rounded bg-slate-200 text-[10px]">MASTERCARD</span>
-                <span className="px-2 py-0.5 rounded bg-slate-200 text-[10px]">TROY</span>
+              <span>{COMPANY_IDENTITY.brandName} © {new Date().getFullYear()} · Tüm hakları saklıdır.</span>
+              <div className="text-center font-semibold text-slate-500">
+                Ödeme yöntemi ve sağlayıcı durumu, ödeme adımında işlem öncesi gösterilir.
               </div>
             </div>
 

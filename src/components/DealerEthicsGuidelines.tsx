@@ -45,7 +45,7 @@ export const DealerEthicsGuidelines: React.FC = () => {
               <div className="whitespace-pre-wrap">{content}</div>
             </div>
             <footer className="border-t border-slate-700 px-4 py-3 text-center text-xs font-semibold text-slate-400 sm:px-6">
-              © 2026 AKN Global Group Ltd. Tüm hakları saklıdır.
+              © 2026 AKN Global Group. Tüm hakları saklıdır.
             </footer>
           </section>
         </div>

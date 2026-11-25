@@ -2874,7 +2874,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                       <span>7. 3D Secure POS &amp; Cayma Blokesi</span>
                     </div>
                     <p className="text-[11px] text-slate-400 leading-relaxed">
-                      BDDK lisanslı Sanal POS, 4&apos;lü yasal sözleşme onayı, 14 gün cayma koruması (Pending Balance &amp; Clawback).
+                      Ödeme yöntemi ödeme adımında gösterilir; sözleşme kayıtları ve komisyon bekleme kuralları sipariş durumuna göre uygulanır.
                     </p>
                   </div>
 

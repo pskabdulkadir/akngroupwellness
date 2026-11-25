@@ -29,6 +29,7 @@ import type {
   PendingPayoutItem,
 } from './src/types/accounting';
 import { createPaymentProvider, PaymentProviderError } from './server/paymentProviders.js';
+import { COMPANY_IDENTITY } from './src/config/companyIdentity.js';
 import {
   DEFAULT_ETHICS_GUIDELINES_CONTENT,
   normalizeEthicsGuidelinesContent,
@@ -2698,8 +2699,11 @@ function processOrderCommission(
         customer_name: buyer.full_name,
         customer_email: buyer.email,
         customer_phone: buyer.phone,
-        customer_tax_id: buyer.tc_identity_no,
+        customer_tax_id: buyer.tc_identity_no || null,
+        customer_tax_identity_type: buyer.has_tax_company ? 'VKN' : 'TCKN',
         customer_is_company: Boolean(buyer.has_tax_company),
+        customer_address: (buyer as any).address || '',
+        customer_city: buyer.city || '',
         package_id: normalizedPkg || String(payload.package_id || 'CUSTOM'),
         package_name: normalizedPkg ? PACKAGES[normalizedPkg].name : String(payload.package_id || 'Özel Sipariş'),
         payment_method: payload.payment_method || 'NOT_PROVIDED',
@@ -2832,21 +2836,44 @@ function upsertPurchaseInvoiceDraft(params: {
       customer_email: member.email,
       customer_phone: member.phone,
       customer_tax_id: member.tc_identity_no || null,
+      customer_tax_identity_type: member.has_tax_company ? 'VKN' : 'TCKN',
       customer_is_company: Boolean(member.has_tax_company),
+      customer_address: (member as any).address || '',
+      customer_city: member.city || '',
       package_id: params.packageId || null,
       package_name: productName,
       order_type: orderType,
       is_test: /^(ORD-SIM-|ORD-DEMO-|TEST-|SIM-)/i.test(orderId),
       invoice_draft: {
         status: 'PREPARED_FOR_ACCOUNTANT_REVIEW',
+        seller: {
+          legal_name: COMPANY_IDENTITY.legalName,
+          brand_name: COMPANY_IDENTITY.brandName,
+          authorized_person: COMPANY_IDENTITY.authorizedPerson,
+          tax_number: COMPANY_IDENTITY.taxNumber,
+          tax_identity_type: COMPANY_IDENTITY.taxIdentityType,
+          address: COMPANY_IDENTITY.address,
+          phone: COMPANY_IDENTITY.internationalPhone,
+          email: COMPANY_IDENTITY.contactEmail,
+          website: COMPANY_IDENTITY.website,
+        },
         customer: {
           name: member.full_name,
+          company_name: (member as any).company_name || '',
           email: member.email,
           phone: member.phone,
+          address: (member as any).address || '',
           tax_id: member.tc_identity_no || null,
+          tax_identity_type: member.has_tax_company ? 'VKN' : 'TCKN',
+          tax_office: (member as any).tax_office || '',
           is_company: Boolean(member.has_tax_company),
         },
-        missing_fields: member.tc_identity_no ? [] : ['customer.tax_id'],
+        missing_fields: [
+          ...(!member.tc_identity_no ? ['customer.tax_id'] : []),
+          ...(!(member as any).address ? ['customer.address'] : []),
+          ...(!member.email ? ['customer.email'] : []),
+          ...(!member.phone ? ['customer.phone'] : []),
+        ],
         items: [{ description: itemDescription, quantity: 1, unit_price: amount, line_total: amount }],
         currency,
         subtotal: amount,
@@ -6739,6 +6766,7 @@ async function startServer(options: { listen?: boolean } = {}) {
         const grossAmount = reqAmount;
         const taxDeduction = 0;
         const netAmount = grossAmount;
+        const withdrawalCurrency = payoutRegion === 'INTERNATIONAL' ? 'USD' : 'TRY';
 
         debitMemberRegionalUsd(member, grossAmount, payoutRegion);
 
@@ -6808,13 +6836,13 @@ async function startServer(options: { listen?: boolean } = {}) {
           net_amount: netAmount,
           tax_rate_percent: undefined,
           has_tax_company: Boolean(member.has_tax_company),
-          tc_identity_no: member.tc_identity_no || '11111111110',
+          tc_identity_no: member.tc_identity_no || '',
           method: payoutMethod,
           payout_method: payoutMethod,
           payout_address: String(payoutAddress),
           region: payoutRegion,
           channel: payoutChannel,
-          currency: payoutRegion === 'INTERNATIONAL' ? 'USD' : 'TRY',
+          currency: withdrawalCurrency,
           bank_details: {
             method: payoutMethod,
             holder_name: holder_name || member.bank_details.iban_holder_name || member.full_name,
@@ -6836,6 +6864,39 @@ async function startServer(options: { listen?: boolean } = {}) {
         };
 
         withdrawalRequests.unshift(newWithdrawal);
+        const sourceEventId = `WITHDRAWAL-${newWithdrawal.id}`;
+        if (!accountingEvents.some((event) => event.source_event_id === sourceEventId)) {
+          accountingEvents.unshift({
+            source_event_id: sourceEventId,
+            event_type: 'WITHDRAWAL_REQUESTED',
+            accounting_status: 'NEEDS_REVIEW',
+            tax_status: 'NEEDS_REVIEW',
+            invoice_status: 'DRAFT_REQUIRED',
+            amount: grossAmount,
+            currency: withdrawalCurrency,
+            created_at: nowIso,
+            event_data: {
+              withdrawal_id: newWithdrawal.id,
+              user_id: newWithdrawal.external_user_id,
+              customer_name: newWithdrawal.user_full_name,
+              customer_tax_id: newWithdrawal.tc_identity_no,
+              country_code: newWithdrawal.region === 'INTERNATIONAL' ? member.country_code || '' : 'TR',
+              payout_method: newWithdrawal.payout_method,
+              payout_channel: newWithdrawal.channel,
+              bank_name: newWithdrawal.bank_details.bank_name || '',
+              iban: newWithdrawal.bank_details.iban,
+              swift_code: newWithdrawal.bank_details.swift_code || '',
+              gross_amount: newWithdrawal.gross_amount,
+              tax_deduction: newWithdrawal.tax_deduction,
+              net_amount: newWithdrawal.net_amount,
+              invoice_number: newWithdrawal.invoice_no || null,
+              status: newWithdrawal.status,
+              payment_status: 'NOT_SETTLED',
+              tax_status: 'NEEDS_REVIEW',
+              is_test: false,
+            },
+          });
+        }
         return { member, newWithdrawal, createdInvoice };
       });
 
@@ -7010,6 +7071,12 @@ async function startServer(options: { listen?: boolean } = {}) {
             withdrawal.tax_refund_status = 'REJECTED';
           }
           withdrawal.status = 'REJECTED';
+          const withdrawalEvent = accountingEvents.find((event) => event.source_event_id === `WITHDRAWAL-${withdrawal.id}`);
+          if (withdrawalEvent) {
+            withdrawalEvent.event_data.status = withdrawal.status;
+            withdrawalEvent.event_data.payment_status = 'NOT_SETTLED';
+            withdrawalEvent.event_data.rejection_reason = admin_note || 'Çekim talebi reddedildi.';
+          }
           withdrawal.processed_at = new Date().toISOString();
           withdrawal.admin_note = admin_note ||
             `Çekim reddedildi. Brüt tutar $${netRefund.toFixed(2)} bölgesel cüzdana iade edildi; stopaj müşavir incelemesi olmadan kesilmedi.`;
@@ -8316,9 +8383,8 @@ async function startServer(options: { listen?: boolean } = {}) {
         finalLeg = leftCount <= rightCount ? 'LEFT' : 'RIGHT';
       }
 
-      const generatedIban = `TR${Math.floor(10 + Math.random() * 89)} 0001 0004 8271 9283 10${nextLineId}`;
-      const memberIban = req.body?.bank_iban ? String(req.body.bank_iban).trim() : generatedIban;
-      const memberBank = req.body?.bank_name ? String(req.body.bank_name).trim() : 'Ziraat Bankası';
+      const memberIban = req.body?.bank_iban ? String(req.body.bank_iban).trim() : '';
+      const memberBank = req.body?.bank_name ? String(req.body.bank_name).trim() : '';
 
       const newMember: MonolineMember = {
         id: nextLineId,
@@ -8332,9 +8398,9 @@ async function startServer(options: { listen?: boolean } = {}) {
             : `${String(full_name)
                 .toLowerCase()
                 .replace(/[^a-z0-9]/g, '.')
-                .replace(/\.+/g, '.')}@akngroupfrekans.com`,
+                .replace(/\.+/g, '.')}@akngroupwellness.com`,
         phone: phone ? String(phone).trim() : '',
-        city: String(city || 'Türkiye').trim(),
+        city: String(city || '').trim(),
         country_code: normalizedCountryCode,
         joined_at: nowIso,
         sponsor_id: assignedSponsorId,
@@ -8359,7 +8425,7 @@ async function startServer(options: { listen?: boolean } = {}) {
           total_withdrawn: 0,
         },
         bank_details: {
-          iban_holder_name: String(full_name).trim(),
+          iban_holder_name: String(req.body?.holder_name || full_name).trim(),
           bank_name: memberBank,
           iban: memberIban,
           trc20_address: `T${Math.random()
@@ -8403,8 +8469,11 @@ async function startServer(options: { listen?: boolean } = {}) {
       (newMember as any).role = 'dealer';
       (newMember as any).dealerStatus = isPendingPayment ? 'pending' : 'approved';
       (newMember as any).isDealerRequested = true;
-      if (req.body?.company_title) {
-        (newMember as any).dealerDetails = { companyName: String(req.body.company_title).trim() };
+      (newMember as any).company_name = String(company_title || '').trim();
+      (newMember as any).tax_office = String(tax_office || '').trim();
+      (newMember as any).address = String(address || '').trim();
+      if (company_title) {
+        (newMember as any).dealerDetails = { companyName: String(company_title).trim() };
       }
 
       const rollbackState = captureRollbackState();
@@ -12567,6 +12636,15 @@ async function startServer(options: { listen?: boolean } = {}) {
         wallet_international_usd: m.wallets.wallet_international_usd || 0,
         wallet_try_equivalent: m.wallets.total_earnings || 0,
         is_active: m.is_active,
+        address: (m as any).address || '',
+        tc_identity_no: m.tc_identity_no || '',
+        has_tax_company: Boolean(m.has_tax_company),
+        company_name: (m as any).company_name || '',
+        tax_office: (m as any).tax_office || '',
+        bank_iban: m.bank_details?.iban || '',
+        bank_name: m.bank_details?.bank_name || '',
+        bank_holder_name: m.bank_details?.iban_holder_name || '',
+        bank_swift: m.bank_details?.swift_code || '',
         created_at: m.joined_at,
       }));
       res.json({
@@ -12730,11 +12808,41 @@ async function startServer(options: { listen?: boolean } = {}) {
       const releaseMs = log.release_at ? new Date(log.release_at).getTime() : 0;
       return releaseMs <= nowMs && Number(log.amount) > 0;
     });
+    for (const log of pendingReviewLogs) {
+      const sourceEventId = `COMMISSION-REVIEW-${log.id}`;
+      if (accountingEvents.some((event) => event.source_event_id === sourceEventId)) continue;
+      const member = members.find((candidate) => candidate.user_id === log.target_external_id);
+      accountingEvents.unshift({
+        source_event_id: sourceEventId,
+        event_type: 'COMMISSION_14D_RELEASED',
+        accounting_status: 'NEEDS_REVIEW',
+        tax_status: 'NEEDS_REVIEW',
+        invoice_status: 'DRAFT_REQUIRED',
+        amount: Number(log.amount),
+        currency: (log as any).currency || 'USD',
+        created_at: log.release_at || new Date().toISOString(),
+        event_data: {
+          commission_id: log.id,
+          order_id: log.order_id,
+          user_id: log.target_external_id,
+          customer_name: log.target_user_name || member?.full_name || '',
+          customer_tax_id: member?.tc_identity_no || '',
+          is_company: Boolean(member?.has_tax_company),
+          commission_type: log.type,
+          gross_amount: Number(log.amount),
+          payout_status: 'NEEDS_ACCOUNTANT_REVIEW',
+          voucher_status: 'NOT_GENERATED',
+          payment_status: 'NOT_SETTLED',
+          is_test: /^(ORD-SIM-|ORD-DEMO-|TEST-|SIM-)/i.test(log.order_id),
+        },
+      });
+    }
     return {
       generatedCount: 0,
       documentStatus: 'NOT_GENERATED_REQUIRES_ACCOUNTANT_APPROVAL',
       totalGrossPendingReview: pendingReviewLogs.reduce((sum, log) => sum + Number(log.amount || 0), 0),
       pendingReviewCount: pendingReviewLogs.length,
+      accountingEventCount: pendingReviewLogs.length,
     };
   }
 
@@ -12808,24 +12916,34 @@ async function startServer(options: { listen?: boolean } = {}) {
     );
     const storedVouchers = (voucherRows?.rows || []).map((row: any) => row.voucher_data as ExpenseVoucherRecord).filter((voucher: any) => voucher && Object.keys(voucher).length > 0);
     const pendingItems: PendingPayoutItem[] = storedVouchers
-      .map((v) => ({
-        commission_id: v.commission_log_id,
-        voucher_number: v.voucher_number,
-        ettn_uuid: v.ettn_uuid,
-        order_id: v.order_id,
-        dealer_user_id: v.dealer_user_id,
-        dealer_name: v.dealer_full_name,
-        dealer_tckn: v.dealer_tckn,
-        dealer_iban: v.dealer_iban,
-        bank_name: 'Garanti BBVA / FAST',
-        is_company: v.is_company,
-        gross_amount: v.gross_amount,
-        withholding_amount: v.withholding_amount,
-        net_amount: v.net_amount,
-        currency: v.currency,
-        release_at: v.created_at,
-        status: 'READY_FOR_PAYOUT',
-      }));
+      .map((v) => {
+        const member = members.find((m) => m.user_id === v.dealer_user_id);
+        const country = v.dealer_country || member?.country_code || '';
+        const iban = v.dealer_iban || member?.bank_details?.iban || '';
+        const swift = v.dealer_swift || member?.bank_details?.swift_code || '';
+        return {
+          commission_id: v.commission_log_id,
+          voucher_number: v.voucher_number,
+          ettn_uuid: v.ettn_uuid,
+          order_id: v.order_id,
+          dealer_user_id: v.dealer_user_id,
+          dealer_name: v.dealer_full_name || member?.full_name || '',
+          dealer_tckn: v.dealer_tckn || member?.tc_identity_no || '',
+          dealer_address: v.dealer_address || (member as any)?.address || '',
+          dealer_country: country,
+          dealer_iban: iban,
+          swift_code: swift,
+          payout_type: country === 'TR' ? 'Yurt İçi IBAN' : 'Yurt Dışı IBAN + SWIFT/BIC',
+          bank_name: v.dealer_bank_name || member?.bank_details?.bank_name || '',
+          is_company: v.is_company,
+          gross_amount: v.gross_amount,
+          withholding_amount: v.withholding_amount,
+          net_amount: v.net_amount,
+          currency: v.currency,
+          release_at: v.created_at,
+          status: 'READY_FOR_PAYOUT',
+        };
+      });
 
     res.json({
       status: 'success',
@@ -12845,37 +12963,58 @@ async function startServer(options: { listen?: boolean } = {}) {
     try {
     const bank = ((req.query.bank as string) || 'GARANTI').toUpperCase() as 'GARANTI' | 'AKBANK' | 'ISBANK' | 'ZIRAAT';
     const rawIds = (req.query.commission_ids as string) || '';
-    const selectedIds = rawIds ? rawIds.split(',') : [];
+    const selectedIds = Array.from(new Set(rawIds.split(',').map((id) => id.trim()).filter(Boolean)));
+    if (selectedIds.length === 0) {
+      return res.status(400).json({ error: 'Banka dosyası için en az bir gider pusulası seçilmelidir.' });
+    }
     const voucherRows = await pgQuery("SELECT voucher_data FROM expense_vouchers WHERE status IN ('ISSUED', 'QUEUED_FOR_PAYOUT') ORDER BY created_at DESC, id DESC");
     let eligibleVouchers = (voucherRows?.rows || []).map((row: any) => row.voucher_data as ExpenseVoucherRecord).filter((voucher: any) => voucher && Object.keys(voucher).length > 0);
-    if (selectedIds.length > 0) {
-      eligibleVouchers = eligibleVouchers.filter((v) =>
-        selectedIds.includes(v.commission_log_id) || selectedIds.includes(v.voucher_number)
-      );
-    }
+    eligibleVouchers = eligibleVouchers.filter((v) =>
+      selectedIds.includes(v.commission_log_id) || selectedIds.includes(v.voucher_number)
+    );
 
     if (eligibleVouchers.length === 0) {
       return res.status(400).json({ error: 'Toplu dosya için bekleyen hakediş bulunamadı.' });
     }
 
-    const items: PendingPayoutItem[] = eligibleVouchers.map((v) => ({
-      commission_id: v.commission_log_id,
-      voucher_number: v.voucher_number,
-      ettn_uuid: v.ettn_uuid,
-      order_id: v.order_id,
-      dealer_user_id: v.dealer_user_id,
-      dealer_name: v.dealer_full_name,
-      dealer_tckn: v.dealer_tckn,
-      dealer_iban: v.dealer_iban,
-      bank_name: bank,
-      is_company: v.is_company,
-      gross_amount: v.gross_amount,
-      withholding_amount: v.withholding_amount,
-      net_amount: v.net_amount,
-      currency: v.currency,
-      release_at: v.created_at,
-      status: 'READY_FOR_PAYOUT',
-    }));
+    const items: PendingPayoutItem[] = eligibleVouchers.map((v) => {
+      const member = members.find((m) => m.user_id === v.dealer_user_id);
+      const country = v.dealer_country || member?.country_code || '';
+      return {
+        commission_id: v.commission_log_id,
+        voucher_number: v.voucher_number,
+        ettn_uuid: v.ettn_uuid,
+        order_id: v.order_id,
+        dealer_user_id: v.dealer_user_id,
+        dealer_name: v.dealer_full_name || member?.full_name || '',
+        dealer_tckn: v.dealer_tckn || member?.tc_identity_no || '',
+        dealer_address: v.dealer_address || (member as any)?.address || '',
+        dealer_country: country,
+        dealer_iban: v.dealer_iban || member?.bank_details?.iban || '',
+        swift_code: v.dealer_swift || member?.bank_details?.swift_code || '',
+        payout_type: country === 'TR' ? 'Yurt İçi IBAN' : 'Yurt Dışı IBAN + SWIFT/BIC',
+        bank_name: v.dealer_bank_name || member?.bank_details?.bank_name || bank,
+        is_company: v.is_company,
+        gross_amount: v.gross_amount,
+        withholding_amount: v.withholding_amount,
+        net_amount: v.net_amount,
+        currency: v.currency,
+        release_at: v.created_at,
+        status: 'READY_FOR_PAYOUT',
+      };
+    });
+    const missingData = items.filter((item) =>
+      !item.dealer_name || !/^\d{10,11}$/.test(item.dealer_tckn) || !item.dealer_iban ||
+      (item.dealer_country !== 'TR' && !item.swift_code)
+    );
+    if (missingData.length > 0) {
+      return res.status(422).json({
+        status: 'error',
+        code: 'PAYOUT_DATA_INCOMPLETE',
+        message: 'Banka dosyası oluşturulmadı; seçili kayıtların alıcı adı, vergi/T.C. kimlik no, IBAN veya yurt dışı SWIFT/BIC bilgileri eksik.',
+        missing_vouchers: missingData.map((item) => item.voucher_number),
+      });
+    }
 
     const file = generateBankBatchFile(bank, items);
     res.setHeader('Content-Type', file.mimeType);

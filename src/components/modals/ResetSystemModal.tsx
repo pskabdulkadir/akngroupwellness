@@ -183,7 +183,7 @@ export const ResetSystemModal: React.FC<ResetSystemModalProps> = ({
         {/* Footer */}
         <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-xs">
           <span className="text-slate-500 text-[11px]">
-            AKN Global Group Ltd. Vergi &amp; Finans Altyapısı
+            AKN Global Group Vergi &amp; Finans Altyapısı
           </span>
           <button
             onClick={onClose}

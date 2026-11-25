@@ -1,5 +1,7 @@
 export type Currency = 'TRY' | 'USD' | 'EUR';
 
+import { COMPANY_IDENTITY } from '../config/companyIdentity';
+
 export type InvoiceScenario = 'TEMELFATURA' | 'TICARIFATURA' | 'EARSIVBELGE' | 'IHRACAT' | 'IADE';
 
 export type InvoiceType = 'SATIS' | 'HIZMET_IHRACI' | 'KOMISYON_GIDER' | 'IADE';
@@ -395,7 +397,7 @@ export interface ProactiveAlert {
   dismissed?: boolean;
 }
 
-// 8. AKN GLOBAL GROUP LTD. KURUMSAL KİMLİK & DİNAMİK ŞİRKET PROFİLİ
+// 8. AKN GLOBAL GROUP KURUMSAL KİMLİK & DİNAMİK ŞİRKET PROFİLİ
 export interface CompanyProfile {
   legalName: string;
   shortName: string;
@@ -428,30 +430,30 @@ export interface CompanyProfile {
 }
 
 export const INITIAL_COMPANY_PROFILE: CompanyProfile = {
-  legalName: 'AKN Global Group Ltd.',
-  shortName: 'AKN Global',
-  tradeTitle: 'AKN Global Group Ltd. Teknoloji & Dijital Finans Direktörlüğü',
-  vkn: '0849201948',
-  taxOffice: 'Büyük Mükellefler V.D. / Kadıköy',
-  taxOfficeCode: '34251',
-  address: 'Levent Mah. Büyükdere Cad. No: 195 K:12 Beşiktaş / İstanbul',
-  city: 'İstanbul',
-  district: 'Beşiktaş',
-  postalCode: '34394',
-  tradeRegistryNumber: '958204-5',
-  mersisNumber: '0084920194800001',
-  kepAddress: 'aknglobal@hs01.kep.tr',
-  email: 'finans@aknglobal.com',
-  website: 'www.aknglobal.com',
-  phone: '+90 (212) 892 40 00',
-  cfoTitle: 'Sanal Finans Direktörü (AI CFO & Mali Müşavir)',
-  directorName: 'Ece Yılmaz (Mali İşler Direktörü & AI CFO)',
-  gibIntegrator: 'UYUMSOFT',
-  gibApiKey: 'akn_live_sec_994821a8f01b',
-  gibApiSecret: 'gib_token_77a942b001fe9d',
-  gibSenderIdentifier: 'urn:mail:defaultgb@aknglobal.com',
-  gibReceiverIdentifier: 'urn:mail:defaultpk@aknglobal.com',
-  gibEndpointUrl: 'https://efatura-test.uyumsoft.com.tr/services/integration',
+  legalName: COMPANY_IDENTITY.legalName,
+  shortName: COMPANY_IDENTITY.brandName,
+  tradeTitle: COMPANY_IDENTITY.legalName,
+  vkn: COMPANY_IDENTITY.taxNumber,
+  taxOffice: COMPANY_IDENTITY.taxOffice,
+  taxOfficeCode: '',
+  address: COMPANY_IDENTITY.address,
+  city: '',
+  district: '',
+  postalCode: '',
+  tradeRegistryNumber: '',
+  mersisNumber: '',
+  kepAddress: '',
+  email: COMPANY_IDENTITY.contactEmail,
+  website: COMPANY_IDENTITY.website,
+  phone: COMPANY_IDENTITY.internationalPhone,
+  cfoTitle: 'Şirket Yetkilisi',
+  directorName: COMPANY_IDENTITY.authorizedPerson,
+  gibIntegrator: 'GIB_PORTAL',
+  gibApiKey: '',
+  gibApiSecret: '',
+  gibSenderIdentifier: '',
+  gibReceiverIdentifier: '',
+  gibEndpointUrl: '',
   isSandbox: true,
   waybillStatusDefault: 'ISSUED',
   smmmReadOnlyAccessEnabled: true,
@@ -543,7 +545,10 @@ export interface ExpenseVoucherRecord {
   dealer_tckn: string;
   dealer_tax_office?: string;
   dealer_address?: string;
+  dealer_country?: string;
   dealer_iban: string;
+  dealer_swift?: string;
+  dealer_bank_name?: string;
   is_company: boolean;
   gross_amount: number;
   withholding_rate: number;
@@ -599,7 +604,11 @@ export interface PendingPayoutItem {
   dealer_user_id: string;
   dealer_name: string;
   dealer_tckn: string;
+  dealer_address?: string;
+  dealer_country?: string;
   dealer_iban: string;
+  swift_code?: string;
+  payout_type?: string;
   bank_name: string;
   is_company: boolean;
   gross_amount: number;

@@ -57,9 +57,7 @@ export const CompanyTaxSettingsView: React.FC<CompanyTaxSettingsViewProps> = ({
     };
     onUpdateCompanyProfile(updated);
     setSaveSuccess(true);
-    SpeechEngine.speak(
-      `${updated.legalName} vergi ve şirket yapılandırmanız başarıyla kaydedildi. Tüm e-fatura ve GİB şablonlarına yansıtıldı.`
-    );
+    SpeechEngine.speak(`${updated.legalName} şirket profili bu tarayıcıya kaydedildi.`);
     setTimeout(() => setSaveSuccess(false), 5000);
   };
 
@@ -69,9 +67,9 @@ export const CompanyTaxSettingsView: React.FC<CompanyTaxSettingsViewProps> = ({
     setTimeout(() => {
       setIsTestingApi(false);
       setApiTestResult({
-        success: true,
-        message: `${formData.gibIntegrator} e-Fatura / e-Arşiv API sunucusuna başarıyla bağlanıldı (HTTP 200 OK). ETTN & VKN doğrulaması geçerli.`,
-        pingMs: 42,
+        success: false,
+        message: 'Bu sürümde GİB/özel entegratör bağlantısı yapılandırılmamış; gerçek fatura gönderimi veya ETTN doğrulaması yapılmadı.',
+        pingMs: 0,
       });
     }, 900);
   };
@@ -142,7 +140,7 @@ export const CompanyTaxSettingsView: React.FC<CompanyTaxSettingsViewProps> = ({
                 Şirket ve Vergi Yapılandırması Başarıyla Kaydedildi!
               </p>
               <p className="text-[11px] text-emerald-800">
-                Yeni unvan ({formData.legalName}), Vergi Dairesi ({formData.taxOffice}) ve VKN ({formData.vkn}) tüm e-Fatura, e-Arşiv ve e-Gider Pusulası şablonlarına anında entegre edildi.
+                Şirket profili bu tarayıcıda saklandı. GİB/entegratör bağlantısı kurulmadığından resmî belge düzenlenmiyor.
               </p>
             </div>
           </div>
@@ -189,12 +187,10 @@ export const CompanyTaxSettingsView: React.FC<CompanyTaxSettingsViewProps> = ({
           <div className="flex items-center gap-2">
             <span
               className={`text-xs font-mono font-bold px-3 py-1 rounded-full border ${
-                formData.isSandbox
-                  ? 'bg-amber-100 text-amber-900 border-amber-300'
-                  : 'bg-emerald-100 text-emerald-900 border-emerald-300 animate-pulse'
+                'bg-amber-100 text-amber-900 border-amber-300'
               }`}
             >
-              {formData.isSandbox ? '🟡 SANDBOX / TEST MODU' : '🟢 CANLI (PRODUCTION) MOD'}
+              {formData.isSandbox ? 'Test modu seçili' : 'Canlı seçili — bağlantı yok'}
             </span>
           </div>
         </div>
@@ -204,74 +200,57 @@ export const CompanyTaxSettingsView: React.FC<CompanyTaxSettingsViewProps> = ({
           {/* Adım 1 */}
           <div
             className={`p-3.5 rounded-xl border transition-all ${
-              !formData.isSandbox
-                ? 'bg-emerald-50/70 border-emerald-300 text-emerald-950'
-                : 'bg-slate-50 border-slate-200 text-slate-800'
+              'bg-amber-50/70 border-amber-300 text-amber-950'
             }`}
           >
             <div className="flex items-center justify-between font-bold text-[11px] mb-1.5">
               <span>1. Entegratör API Modu</span>
               <span className="font-mono text-[10px] bg-white px-1.5 py-0.5 rounded border border-slate-200">
-                {formData.isSandbox ? 'Sandbox' : 'Canlı'}
+                {formData.isSandbox ? 'Test' : 'Bağlı değil'}
               </span>
             </div>
             <p className="text-[11px] text-slate-600 leading-relaxed mb-3">
-              Özel Entegratör (Uyumsoft / Logo / Paraşüt) API modunu testten canlıya aktarma.
+              Entegratör bağlantısı yapılandırılmadı; test sonucu gerçek bağlantı olmadığını bildirir.
             </p>
             <button
               type="button"
-              onClick={() => {
-                const nextMode = !formData.isSandbox;
-                handleChange('isSandbox', nextMode);
-                if (!nextMode) {
-                  handleChange(
-                    'gibEndpointUrl',
-                    'https://efatura.uyumsoft.com.tr/services/integration'
-                  );
-                  SpeechEngine.speak('GİB Özel Entegratör API çalışma modu Canlı Production ortamına geçirildi.');
-                } else {
-                  handleChange(
-                    'gibEndpointUrl',
-                    'https://efatura-test.uyumsoft.com.tr/services/integration'
-                  );
-                }
-              }}
+              onClick={handleTestApiConnection}
               className={`w-full py-1.5 rounded-lg font-bold text-[11px] transition-colors ${
                 formData.isSandbox
                   ? 'bg-slate-900 hover:bg-slate-800 text-white'
                   : 'bg-emerald-600 hover:bg-emerald-700 text-white'
               }`}
             >
-              {formData.isSandbox ? '🚀 Canlı (Prod) Moduna Geç' : '✓ Canlı Mod Aktif (Test Yap)'}
+              Entegratör bağlantısını test et
             </button>
           </div>
 
           {/* Adım 2 */}
-          <div className="p-3.5 rounded-xl border bg-emerald-50/70 border-emerald-300 text-emerald-950">
+          <div className="p-3.5 rounded-xl border bg-amber-50/70 border-amber-300 text-amber-950">
             <div className="flex items-center justify-between font-bold text-[11px] mb-1.5">
               <span>2. TCMB Canlı Kur API</span>
-              <span className="font-mono text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-bold">
-                ✓ Doğrulandı
+              <span className="font-mono text-[10px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-bold">
+                Doğrulanmadı
               </span>
             </div>
             <p className="text-[11px] text-slate-600 leading-relaxed mb-3">
-              $3x$ USD satışlarda sipariş anı kuru (34.250 ₺) snapshot dondurularak deftere yazılıyor.
+              Canlı kur API bağlantısı bu ekranda doğrulanmıyor.
             </p>
             <div className="p-1.5 bg-white rounded border border-emerald-200 font-mono text-[10px] text-emerald-800 text-center font-bold">
-              USD/TRY: 34.250 ₺ · EUR: 37.180 ₺
+              Canlı kur bağlantısı doğrulanmadı
             </div>
           </div>
 
           {/* Adım 3 */}
-          <div className="p-3.5 rounded-xl border bg-emerald-50/70 border-emerald-300 text-emerald-950">
+          <div className="p-3.5 rounded-xl border bg-amber-50/70 border-amber-300 text-amber-950">
             <div className="flex items-center justify-between font-bold text-[11px] mb-1.5">
               <span>3. GİB / İVD Test Faturası</span>
-              <span className="font-mono text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-bold">
-                ✓ Doğrulandı
+              <span className="font-mono text-[10px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-bold">
+                Doğrulanmadı
               </span>
             </div>
             <p className="text-[11px] text-slate-600 leading-relaxed mb-3">
-              UBL-TR 2.1 XML dosya yapısı geçerli, %20 stopaj tahakkuk ekranına otomatik yansıyor.
+              XML çıktısı taslak niteliğindedir; GİB doğrulaması ve stopaj tahakkuk entegrasyonu yapılmamıştır.
             </p>
             <button
               type="button"
@@ -283,15 +262,15 @@ export const CompanyTaxSettingsView: React.FC<CompanyTaxSettingsViewProps> = ({
           </div>
 
           {/* Adım 4 */}
-          <div className="p-3.5 rounded-xl border bg-emerald-50/70 border-emerald-300 text-emerald-950">
+          <div className="p-3.5 rounded-xl border bg-amber-50/70 border-amber-300 text-amber-950">
             <div className="flex items-center justify-between font-bold text-[11px] mb-1.5">
               <span>4. Sesli Onay &amp; Audit Log</span>
-              <span className="font-mono text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-bold">
-                ✓ Aktif
+              <span className="font-mono text-[10px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-bold">
+                Doğrulanmadı
               </span>
             </div>
             <p className="text-[11px] text-slate-600 leading-relaxed mb-3">
-              Çift Onaylı Güvenlik Kilidi devrede; her sesli işlem voice_command_logs'a işleniyor.
+              Bu kartta sesli işlem veya denetim günlüğü bağlantısı doğrulanmıyor.
             </p>
             <button
               type="button"
@@ -331,7 +310,7 @@ export const CompanyTaxSettingsView: React.FC<CompanyTaxSettingsViewProps> = ({
                 value={formData.legalName}
                 onChange={(e) => handleChange('legalName', e.target.value)}
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 font-semibold focus:ring-2 focus:ring-slate-900 focus:outline-hidden"
-                placeholder="Örn: AKN Global Group Ltd."
+                placeholder="AKN Global Group — Abdulkadir Kan (Şahıs Şirketi)"
                 required
               />
             </div>
@@ -351,8 +330,7 @@ export const CompanyTaxSettingsView: React.FC<CompanyTaxSettingsViewProps> = ({
             {/* Vergi Dairesi Adı */}
             <div className="space-y-1.5">
               <label className="font-semibold text-slate-700 flex items-center justify-between">
-                <span>Bağlı Olunan Vergi Dairesi *</span>
-                <span className="text-[10px] text-emerald-700 font-mono font-bold">Kayıtlı</span>
+                <span>Bağlı Olunan Vergi Dairesi</span>
               </label>
               <input
                 id="company-tax-office-input"
@@ -361,7 +339,6 @@ export const CompanyTaxSettingsView: React.FC<CompanyTaxSettingsViewProps> = ({
                 onChange={(e) => handleChange('taxOffice', e.target.value)}
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
                 placeholder="Örn: Büyük Mükellefler V.D. / Kadıköy"
-                required
               />
             </div>
 
@@ -380,17 +357,17 @@ export const CompanyTaxSettingsView: React.FC<CompanyTaxSettingsViewProps> = ({
             {/* VKN */}
             <div className="space-y-1.5">
               <label className="font-semibold text-slate-700 flex items-center justify-between">
-                <span>Vergi Kimlik No (VKN) *</span>
-                <span className="text-[10px] font-mono text-slate-400">10 Haneli</span>
+                <span>Vergi Kimlik No / T.C. Kimlik No *</span>
+                <span className="text-[10px] font-mono text-slate-400">10 veya 11 hane</span>
               </label>
               <input
                 id="company-vkn-input"
                 type="text"
-                maxLength={10}
+                maxLength={11}
                 value={formData.vkn}
                 onChange={(e) => handleChange('vkn', e.target.value)}
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 font-mono font-bold tracking-wider focus:ring-2 focus:ring-slate-900 focus:outline-hidden"
-                placeholder="0849201948"
+                placeholder="T.C. Kimlik No / Vergi Kimlik No"
                 required
               />
             </div>
@@ -403,7 +380,7 @@ export const CompanyTaxSettingsView: React.FC<CompanyTaxSettingsViewProps> = ({
                 value={formData.mersisNumber}
                 onChange={(e) => handleChange('mersisNumber', e.target.value)}
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 font-mono text-xs focus:ring-2 focus:ring-slate-900 focus:outline-hidden"
-                placeholder="0084920194800001"
+                placeholder="Resmî kayıttaki numara (varsa)"
               />
             </div>
 
@@ -415,7 +392,7 @@ export const CompanyTaxSettingsView: React.FC<CompanyTaxSettingsViewProps> = ({
                 value={formData.tradeRegistryNumber}
                 onChange={(e) => handleChange('tradeRegistryNumber', e.target.value)}
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 font-mono focus:ring-2 focus:ring-slate-900 focus:outline-hidden"
-                placeholder="958204-5"
+                placeholder="Resmî kayıttaki numara (varsa)"
               />
             </div>
 
@@ -460,7 +437,7 @@ export const CompanyTaxSettingsView: React.FC<CompanyTaxSettingsViewProps> = ({
                 value={formData.address}
                 onChange={(e) => handleChange('address', e.target.value)}
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 focus:ring-2 focus:ring-blue-500 focus:outline-hidden"
-                placeholder="Levent Mah. Büyükdere Cad. No: 195 K:12 Beşiktaş / İstanbul"
+                placeholder="Ahmet Yesevi Mahallesi, Şehit Piyade Er Cuma Uçar Caddesi, Furkan Apt. Giriş Kat No: 2"
                 required
               />
             </div>
@@ -527,7 +504,7 @@ export const CompanyTaxSettingsView: React.FC<CompanyTaxSettingsViewProps> = ({
                 value={formData.email}
                 onChange={(e) => handleChange('email', e.target.value)}
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 focus:ring-2 focus:ring-slate-900 focus:outline-hidden"
-                placeholder="finans@aknglobal.com"
+                placeholder="psikologabdulkadirkan@gmail.com"
               />
             </div>
 
@@ -542,7 +519,7 @@ export const CompanyTaxSettingsView: React.FC<CompanyTaxSettingsViewProps> = ({
                 value={formData.website}
                 onChange={(e) => handleChange('website', e.target.value)}
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 focus:ring-2 focus:ring-slate-900 focus:outline-hidden"
-                placeholder="www.aknglobal.com"
+                placeholder="https://akngroupwellness.com"
               />
             </div>
           </div>
@@ -558,7 +535,7 @@ export const CompanyTaxSettingsView: React.FC<CompanyTaxSettingsViewProps> = ({
                   3. GİB Özel Entegratör &amp; e-Fatura API Anahtarları
                 </h3>
                 <p className="text-[11px] text-slate-500">
-                  Faturanın Gelir İdaresi Başkanlığı'na otomatik iletilmesini sağlayan web servis parametreleri
+                  Entegratör bağlantısı kurulursa kullanılacak web servis parametreleri
                 </p>
               </div>
             </div>
@@ -640,7 +617,7 @@ export const CompanyTaxSettingsView: React.FC<CompanyTaxSettingsViewProps> = ({
                 value={formData.gibSenderIdentifier}
                 onChange={(e) => handleChange('gibSenderIdentifier', e.target.value)}
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 font-mono text-xs focus:ring-2 focus:ring-slate-900 focus:outline-hidden"
-                placeholder="urn:mail:defaultgb@aknglobal.com"
+                placeholder="Entegratörün verdiği gönderici etiketi"
               />
             </div>
 
@@ -652,7 +629,7 @@ export const CompanyTaxSettingsView: React.FC<CompanyTaxSettingsViewProps> = ({
                 value={formData.gibReceiverIdentifier}
                 onChange={(e) => handleChange('gibReceiverIdentifier', e.target.value)}
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 font-mono text-xs focus:ring-2 focus:ring-slate-900 focus:outline-hidden"
-                placeholder="urn:mail:defaultpk@aknglobal.com"
+                placeholder="Entegratörün verdiği posta kutusu etiketi"
               />
             </div>
 
@@ -701,7 +678,7 @@ export const CompanyTaxSettingsView: React.FC<CompanyTaxSettingsViewProps> = ({
                 </span>
               </div>
               <p className="text-[11px] text-slate-600 leading-relaxed">
-                Fiziksel ürün, seans cihazı veya takviye gıda satışlarında e-İrsaliye UBL-TR formatında otomatik üretilir.
+                Bu bölüm yalnızca irsaliye varsayılanını saklar; resmî e-İrsaliye bağlantısı kurulmamıştır.
               </p>
               <div className="space-y-1">
                 <label className="font-semibold text-slate-700">Varsayılan İrsaliye Durumu</label>
@@ -710,7 +687,7 @@ export const CompanyTaxSettingsView: React.FC<CompanyTaxSettingsViewProps> = ({
                   onChange={(e) => handleChange('waybillStatusDefault', e.target.value)}
                   className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-slate-900 bg-white font-medium"
                 >
-                  <option value="ISSUED">Otomatik Sevk İrsaliyesi Düzenle (ISSUED)</option>
+                  <option value="ISSUED">Gönderim durumunu taslakta tut (ISSUED)</option>
                   <option value="DRAFT">Taslak Olarak Oluştur (DRAFT)</option>
                   <option value="DELIVERED">Teslim Edildi Olarak Kapat (DELIVERED)</option>
                 </select>

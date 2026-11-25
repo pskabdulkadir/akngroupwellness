@@ -1,5 +1,6 @@
 import { doc, onSnapshot, setDoc, Unsubscribe, db } from '../lib/db';
 import { BANK_INFO, setAdminPhone } from './authManager';
+import { COMPANY_IDENTITY } from '../config/companyIdentity';
 
 export interface SiteContent {
   bankName: string;
@@ -10,10 +11,10 @@ export interface SiteContent {
 }
 
 export const DEFAULT_SITE_CONTENT: SiteContent = {
-  bankName: 'QNB Finansbank',
-  accountHolder: 'Abdulkadir Kan',
-  iban: 'TR32 0015 7000 0000 0091 7751 22',
-  supportPhone: '+90 542 578 37 48',
+  bankName: '',
+  accountHolder: COMPANY_IDENTITY.authorizedPerson,
+  iban: '',
+  supportPhone: COMPANY_IDENTITY.internationalPhone,
   affiliateBadge: 'AFFILIATE v2.5',
 };
 
@@ -40,6 +41,10 @@ function normalizeSiteContent(raw: Partial<SiteContent> | undefined): SiteConten
     const value = raw?.[key];
     if (typeof value === 'string' && value.trim()) merged[key] = value.trim();
   });
+  if (merged.iban.replace(/\s/g, '') === 'TR320015700000000091775122') {
+    merged.iban = '';
+    merged.bankName = '';
+  }
   return merged;
 }
 

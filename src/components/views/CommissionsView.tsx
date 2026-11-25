@@ -23,6 +23,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import avatarDistributor from '../../assets/images/avatar_distributor_lead_1792512086444.jpg';
+import { jsPDF } from 'jspdf';
 
 interface CommissionsViewProps {
   distributors: Distributor[];
@@ -215,6 +216,32 @@ export const CommissionsView: React.FC<CommissionsViewProps> = ({
   const selectedTotalGross = selectedItems.reduce((acc, i) => acc + i.gross_amount, 0);
   const selectedTotalStopaj = selectedItems.reduce((acc, i) => acc + i.withholding_amount, 0);
   const selectedTotalNet = selectedItems.reduce((acc, i) => acc + i.net_amount, 0);
+
+  const handleDownloadPayoutPdf = () => {
+    const doc = new jsPDF({ orientation: 'landscape' });
+    let y = 16;
+    doc.setFontSize(14);
+    doc.text('Toplu bayi ödeme listesi - taslak', 14, y);
+    y += 8;
+    doc.setFontSize(8);
+    doc.text('Banka talimatı taslağıdır; banka tarafından işlenmiş veya ödenmiş anlamına gelmez.', 14, y);
+    y += 8;
+    selectedItems.forEach((item, index) => {
+      const details = [
+        `${index + 1}. ${item.dealer_name} | ${item.is_company ? 'VKN' : 'TCKN'}: ${item.dealer_tckn}`,
+        `Ülke: ${item.dealer_country || 'Belirtilmemiş'} | ${item.payout_type || 'Ödeme türü belirtilmemiş'} | IBAN: ${item.dealer_iban || 'Eksik'} | SWIFT/BIC: ${item.swift_code || '—'}`,
+        `Net: ${item.net_amount.toFixed(2)} ${item.currency} | Belge: ${item.voucher_number} | Açıklama: AKN Global Group bayi hakedişi ${item.voucher_number}`,
+      ];
+      const lines = doc.splitTextToSize(details.join('\n'), 265);
+      if (y + lines.length * 4 > 190) {
+        doc.addPage();
+        y = 16;
+      }
+      doc.text(lines, 14, y);
+      y += lines.length * 4 + 4;
+    });
+    doc.save(`toplu-odeme-taslagi-${new Date().toISOString().slice(0, 10)}.pdf`);
+  };
 
   // Gider Pusulası Görüntüleme Köprüsü
   const handleOpenVoucherModal = (v: ExpenseVoucherRecord | PendingPayoutItem) => {
@@ -410,7 +437,16 @@ export const CommissionsView: React.FC<CommissionsViewProps> = ({
                 className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 rounded-lg shadow-2xs transition-colors disabled:opacity-50"
               >
                 <Download className="w-3.5 h-3.5" />
-                Banka İçin Toplu Ödeme Listesi İndir (.CSV)
+                Ödeme Listesi İndir (.CSV / Excel)
+              </button>
+              <button
+                type="button"
+                onClick={handleDownloadPayoutPdf}
+                disabled={selectedItems.length === 0}
+                className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-slate-700 bg-white border border-slate-300 hover:bg-slate-100 rounded-lg disabled:opacity-50"
+              >
+                <FileCode className="w-3.5 h-3.5" />
+                PDF İndir
               </button>
 
               <button
@@ -433,7 +469,8 @@ export const CommissionsView: React.FC<CommissionsViewProps> = ({
                   <th className="py-3 px-4 w-10 text-center">Seç</th>
                   <th className="py-3 px-4">Pusula No / Hakediş</th>
                   <th className="py-3 px-4">Hak Sahibi Bayi (TCKN/VKN)</th>
-                  <th className="py-3 px-4">Banka &amp; IBAN Bilgisi</th>
+                  <th className="py-3 px-4">Ülke / Ödeme Türü</th>
+                  <th className="py-3 px-4">Banka &amp; IBAN / SWIFT</th>
                   <th className="py-3 px-4 text-right">Brüt Hakediş</th>
                   <th className="py-3 px-4 text-right">Tahmini Stopaj</th>
                   <th className="py-3 px-4 text-right font-bold text-emerald-800">Tahmini Net</th>
@@ -444,7 +481,7 @@ export const CommissionsView: React.FC<CommissionsViewProps> = ({
               <tbody className="divide-y divide-slate-100 font-mono">
                 {pendingPayouts.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="py-8 text-center text-slate-500 font-sans">
+                    <td colSpan={10} className="py-8 text-center text-slate-500 font-sans">
                       Ödeme bekleyen hakediş bulunmuyor. Tüm hak edişler tediye edildi.
                     </td>
                   </tr>
@@ -482,24 +519,28 @@ export const CommissionsView: React.FC<CommissionsViewProps> = ({
                             {item.is_company ? `VKN: ${item.dealer_tckn}` : `TCKN: ${item.dealer_tckn}`}
                           </span>
                         </td>
+                        <td className="py-3 px-4 font-sans">
+                          <span className="text-slate-800 font-medium">{item.dealer_country || 'Ülke belirtilmemiş'}</span>
+                          <span className="block text-[10px] text-slate-500">{item.payout_type || 'Ödeme türü belirtilmemiş'}</span>
+                        </td>
                         <td className="py-3 px-4 font-mono">
-                          <span className="text-slate-800 font-medium">{item.dealer_iban}</span>
-                          <span className="block text-[10px] text-slate-400 font-sans">Garanti BBVA / FAST</span>
+                          <span className="text-slate-800 font-medium">{item.dealer_iban || 'IBAN eksik'}</span>
+                          <span className="block text-[10px] text-slate-500 font-sans">{item.bank_name || 'Banka belirtilmemiş'} · SWIFT/BIC: {item.swift_code || '—'}</span>
                         </td>
                         <td className="py-3 px-4 text-right font-semibold text-slate-900">
-                          {item.gross_amount.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺
+                          {item.gross_amount.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} {item.currency}
                         </td>
                         <td className="py-3 px-4 text-right font-semibold">
                           {item.is_company ? (
-                            <span className="text-slate-400">0.00 ₺ (%0 Şirket)</span>
+                            <span className="text-slate-400">0.00 {item.currency} (%0 şirket profili)</span>
                           ) : (
                             <span className="text-red-700">
-                              -{item.withholding_amount.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺
+                              -{item.withholding_amount.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} {item.currency}
                             </span>
                           )}
                         </td>
                         <td className="py-3 px-4 text-right font-bold text-emerald-700 text-sm">
-                          {item.net_amount.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺
+                          {item.net_amount.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} {item.currency}
                         </td>
                         <td className="py-3 px-4 text-center font-sans">
                           <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">

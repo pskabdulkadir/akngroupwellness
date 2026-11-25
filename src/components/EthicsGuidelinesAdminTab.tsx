@@ -55,7 +55,7 @@ export const EthicsGuidelinesAdminTab: React.FC<EthicsGuidelinesAdminTabProps> =
       <div>
         <h3 className="text-base font-bold text-slate-100">Etik Kurallar &amp; Ticari Davranış İlkeleri</h3>
         <p className="mt-1 text-xs text-slate-400">
-          Bu metin bayi panellerine anlık olarak yayınlanır. © 2026 AKN Global Group Ltd. Tüm hakları saklıdır.
+          Bu metin bayi panellerine anlık olarak yayınlanır. © 2026 AKN Global Group. Tüm hakları saklıdır.
         </p>
       </div>
       <textarea

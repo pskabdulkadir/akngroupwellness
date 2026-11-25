@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { INTEGRATORS, IntegratorConfig } from '../../services/gibIntegrator';
 import {
   Sliders,
-  CheckCircle2,
+  AlertTriangle,
   Shield,
   Search,
   RefreshCw,
@@ -14,55 +14,32 @@ import {
 export const IntegratorSettingsView: React.FC = () => {
   const [integrators, setIntegrators] = useState<IntegratorConfig[]>(INTEGRATORS);
   const [selectedIntegratorId, setSelectedIntegratorId] = useState<'Uyumsoft' | 'Logo' | 'Parasut' | 'NetGSM'>('Uyumsoft');
-  const [testVkn, setTestVkn] = useState('6120482910');
+  const [testVkn, setTestVkn] = useState('');
   const [vknQueryResult, setVknQueryResult] = useState<{
     registered: boolean;
     title?: string;
     alias?: string;
     queryDate?: string;
-  } | null>({
-    registered: true,
-    title: 'Mavi Yelken Bilişim Danışmanlık A.Ş.',
-    alias: 'urn:mail:defaultpk@maviyelken.com.tr',
-    queryDate: '2026-10-20 09:12:00',
-  });
+    unavailable?: boolean;
+  } | null>(null);
   const [isQuerying, setIsQuerying] = useState(false);
-  const [connectionTestSuccess, setConnectionTestSuccess] = useState<string | null>(null);
+  const [connectionTestMessage, setConnectionTestMessage] = useState<string | null>(null);
 
   const activeConfig = integrators.find((i) => i.id === selectedIntegratorId) || integrators[0];
 
   const handleTestConnection = () => {
-    setConnectionTestSuccess(null);
-    setTimeout(() => {
-      setConnectionTestSuccess(`${activeConfig.name} bağlantısı başarılı (Ping: 42ms, TLS 1.3, Mali Mühür Sertifikası Geçerli).`);
-      setTimeout(() => setConnectionTestSuccess(null), 5000);
-    }, 500);
+    setConnectionTestMessage('Bu uygulamada entegratör bağlantısı yapılandırılmamış; ağ testi veya mali mühür doğrulaması yapılmadı.');
   };
 
   const handleQueryVkn = () => {
     setIsQuerying(true);
     setVknQueryResult(null);
-    setTimeout(() => {
-      setIsQuerying(false);
-      if (testVkn === '6120482910' || testVkn === '9482103948' || testVkn === '1048201948') {
-        setVknQueryResult({
-          registered: true,
-          title:
-            testVkn === '6120482910'
-              ? 'Mavi Yelken Bilişim Danışmanlık A.Ş.'
-              : testVkn === '1048201948'
-              ? 'Anadolu Bilişim ve Teknoloji A.Ş.'
-              : 'VergiSync Teknoloji Yazılım A.Ş.',
-          alias: 'urn:mail:defaultpk@kurum.com.tr',
-          queryDate: new Date().toISOString().replace('T', ' ').substring(0, 19),
-        });
-      } else {
-        setVknQueryResult({
-          registered: false,
-          queryDate: new Date().toISOString().replace('T', ' ').substring(0, 19),
-        });
-      }
-    }, 600);
+    setIsQuerying(false);
+    setVknQueryResult({
+      registered: false,
+      unavailable: true,
+      queryDate: new Date().toISOString().replace('T', ' ').substring(0, 19),
+    });
   };
 
   return (
@@ -70,17 +47,17 @@ export const IntegratorSettingsView: React.FC = () => {
       {/* Header */}
       <div>
         <h2 className="text-lg font-bold text-slate-900 tracking-tight">
-          GİB Lisanslı Özel Entegratör API Yönetimi
+          GİB / Özel Entegratör Bağlantı Ayarları
         </h2>
         <p className="text-xs text-slate-500">
-          Logo, Uyumsoft, Paraşüt ve NetGSM e-Fatura / e-Arşiv bağlantıları ve GİB mükellefiyet sorgulama motoru
+          Entegratör yapılandırmaları ve bağlantı durumu. Bu sürümde canlı bağlantı veya GİB mükellefiyet sorgusu yapılmıyor.
         </p>
       </div>
 
-      {connectionTestSuccess && (
-        <div className="bg-emerald-50 border border-emerald-200 p-4 rounded-xl text-xs font-medium text-emerald-800 flex items-center gap-2">
-          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-          <span>{connectionTestSuccess}</span>
+      {connectionTestMessage && (
+        <div className="bg-amber-50 border border-amber-200 p-4 rounded-xl text-xs font-medium text-amber-800 flex items-center gap-2">
+          <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+          <span>{connectionTestMessage}</span>
         </div>
       )}
 
@@ -108,10 +85,10 @@ export const IntegratorSettingsView: React.FC = () => {
                 </span>
                 <span
                   className={`text-[10px] font-mono ${
-                    isSelected ? 'text-emerald-300' : 'text-emerald-700'
+                    integ.status === 'CONNECTED' ? (isSelected ? 'text-emerald-300' : 'text-emerald-700') : (isSelected ? 'text-amber-300' : 'text-amber-700')
                   }`}
                 >
-                  ● Bağlı
+                  ● {integ.status === 'CONNECTED' ? 'Bağlı' : 'Bağlı değil'}
                 </span>
               </div>
 
@@ -139,14 +116,14 @@ export const IntegratorSettingsView: React.FC = () => {
                 {activeConfig.name} - Yapılandırma Parametreleri
               </h3>
               <p className="text-xs text-slate-500">
-                GİB e-Fatura / e-Arşiv UBL-TR 2.1 İletim Protokolü
+                Bağlantı bilgileri yalnızca yapılandırma içindir; belge gönderimi etkin değildir.
               </p>
             </div>
             <button
               onClick={handleTestConnection}
               className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-medium transition-colors"
             >
-              Bağlantıyı Test Et (Ping)
+              Bağlantı durumunu kontrol et
             </button>
           </div>
 
@@ -199,9 +176,9 @@ export const IntegratorSettingsView: React.FC = () => {
           <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs text-slate-600">
             <span className="flex items-center gap-2">
               <Shield className="w-4 h-4 text-emerald-600" />
-              <span>GİB Mali Mühür Sertifikası: TR-TÜBİTAK KamuSM Kamu Sertifikasyon Merkezi</span>
+              <span>Mali mühür bilgisi yapılandırılmadı</span>
             </span>
-            <span className="font-mono text-slate-400">Son Güncelleme: 2026-10-20</span>
+            <span className="font-mono text-slate-400">Canlı bağlantı doğrulanmadı</span>
           </div>
         </div>
 
@@ -212,7 +189,7 @@ export const IntegratorSettingsView: React.FC = () => {
               GİB e-Fatura Mükellef Sorgulama
             </h3>
             <p className="text-xs text-slate-500">
-              VKN/TCKN girerek sistemin e-Fatura mı e-Arşiv mi keseceğini test edin
+              VKN/TCKN girin; canlı GİB sorgusu bu sürümde kullanılamıyor.
             </p>
           </div>
 
@@ -231,7 +208,7 @@ export const IntegratorSettingsView: React.FC = () => {
                 />
                 <button
                   onClick={handleQueryVkn}
-                  disabled={isQuerying}
+                  disabled={isQuerying || !testVkn.trim()}
                   className="px-3 py-2 bg-slate-900 text-white rounded-lg text-xs font-medium hover:bg-slate-800 transition-colors"
                 >
                   {isQuerying ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
@@ -249,10 +226,10 @@ export const IntegratorSettingsView: React.FC = () => {
               >
                 <div className="flex items-center justify-between font-bold">
                   <span>
-                    {vknQueryResult.registered ? 'e-Fatura Mükellefi' : 'e-Fatura Mükellefi Değil'}
+                    {vknQueryResult.unavailable ? 'Sorgu yapılamadı' : vknQueryResult.registered ? 'e-Fatura Mükellefi' : 'e-Fatura Mükellefi Değil'}
                   </span>
                   <span className="text-[10px] font-mono">
-                    {vknQueryResult.registered ? 'TICARIFATURA Kesilir' : 'EARSIVBELGE Kesilir'}
+                    {vknQueryResult.unavailable ? 'Canlı servis bağlı değil' : vknQueryResult.registered ? 'TICARIFATURA' : 'EARSIVBELGE'}
                   </span>
                 </div>
                 {vknQueryResult.registered && (
@@ -261,9 +238,9 @@ export const IntegratorSettingsView: React.FC = () => {
                     <p className="font-mono text-slate-600">{vknQueryResult.alias}</p>
                   </div>
                 )}
-                {!vknQueryResult.registered && (
+                {vknQueryResult.unavailable && (
                   <p className="text-[11px] text-amber-800 leading-normal">
-                    Müşteri GİB e-Fatura sistemine kayıtlı olmadığından, 3DS ödemesinde otomatik olarak e-Arşiv Fatura düzenlenir.
+                    Bu sürümde GİB mükellefiyet sorgusu yapılandırılmamış; belge türü belirlenmedi.
                   </p>
                 )}
               </div>

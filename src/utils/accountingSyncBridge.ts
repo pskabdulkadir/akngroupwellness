@@ -22,6 +22,7 @@ export interface SyncTransactionPayload {
   channel?: string;
   timestamp?: string;
   taxOffice?: string;
+  paymentStatus?: 'PENDING' | 'PAID' | 'COMPLETED' | 'SETTLED';
 }
 
 const STORAGE_SYNCED_ORDERS_KEY = 'akn_synced_orders_v1';
@@ -59,11 +60,11 @@ class AccountingSyncBridge {
       }
 
       const token = getAdminToken() || getAccountingToken();
-      if (!token) return;
+      if (!token || !['PAID', 'COMPLETED', 'SETTLED'].includes(payload.paymentStatus || '')) return;
       const sourceEventType = payload.isDealerCommission
         ? 'COMMISSION_PENDING_ACCRUED'
         : 'ORDER_PAYMENT_CONFIRMED';
-      const eventKey = `${sourceEventType}:${payload.orderId}`;
+      const eventKey = payload.isDealerCommission ? `${sourceEventType}:${payload.orderId}` : payload.orderId;
 
       fetch('/api/v1/integrations/accounting/sync-event', {
         method: 'POST',
@@ -73,7 +74,7 @@ class AccountingSyncBridge {
           source_event_type: sourceEventType,
           source_event_id: eventKey,
           idempotency_key: `IDEMP-${eventKey}`,
-          payload: { ...payload, payment_status: 'PAID' },
+          payload: { ...payload, payment_status: payload.paymentStatus },
         }),
       }).catch((e) => console.warn('Async accounting sync notice failed:', e));
     } catch (err) {

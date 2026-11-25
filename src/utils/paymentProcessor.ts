@@ -1,3 +1,5 @@
+import { COMPANY_IDENTITY } from '../config/companyIdentity';
+
 export interface CreditCardDetails {
   cardHolder: string;
   cardNumber: string;
@@ -187,22 +189,22 @@ export const LEGAL_CONTRACT_TEXTS: Record<
     title: 'Ön Bilgilendirme Formu',
     version: 'v2.2',
     summary:
-      '6502 sayılı Tüketicinin Korunması Hakkında Kanun ve Mesafeli Sözleşmeler Yönetmeliği uyarınca dijital seans kredisi paketi, vergiler dahil toplam bedel, 3D Sanal POS ödeme ve 14 günlük cayma hakkı şartlarını içerir.',
+      'Dijital paket, toplam bedel ve sunulan ödeme yöntemine ilişkin ön bilgilendirme metnidir. Cayma hakkı, işlem koşulları ve yürürlükteki mevzuata göre değerlendirilir.',
     clauses: [
-      '1. SATICI BİLGİLERİ: AuraBio Frekans & Biyo-Rezonans Teknolojileri A.Ş. Tüm ödemeler yalnızca 256-Bit SSL 3D Secure Sanal POS üzerinden Kredi/Banka Kartı ile tahsil edilir; elden nakit, şahsi IBAN havalesi veya kripto varlık ile ödeme kabul edilmez.',
+      `1. SATICI BİLGİLERİ: ${COMPANY_IDENTITY.legalName}; T.C. Kimlik No: ${COMPANY_IDENTITY.taxNumber}; adres: ${COMPANY_IDENTITY.address}; telefon: ${COMPANY_IDENTITY.internationalPhone}; web: ${COMPANY_IDENTITY.website}. Ödeme seçenekleri sipariş ve ödeme ekranında gösterilir.`,
       '2. KONU HİZMET/PAKET: Seçilen seans kredisi paketinin KDV dahil toplam TL fiyatı ve yüklenecek seans kredisi adedi sipariş özetinde açıkça belirtilmiştir.',
-      '3. CAYMA HAKKI (14 GÜN): Alıcı, paket satın alım tarihinden itibaren 14 (on dört) gün içinde herhangi bir gerekçe göstermeksizin cayma hakkını kullanabilir. Cayma süresi boyunca oluşan komisyonlar 14 Günlük Cayma Koruması (Pending Balance) havuzunda bloke tutulur.',
+      '3. CAYMA HAKKI: Cayma hakkı ve uygulanabilecek istisnalar, siparişin niteliği ve yürürlükteki mevzuat çerçevesinde belirlenir. Sistem içi komisyon bekleme kuralları bu yasal değerlendirmeden ayrıdır.',
     ],
   },
   DISTANCE_SALES: {
     title: 'Mesafeli Satış Sözleşmesi',
     version: 'v2.2',
     summary:
-      'Alıcı ile AuraBio arasında elektronik ortamda kurulan, Sanal POS kredi kartı ödemesi ve dijital seans kredisi tanımlanmasına ilişkin resmi mesafeli satış sözleşmesidir.',
+      'Alıcı ile satıcı arasında dijital hizmet siparişine ilişkin sözleşme metnidir; yürürlüğe alınmadan önce hukuk danışmanı tarafından doğrulanmalıdır.',
     clauses: [
-      '1. TARAFLAR VE KONU: İşbu sözleşme, Alıcının elektronik ortamda sipariş verdiği AuraBio Seans Kredisi Paketinin satışı, dijital teslimi ve tarafların hak/yükümlülüklerini düzenler.',
-      '2. ÖDEME GÜVENLİĞİ: Ödeme işlemleri yalnızca BDDK/TCMB lisanslı Sanal POS altyapısı üzerinden kredi kartı ile gerçekleştirilir. Üçüncü şahıs IBAN hesaplarına veya kripto adreslerine ödeme yapılamaz.',
-      '3. İADE VE MAHSUPLAŞMA: 14 günlük yasal cayma süresi içinde iade talep edilmesi halinde kullanılmamış seans kredileri iptal edilir, bekleyen komisyonlar (Clawback) geri çekilir ve kartınıza iade gerçekleştirilir.',
+      `1. TARAFLAR VE KONU: Satıcı ${COMPANY_IDENTITY.legalName} (T.C. Kimlik No: ${COMPANY_IDENTITY.taxNumber}, ${COMPANY_IDENTITY.address}, ${COMPANY_IDENTITY.internationalPhone}, ${COMPANY_IDENTITY.website}); işbu sözleşme elektronik ortamda sipariş verilen dijital hizmetin teslimini ve tarafların hak/yükümlülüklerini düzenler.`,
+      '2. ÖDEME: Kullanılabilir ödeme yöntemi ödeme adımında gösterilir. Ödeme sağlayıcısının lisans ve güvenlik bilgileri işlemden önce ayrıca doğrulanmalıdır.',
+      '3. İPTAL VE İADE: İptal ve iade talepleri yürürlükteki tüketici mevzuatı ile siparişin teslim ve kullanım durumuna göre değerlendirilir. Kanuni haklar bu metinle sınırlandırılmaz.',
     ],
   },
   KVKK: {
@@ -211,9 +213,9 @@ export const LEGAL_CONTRACT_TEXTS: Record<
     summary:
       '6698 sayılı KVKK kapsamında kimlik, iletişim, finansal fatura/IBAN eşleşme ve sözleşme onay loglarının (IP ve zaman damgası) işlenmesine ilişkin aydınlatma metnidir.',
     clauses: [
-      '1. VERİ SORUMLUSU: 6698 sayılı Kişisel Verilerin Korunması Kanunu uyarınca kimlik, iletişim, sipariş ve banka IBAN ad-soyad eşleşme verileriniz yasal uyum ve faturalandırma amacıyla işlenmektedir.',
-      '2. SÖZLEŞME ONAY LOGLARI: Banka ve Ticaret Bakanlığı denetimleri kapsamında onayladığınız sözleşmelerin versiyonu (v2.2), IP adresiniz ve onay zaman damganız user_contract_approvals tablosunda değiştirilemez şekilde kayıt altına alınır.',
-      '3. VERİ GÜVENLİĞİ: Kredi kartı bilgileriniz sistemlerimizde kesinlikle saklanmaz; doğrudan PCI-DSS uyumlu Sanal POS ödeme kuruluşu üzerinden şifreli olarak işlenir.',
+      `1. VERİ SORUMLUSU: ${COMPANY_IDENTITY.legalName}, ${COMPANY_IDENTITY.address}; iletişim: ${COMPANY_IDENTITY.internationalPhone}, ${COMPANY_IDENTITY.contactEmail}. Kimlik, iletişim, sipariş ve ödeme verileri hizmetin sunulması ve mevzuattan doğan yükümlülükler kapsamında işlenir.`,
+      '2. SÖZLEŞME ONAY KAYDI: Onay durumu ve işlemle ilişkilendirilen kayıtlar, sistemin mevcut saklama ve erişim yapılandırmasına tabidir.',
+      '3. ÖDEME VERİLERİ: Kart verilerinin işlenmesi kullanılan ödeme sağlayıcısının altyapısına ve koşullarına bağlıdır; bu metin kart verilerinin saklanmadığını tek başına doğrulamaz.',
     ],
   },
   MLM_TERMS: {

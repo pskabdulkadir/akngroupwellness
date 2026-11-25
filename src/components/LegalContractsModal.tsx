@@ -16,7 +16,8 @@ import {
   Mail,
   Printer
 } from 'lucide-react';
-import { BANK_INFO, ADMIN_PHONE, ADMIN_EMAILS } from '../utils/authManager';
+import { ADMIN_PHONE, ADMIN_EMAILS } from '../utils/authManager';
+import { COMPANY_IDENTITY } from '../config/companyIdentity';
 
 export type LegalContractTab = 'preInfo' | 'distanceSale' | 'cancellationRefund' | 'terms' | 'kvkk';
 
@@ -169,13 +170,14 @@ export const LegalContractsModal: React.FC<LegalContractsModalProps> = ({
                   <span>1. SATICI / HİZMET SAĞLAYICI VE ŞİRKET BİLGİLERİ</span>
                 </h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs bg-slate-900/60 p-3 rounded-xl border border-slate-800/80">
-                  <div><strong>Ticari Unvan:</strong> AKN Global Group Ltd</div>
-                  <div><strong>Marka:</strong> AuraBio Frekans Sistemleri</div>
-                  <div><strong>Yetkili Yönetici:</strong> Psikolog Abdulkadir Kan</div>
-                  <div><strong>Müşteri Hizmetleri / WhatsApp:</strong> {ADMIN_PHONE}</div>
-                  <div><strong>E-Posta:</strong> {ADMIN_EMAILS[0]}</div>
-                  <div><strong>Resmi Banka:</strong> {BANK_INFO.bankName}</div>
-                  <div className="sm:col-span-2"><strong>Hesap Sahibi & IBAN:</strong> {BANK_INFO.accountHolder} — <span className="font-mono text-emerald-300 select-all">{BANK_INFO.iban}</span></div>
+                  <div className="sm:col-span-2"><strong>Ticari Unvan:</strong> {COMPANY_IDENTITY.legalName}</div>
+                  <div><strong>Marka:</strong> {COMPANY_IDENTITY.brandName}</div>
+                  <div><strong>Yetkili:</strong> {COMPANY_IDENTITY.authorizedPerson}</div>
+                  <div><strong>T.C. Kimlik No:</strong> {COMPANY_IDENTITY.taxNumber}</div>
+                  <div><strong>Telefon / WhatsApp:</strong> {COMPANY_IDENTITY.internationalPhone}</div>
+                  <div><strong>E-Posta:</strong> {COMPANY_IDENTITY.contactEmail}</div>
+                  <div className="sm:col-span-2"><strong>Açık Adres:</strong> {COMPANY_IDENTITY.address}</div>
+                  <div className="sm:col-span-2"><strong>Web:</strong> <a href={COMPANY_IDENTITY.website} target="_blank" rel="noreferrer">{COMPANY_IDENTITY.website}</a></div>
                 </div>
 
                 <h4 className="font-bold text-slate-100 text-sm border-b border-slate-800 pb-1.5 pt-2">
@@ -189,7 +191,7 @@ export const LegalContractsModal: React.FC<LegalContractsModalProps> = ({
                   3. ÖDEME YÖNTEMLERİ, FİYATLANDIRMA VE VERGİLENDİRME
                 </h4>
                 <p>
-                  Sistem üzerinden sipariş verilen tüm paket fiyatları ABD Doları (USD) cinsinden olup yürürlükteki yasal KDV dahildir. Harici tahsilat yalnızca güvenli 256-bit SSL şifreleme altındaki <strong>3D Secure Sanal POS (Kredi Kartı / Banka Kartı)</strong> üzerinden yapılır.
+                  Paket bedeli, para birimi, vergiler ve kullanılabilir ödeme yöntemi sipariş özeti ile ödeme adımında gösterilir. Ödeme, yalnızca ödeme adımında açıkça sunulan yöntem üzerinden yapılmalıdır.
                 </p>
 
                 <h4 className="font-bold text-slate-100 text-sm border-b border-slate-800 pb-1.5 pt-2">
@@ -202,10 +204,10 @@ export const LegalContractsModal: React.FC<LegalContractsModalProps> = ({
                 <div className="p-3.5 rounded-xl bg-rose-950/50 border-2 border-rose-500/50 text-rose-200 text-xs space-y-1.5">
                   <div className="font-black text-rose-300 flex items-center gap-1.5">
                     <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
-                    <span>ÖNEMLİ CAYMA HAKKI İSTİSNASI BİLGİLENDİRMESİ:</span>
+                    <span>CAYMA HAKKI BİLGİLENDİRMESİ:</span>
                   </div>
                   <p>
-                    6502 Sayılı Tüketicinin Korunması Hakkında Kanun ve Mesafeli Sözleşmeler Yönetmeliği Madde 15/1-ğ bendi uyarınca, <em>"Elektronik ortamda anında ifa edilen hizmetler veya tüketiciye anında teslim edilen gayrimaddi mallara ilişkin sözleşmeler"</em> yasal cayma hakkı istisnası kapsamındadır. Ödeme yapılıp dijital erişim/hesap aktif edildiğinde cayma hakkı ve ücret iadesi talep edilemez.
+                    Cayma hakkı ve olası istisnalar işlemin niteliğine, ifa durumuna ve yürürlükteki mevzuata göre değerlendirilir. Bu metin kanuni hakları ortadan kaldırmaz; somut işlem için hukuk danışmanlığı alınmalıdır.
                   </p>
                 </div>
               </div>
@@ -225,9 +227,11 @@ export const LegalContractsModal: React.FC<LegalContractsModalProps> = ({
                   MADDE 1 - TARAFLAR
                 </h4>
                 <div className="text-xs space-y-1 bg-slate-900/60 p-3 rounded-xl border border-slate-800/80">
-                  <p><strong>SATICI / HİZMET SAĞLAYICI:</strong> AKN Global Group Ltd (AuraBio Frekans Sistemleri)</p>
-                  <p><strong>YETKİLİ TEMSİLCİ:</strong> Abdulkadir Kan (Psikolog & Biyo-Rezonans Uzmanı)</p>
-                  <p><strong>İLETİŞİM / DESTEK:</strong> {ADMIN_PHONE} — {ADMIN_EMAILS[0]}</p>
+                  <p><strong>SATICI / HİZMET SAĞLAYICI:</strong> {COMPANY_IDENTITY.legalName}</p>
+                  <p><strong>MARKA / YETKİLİ:</strong> {COMPANY_IDENTITY.brandName} — {COMPANY_IDENTITY.authorizedPerson}</p>
+                  <p><strong>T.C. KİMLİK NO:</strong> {COMPANY_IDENTITY.taxNumber}</p>
+                  <p><strong>ADRES:</strong> {COMPANY_IDENTITY.address}</p>
+                  <p><strong>İLETİŞİM:</strong> {COMPANY_IDENTITY.internationalPhone} — {COMPANY_IDENTITY.contactEmail} — {COMPANY_IDENTITY.website}</p>
                   <p><strong>ALICI (MÜŞTERİ / BAYİ):</strong> AuraBio Frekans platformu üzerinden kayıt formunu dolduran, paketi seçen ve 3D Secure Sanal POS üzerinden ödemeyi gerçekleştiren gerçek veya tüzel kişidir.</p>
                 </div>
 
@@ -235,7 +239,7 @@ export const LegalContractsModal: React.FC<LegalContractsModalProps> = ({
                   MADDE 2 - SÖZLEŞMENİN KONUSU VE HUKUKİ DAYANAĞI
                 </h4>
                 <p>
-                  İşbu sözleşmenin konusu, ALICI'nın SATICI'ya ait www.aurabiofrekans.com veya web uygulaması üzerinden elektronik ortamda siparişini verdiği, özellikleri ve satış bedeli belirtilen dijital yazılım kullanım lisansı ve seans kredi paketlerinin satışı, teslimi ve tarafların hak ve yükümlülüklerinin 6502 Sayılı Tüketicinin Korunması Hakkında Kanun ve Mesafeli Sözleşmeler Yönetmeliği hükümleri gereğince düzenlenmesidir.
+                  İşbu sözleşmenin konusu, ALICI'nın SATICI'ya ait akngroupwellness.com web uygulaması üzerinden elektronik ortamda siparişini verdiği, özellikleri ve satış bedeli belirtilen dijital yazılım kullanım lisansı ve seans kredi paketlerinin satışı, teslimi ve tarafların hak ve yükümlülüklerinin 6502 Sayılı Tüketicinin Korunması Hakkında Kanun ve Mesafeli Sözleşmeler Yönetmeliği hükümleri gereğince düzenlenmesidir.
                 </p>
 
                 <h4 className="font-bold text-slate-100 text-sm border-b border-slate-800 pb-1 pt-2">
@@ -256,7 +260,7 @@ export const LegalContractsModal: React.FC<LegalContractsModalProps> = ({
                   MADDE 5 - KREDİ KARTI GÜVENLİĞİ VE HAKSIZ CHARGEBACK (TERS İBRAZ) YASAĞI
                 </h4>
                 <p>
-                  Ödemeler 3D Secure güvenlik protokolü ve PCI-DSS standartlarına sahip sanal POS altyapısı üzerinden gerçekleştirilir. Dijital hizmetin eksiksiz ifa edilmesinden sonra, banka veya ödeme kuruluşuna gerçeğe aykırı 'hizmet alınmadı' veya yetkisiz işlem gerekçesiyle haksız chargeback (ters ibraz) başvurusunda bulunulması hukuka aykırıdır. Bu tür kötü niyetli girişimlerde SATICI; IP log kayıtları, cihaz parmak izi, oturum zaman damgaları ve kullanım loglarını bankaya ve adli makamlara sunarak tüm yasal haklarını, tazminat ve avukatlık ücretlerini ALICI'dan tahsil etme hakkını saklı tutar.
+                  Ödeme güvenliği ve itiraz süreçleri, işlemde kullanılan ödeme sağlayıcısının koşulları ve yürürlükteki mevzuat çerçevesinde değerlendirilir. Alıcı ve satıcının kanuni başvuru ve itiraz hakları saklıdır.
                 </p>
               </div>
             </div>
@@ -267,20 +271,20 @@ export const LegalContractsModal: React.FC<LegalContractsModalProps> = ({
             <div className="space-y-4 p-4 sm:p-5 rounded-2xl bg-slate-950/80 border-2 border-rose-500/40">
               <div className="p-3.5 rounded-xl bg-rose-950/60 border border-rose-500/50 text-rose-200 font-bold text-xs flex items-center gap-2">
                 <Ban className="w-5 h-5 text-rose-400 shrink-0" />
-                <span>İptal, İade ve Cayma Hakkı Şartları — Dijital İçerik Gayrimaddi Mal İstisnası (No-Refund Policy)</span>
+                <span>İptal, İade ve Cayma Hakkı Şartları</span>
               </div>
 
               <div className="space-y-3.5 text-slate-200">
                 <div className="p-4 rounded-2xl bg-rose-950/30 border border-rose-500/40 space-y-2">
                   <h4 className="font-black text-rose-300 text-sm flex items-center gap-2">
                     <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
-                    <span>YASAL CAYMA HAKKI İSTİSNASI VE KESİN İADE EDİLEMEZLİK KURALI</span>
+                    <span>İPTAL, İADE VE CAYMA KOŞULLARI</span>
                   </h4>
                   <p className="text-xs leading-relaxed text-slate-200">
-                    6502 Sayılı Tüketicinin Korunması Hakkında Kanun'un 48. Maddesi ve 29188 Sayılı Resmi Gazete'de yayımlanan <strong>Mesafeli Sözleşmeler Yönetmeliği'nin "Cayma Hakkının İstisnaları" başlıklı 15. Maddesi 1. Fıkrasının (ğ) bendi</strong> açık hükmü gereğince:
+                    Cayma, iptal ve iade koşulları işlemin niteliğine ve yürürlükteki tüketici mevzuatına göre değerlendirilir. Aşağıdaki metin hukuki danışman incelemesi gerektiren bilgilendirmedir:
                   </p>
                   <blockquote className="p-3 rounded-xl bg-slate-900 border-l-4 border-rose-500 text-xs italic font-medium text-amber-200">
-                    "Elektronik ortamda anında ifa edilen hizmetler veya tüketiciye anında teslim edilen gayrimaddi mallara ilişkin sözleşmelerde cayma hakkı kullanılamaz."
+                    "Cayma hakkına uygulanacak istisnalar, yürürlükteki mevzuat ve somut işlem koşullarına göre belirlenir."
                   </blockquote>
                 </div>
 
@@ -288,14 +292,14 @@ export const LegalContractsModal: React.FC<LegalContractsModalProps> = ({
                   1. DİJİTAL LİSANS VE SEANS KREDİLERİNİN NİTELİĞİ
                 </h4>
                 <p>
-                  AuraBio Frekans sistemi tarafından sağlanan yazılım erişim yetkileri, özel biyo-rezonans algoritma motorları, frekans ses kütüphaneleri, seans kredileri ve kaynak kodları gayrimaddi dijital ürün statüsündedir. Ödeme gerçekleştiği anda kullanıcının hesabına tanımlanmakta ve tüketim anında başlayabilmektedir.
+                  AuraBio Frekans sistemi üzerinden sunulan dijital hizmet ve seans kredilerinin teslim/başlangıç zamanı sipariş kaydında gösterilir. Cayma, iptal ve iade koşulları yürürlükteki mevzuat ve somut sipariş durumuna göre uygulanır.
                 </p>
 
                 <h4 className="font-bold text-slate-100 text-sm border-b border-slate-800 pb-1 pt-2">
-                  2. İPTAL VE İADE TALEPLERİNİN KABUL EDİLMEMESİ
+                  2. İPTAL VE İADE TALEPLERİ
                 </h4>
                 <p>
-                  Siparişin onaylanması ve kullanıcı hesabının aktif edilmesiyle birlikte hizmet ifası tamamlanmış sayılır. Bu aşamadan sonra hiçbir surette kısmi veya tam ücret iadesi, cayma talebi veya paket iptali yapılamaz. Kullanıcı satın alma işlemini onaylayarak bu şartı peşinen ve gayrikabili rücu kabul etmiş sayılır.
+                  İptal veya iade talepleri destek kanallarından iletilir ve mevzuata uygun olarak değerlendirilir. Kullanıcıların kanuni hakları bu bilgilendirme ile sınırlandırılmaz.
                 </p>
 
                 <h4 className="font-bold text-slate-100 text-sm border-b border-slate-800 pb-1 pt-2">
@@ -328,7 +332,7 @@ export const LegalContractsModal: React.FC<LegalContractsModalProps> = ({
                   1. FİKRİ VE SINAİ MÜLKİYET HAKLARI KORUMASI (5846 SAYILI FSEK)
                 </h4>
                 <p>
-                  AuraBio Frekans yazılımının tüm algoritmaları, görsel arayüzleri, veritabanı şemaları, 3D biyo-aura simülatörleri, ses sentez osiloskop motorları ve teknik mimarisi 5846 Sayılı Fikir ve Sanat Eserleri Kanunu ve 6769 Sayılı Sınai Mülkiyet Kanunu kapsamında AKN Global Group Ltd ve Abdulkadir Kan'a aittir.
+                  AuraBio Frekans markası ve içerikleri üzerindeki haklar, ilgili kayıtlar ve yürürlükteki mevzuat çerçevesinde değerlendirilir. Sistem işletmecisinin bilgileri: {COMPANY_IDENTITY.legalName}; yetkili: {COMPANY_IDENTITY.authorizedPerson}.
                 </p>
 
                 <h4 className="font-bold text-slate-100 text-sm border-b border-slate-800 pb-1 pt-2">
@@ -373,14 +377,14 @@ export const LegalContractsModal: React.FC<LegalContractsModalProps> = ({
                   1. VERİ SORUMLUSU VE KAPSAM
                 </h4>
                 <p>
-                  6698 Sayılı Kişisel Verilerin Korunması Kanunu (KVKK) uyarınca, veri sorumlusu sıfatıyla AKN Global Group Ltd, kullanıcıların kişisel bilgilerini (Ad Soyad, Telefon, E-Posta, Fatura Adresi, Ödeme Logları ve Seans Kayıtları) yalnızca hizmetin sunulması amacıyla işler ve korur.
+                  6698 sayılı Kişisel Verilerin Korunması Kanunu kapsamında veri sorumlusu bilgileri: {COMPANY_IDENTITY.legalName}, {COMPANY_IDENTITY.address}, {COMPANY_IDENTITY.phone}, {COMPANY_IDENTITY.contactEmail}. Kişisel veriler hizmetin sunulması ve mevzuattan doğan yükümlülükler kapsamında işlenir.
                 </p>
 
                 <h4 className="font-bold text-slate-100 text-sm border-b border-slate-800 pb-1 pt-2">
                   2. KREDİ KARTI BİLGİLERİNİN SAKLANMAMASI GÜVENCESİ
                 </h4>
                 <p>
-                  Kullanıcıların kredi kartı veya banka kartı numaraları, son kullanma tarihleri ve CVV güvenlik kodları şirketimiz sunucularında <strong>asla saklanmaz ve kaydedilmez</strong>. Tüm işlemler BDDK lisanslı güvenli ödeme kuruluşlarının 256-bit SSL korumalı altyapısı üzerinden doğrudan bankaya iletilir.
+                  Ödeme sırasında kart verilerinin işlenme biçimi, kullanılan ödeme sağlayıcısının altyapısına bağlıdır. Sağlayıcı ve veri işleme bilgileri ödeme adımında ayrıca açıklanmalı; bu metin tek başına kart verilerinin saklanmadığını doğrulamaz.
                 </p>
 
                 <h4 className="font-bold text-slate-100 text-sm border-b border-slate-800 pb-1 pt-2">
@@ -405,7 +409,7 @@ export const LegalContractsModal: React.FC<LegalContractsModalProps> = ({
         {/* Modal Footer */}
         <div className="pt-3 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
           <div className="text-[11px] text-slate-400 text-center sm:text-left">
-            AuraBio Frekans Sistemi © {new Date().getFullYear()} AKN Global Group Ltd • Tüm Hakları Saklıdır.
+            {COMPANY_IDENTITY.brandName} © {new Date().getFullYear()} • {COMPANY_IDENTITY.legalName}
           </div>
           
           <button

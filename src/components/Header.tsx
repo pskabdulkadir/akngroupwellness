@@ -1085,10 +1085,10 @@ export const Header: React.FC<HeaderProps> = ({
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
-                          <span className="text-xs font-bold text-slate-100">📄 Resmi Teknik Rapor & İş Teklifi</span>
+                          <span className="text-xs font-bold text-slate-100">📄 Teknik Bilgilendirme & İş Sunumu</span>
                           <span className="text-[9px] font-bold bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded border border-emerald-500/30">Word & PDF</span>
                         </div>
-                        <div className="text-[11px] text-slate-400 mt-0.5">AKN GLOBAL GROUP LTD resmi sistem belgesi</div>
+                        <div className="text-[11px] text-slate-400 mt-0.5">AKN Global Group sistem içi bilgilendirme belgesi</div>
                       </div>
                     </div>
                     <ChevronRight className="w-4 h-4 text-slate-500 shrink-0" />

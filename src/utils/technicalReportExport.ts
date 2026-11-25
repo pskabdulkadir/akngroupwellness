@@ -112,7 +112,7 @@ export function downloadTechnicalReportWord(): void {
   <body>
 
     <div style="text-align: center; margin-bottom: 20pt;">
-      <div style="font-size: 16pt; font-weight: bold; color: #047857; letter-spacing: 1.5pt; margin-bottom: 6pt;">AKN GLOBAL GROUP LTD</div>
+      <div style="font-size: 16pt; font-weight: bold; color: #047857; letter-spacing: 1.5pt; margin-bottom: 6pt;">AKN Global Group</div>
       <h1 style="border: none; margin-top: 2pt; margin-bottom: 4pt; color: #064e3b;">AURABIO FREKANS — TEKNİK BİLGİLENDİRME VE İŞ SUNUMU</h1>
       <p style="font-size: 13pt; font-weight: bold; color: #059669; margin-top: 0;">TEKNİK BİLGİLENDİRME, İŞ SUNUMU VE ${PACKAGE_COUNT} FREKANS PAKETİ KATALOĞU</p>
       <p style="font-size: 9pt; color: #64748b;">Kaynak kodundaki uygulama akışlarının özeti • Oluşturulma: ${new Date().toLocaleDateString('tr-TR')}</p>
@@ -216,7 +216,7 @@ export function downloadTechnicalReportWord(): void {
     <table>
       <tr>
         <td style="width: 30%;"><strong>Kurumsal Yapı:</strong></td>
-        <td>AKN GLOBAL GROUP LTD • AuraBio Kuantum Biyo-Rezonans &amp; Frekans Enstitüsü</td>
+        <td>AKN Global Group • AuraBio Kuantum Biyo-Rezonans &amp; Frekans Enstitüsü</td>
       </tr>
       <tr>
         <td><strong>Resmi Banka:</strong></td>
@@ -252,7 +252,7 @@ export function downloadTechnicalReportWord(): void {
 
     <div class="footer-note">
       Kaynak kodundaki uygulama özelliklerini özetleyen bilgilendirme belgesidir; bağımsız teknik denetim, sağlık etkinliği, gelir, ödeme veya mevzuat uygunluğu sertifikası değildir.<br>
-      © ${new Date().getFullYear()} AKN GLOBAL GROUP LTD • AuraBio Frekans.
+      © ${new Date().getFullYear()} AKN Global Group • AuraBio Frekans.
     </div>
 
   </body>
@@ -470,7 +470,7 @@ export function downloadTechnicalReportPDF(): void {
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(8.5);
   doc.setFont('helvetica', 'bold');
-  doc.text(clean(`AKN GLOBAL GROUP LTD | HESAP SAHIBI: ${BANK_INFO.accountHolder}`), margin + 4, y + 6);
+  doc.text(clean(`AKN Global Group | HESAP SAHIBI: ${BANK_INFO.accountHolder}`), margin + 4, y + 6);
   
   doc.setFontSize(8);
   doc.setFont('helvetica', 'normal');

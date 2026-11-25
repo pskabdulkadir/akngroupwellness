@@ -501,8 +501,8 @@ export function matchVoiceIntent(
 
     const response =
       lang === 'en'
-        ? `On behalf of AKN Global Group Ltd., our total tax accrual payable to ${taxOfficeName} this month is ${totalDue.toLocaleString('en-US')} TL. ${kdvDue.toLocaleString('en-US')} TL of this is VAT, and ${stopajDue.toLocaleString('en-US')} TL is distributor withholding tax. Payment deadline is the 26th of the month. You can view payment bank references by clicking the 'Tax Accruals' tab.`
-        : `AKN Global Group Ltd. adına ${taxOfficeName} Vergi Dairesi'ne bu ay toplam ${totalDue.toLocaleString('tr-TR')} TL tahakkuk ödememiz var. Bunun ${kdvDue.toLocaleString('tr-TR')} TL'si KDV-1, ${stopajDue.toLocaleString('tr-TR')} TL'si ise bayilerimizin komisyon stopajıdır. Ödeme son günü ayın 26'sıdır. Ekrandaki 'Vergi Dairesi Ödeme Detayı' butonuna tıklayarak banka ödeme referansını görebilirsiniz.`;
+        ? `On behalf of AKN Global Group, our total tax accrual payable to ${taxOfficeName} this month is ${totalDue.toLocaleString('en-US')} TL. ${kdvDue.toLocaleString('en-US')} TL of this is VAT, and ${stopajDue.toLocaleString('en-US')} TL is distributor withholding tax. Payment deadline is the 26th of the month. You can view payment bank references by clicking the 'Tax Accruals' tab.`
+        : `AKN Global Group adına ${taxOfficeName} Vergi Dairesi'ne bu ay toplam ${totalDue.toLocaleString('tr-TR')} TL tahakkuk ödememiz var. Bunun ${kdvDue.toLocaleString('tr-TR')} TL'si KDV-1, ${stopajDue.toLocaleString('tr-TR')} TL'si ise bayilerimizin komisyon stopajıdır. Ödeme son günü ayın 26'sıdır. Ekrandaki 'Vergi Dairesi Ödeme Detayı' butonuna tıklayarak banka ödeme referansını görebilirsiniz.`;
 
     return {
       type: 'NAVIGATE',
@@ -709,7 +709,7 @@ export function matchVoiceIntent(
       type: 'NAVIGATE',
       targetTab: 'cfoReport',
       spokenResponse:
-        'AKN Global Group Ltd. Günlük Yönetici ve AI CFO Mali Raporunu açtım. Buradan Brüt Ciro, Vergi Karşılıkları Havuzu ve Net Şirket Kârınızı anlık takip edebilirsiniz.',
+        'AKN Global Group Günlük Yönetici ve AI CFO Mali Raporunu açtım. Buradan Brüt Ciro, Vergi Karşılıkları Havuzu ve Net Şirket Kârınızı anlık takip edebilirsiniz.',
       auditActionName: 'VIEW_CFO_REPORT',
     };
   }
@@ -749,7 +749,7 @@ export function matchVoiceIntent(
       type: 'NAVIGATE',
       targetTab: 'commissions',
       spokenResponse:
-        "Stopaj, AKN Global Group Ltd.'nin şirketi olmayan bireysel bayilere yaptığı komisyon ödemelerinden devlet adına kestiği yüzde 20'lik gelir vergisidir. Bu parayı bayiye değil doğrudan devlete yatırıyoruz ve bayiye net hakediş ödüyoruz. Ekranda resmi Gider Pusulası makbuzlarını inceleyebilirsiniz.",
+        "Stopajın uygulanması, oranı ve belge türü alıcının hukuki statüsü ile güncel mevzuata göre mali müşavir tarafından belirlenmelidir. Bu ekrandaki kayıtlar inceleme/taslak niteliğindedir; resmî gider pusulası düzenlendiğini veya ödeme yapıldığını göstermez.",
       auditActionName: 'TUTOR_STOPAJ',
     };
   }
@@ -797,17 +797,17 @@ export const TAB_TUTORIAL_EXPLANATIONS: Record<string, { title: string; speech: 
   cfoReport: {
     title: 'AKN Günlük Yönetici ve AI CFO Raporu',
     speech:
-      'Şu an AKN Global Group Ltd. AI CFO Yönetici Raporu ekranındasınız. Bu ekran, şirketin tüm brüt cirosunu, devlete ait ayrıştırılmış vergi karşılıklarını ve şirketinize kalan net saf kârı anlık bir mali müşavir derinliğinde özetler.',
+      'Şu an AKN Global Group yönetici raporu ekranındasınız. Buradaki özetler sisteme aktarılan kayıtlarla sınırlıdır ve mali müşavir incelemesinin yerine geçmez.',
   },
   overview: {
     title: 'Genel Mali Bakış & Hasılat Paneli',
     speech:
-      'Şu an AKN Global Group Ltd. Genel Mali Bakış ekranındasınız. Tüm yurt içi satışlarınızı, 3x USD ihracatlarınızı, hesaplanan KDV yükünüzü ve anlık TCMB döviz kurlarını tek ekranda izleyebilirsiniz.',
+      'Şu an AKN Global Group Genel Mali Bakış ekranındasınız. Tüm yurt içi satışlarınızı, 3x USD ihracatlarınızı, hesaplanan KDV yükünüzü ve anlık TCMB döviz kurlarını tek ekranda izleyebilirsiniz.',
   },
   invoices: {
     title: 'e-Fatura & e-Arşiv Yönetimi (GİB API)',
     speech:
-      'Şu an e-Fatura ve e-Arşiv Yönetim ekranındasınız. Kredi kartı ödemesi tamamlanan müşterilerin faturaları burada GİB onaylı olarak listelenir. Tek tıkla UBL-TR XML formatında indirebilir veya yazdırabilirsiniz.',
+      'Şu an muhasebe belge taslakları ekranındasınız. Buradaki kayıtlar GİB onaylı fatura anlamına gelmez; indirilen çıktılar da resmî belge değildir.',
   },
   simulator: {
     title: 'Canlı Satış & 3D Secure Fatura Tanzimi',
@@ -817,7 +817,7 @@ export const TAB_TUTORIAL_EXPLANATIONS: Record<string, { title: string; speech: 
   commissions: {
     title: 'Bayi Komisyon & Stopaj Havuzu (GVK 94)',
     speech:
-      'Şu an AKN Global Group Ltd. Bayi Komisyon ve Stopaj Havuzundasınız. Bireysel bayilerinizin hakedişlerinden yüzde 20 yasal vergi stopajını otomatik kesip resmi e-Gider Pusulası düzenliyoruz.',
+      'Şu an bayi komisyon ve inceleme ekranındasınız. Stopaj ve belge gereklilikleri alıcı durumuna göre mali müşavir tarafından doğrulanmalıdır; sistem resmî gider pusulası düzenlemiyor.',
   },
   taxReturns: {
     title: 'Vergi ve Beyannameler Simülasyonu',
@@ -865,4 +865,3 @@ export const TAB_TUTORIAL_EXPLANATIONS: Record<string, { title: string; speech: 
       'Şu an GİB Özel Entegratör API Ayarları ekranındasınız. Logo, Uyumsoft, Paraşüt ve NetGSM e-fatura servis bağlantılarını ve gönderici etiketlerini buradan yönetebilirsiniz.',
   },
 };
-

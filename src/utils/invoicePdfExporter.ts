@@ -2,6 +2,7 @@ import jsPDF from 'jspdf';
 import QRCode from 'qrcode';
 import { DigitalInvoice, generateInvoiceWhatsAppShareUrl, saveDigitalInvoice } from './invoiceManager';
 import { formatUsd } from './currency';
+import { COMPANY_IDENTITY } from '../config/companyIdentity';
 
 // Clean text for jsPDF standard font rendering without character corruption
 function trClean(t: string | undefined | null): string {
@@ -28,14 +29,13 @@ function trClean(t: string | undefined | null): string {
 }
 
 /**
- * Generates an official, high-resolution vector PDF of the e-Arşiv Invoice directly with jsPDF.
- * 100% immune to html2canvas / CSS parser errors (such as oklch color parsing).
+ * Generates a printable draft document summary; it is not a GIB-issued invoice.
  */
 export async function generateInvoicePdfBlob(invoice: DigitalInvoice): Promise<{ blob: Blob; fileName: string; dataUrl: string }> {
   // Generate QR Code data URL
   let qrCodeDataUrl = '';
   try {
-    qrCodeDataUrl = await QRCode.toDataURL('https://akngroupfrekans.web.app/', {
+    qrCodeDataUrl = await QRCode.toDataURL(invoice.issuer.web || COMPANY_IDENTITY.website, {
       width: 200,
       margin: 1,
       color: {
@@ -77,25 +77,25 @@ export async function generateInvoicePdfBlob(invoice: DigitalInvoice): Promise<{
   doc.setTextColor(15, 23, 42); // slate-900
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(12);
-  doc.text(trClean(invoice.issuer.companyName || 'AKN GLOBAL GROUP LTD'), margin + 17, currentY + 6);
+  doc.text(trClean(invoice.issuer.companyName || 'AKN Global Group'), margin + 17, currentY + 6);
   
   doc.setTextColor(71, 85, 105); // slate-600
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7.5);
-  doc.text(trClean(invoice.issuer.title || 'AuraBio Frekans Sistemleri ve Biyorezonans Yazilim Cozumleri'), margin + 17, currentY + 11);
+  doc.text(trClean(invoice.issuer.title || 'AKN Global Group'), margin + 17, currentY + 11);
 
-  // Right Header: e-Arşiv Fatura Badge & Info
+  // Right Header: internal document summary
   doc.setFillColor(185, 28, 28); // red-700
   doc.roundedRect(pageWidth - margin - 36, currentY, 36, 6, 1.5, 1.5, 'F');
   doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8);
-  doc.text('e-Arsiv Fatura', pageWidth - margin - 18, currentY + 4.2, { align: 'center' });
+  doc.text('Taslak Ozet', pageWidth - margin - 18, currentY + 4.2, { align: 'center' });
 
   doc.setTextColor(15, 23, 42);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8.5);
-  doc.text(`Fatura No: ${invoice.invoiceNumber}`, pageWidth - margin, currentY + 10.5, { align: 'right' });
+  doc.text(`Belge No: ${invoice.invoiceNumber}`, pageWidth - margin, currentY + 10.5, { align: 'right' });
 
   doc.setTextColor(71, 85, 105);
   doc.setFont('helvetica', 'normal');
@@ -136,7 +136,7 @@ export async function generateInvoicePdfBlob(invoice: DigitalInvoice): Promise<{
       doc.setFontSize(6);
       doc.text('Dijital Karekod', pageWidth - margin - 14, currentY + 6);
       doc.setTextColor(107, 33, 168);
-      doc.text('akngroupfrekans.web.app', pageWidth - margin - 14, currentY + 10);
+      doc.text(trClean(invoice.issuer.web || COMPANY_IDENTITY.website), pageWidth - margin - 14, currentY + 10);
     } catch (qrErr) {
       console.warn('QR embed warning:', qrErr);
     }
@@ -169,14 +169,13 @@ export async function generateInvoicePdfBlob(invoice: DigitalInvoice): Promise<{
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(6.8);
   doc.setTextColor(51, 65, 85);
-  doc.text(`Yetkili: ${trClean(invoice.issuer.accountHolder || 'Abdulkadir Kan')}`, margin + 3, currentY + 16);
-  doc.text(`V.D. / V.No: ${trClean(invoice.issuer.taxOffice)} - ${trClean(invoice.issuer.taxNumber)}`, margin + 3, currentY + 20.5);
-  doc.text(`Mersis No: ${trClean(invoice.issuer.mersisNo)}`, margin + 3, currentY + 25);
-  doc.text(`Adres: Dijital Adres (Karekod)`, margin + 3, currentY + 29.5);
+  doc.text(`Yetkili: ${trClean(invoice.issuer.accountHolder || COMPANY_IDENTITY.authorizedPerson)}`, margin + 3, currentY + 16);
+  doc.text(`T.C. Kimlik No: ${trClean(invoice.issuer.taxNumber)}`, margin + 3, currentY + 20.5);
+  doc.text(`Adres: ${trClean(invoice.issuer.address || COMPANY_IDENTITY.address)}`, margin + 3, currentY + 25);
   doc.setTextColor(107, 33, 168);
-  doc.text(`https://akngroupfrekans.web.app/`, margin + 3, currentY + 34);
+  doc.text(trClean(invoice.issuer.web || COMPANY_IDENTITY.website), margin + 3, currentY + 29.5);
   doc.setTextColor(71, 85, 105);
-  doc.text(`Tel: ${invoice.issuer.phone}  |  E-Posta: ${invoice.issuer.email}`, margin + 3, currentY + 39);
+  doc.text(`Tel: ${invoice.issuer.phone}  |  E-Posta: ${invoice.issuer.email}`, margin + 3, currentY + 34);
 
   // Alıcı Box
   const recipientX = margin + boxWidth + 4;
@@ -404,8 +403,8 @@ export async function generateInvoicePdfBlob(invoice: DigitalInvoice): Promise<{
   doc.setTextColor(100, 116, 139);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(6.5);
-  doc.text("Bu fatura 509 Sira No'lu VUK Genel Tebligi uyarinca elektronik ortamda duzenlenmistir.", margin, currentY + 4);
-  doc.text('Elektronik imzali asli ile ayni hukuki gecerlilige sahiptir.', margin, currentY + 8);
+  doc.text('Bu belge sistem ici bilgilendirme/taslak ozetidir.', margin, currentY + 4);
+  doc.text('GIB veya ozel entegrator onayi bulunmadan resmi fatura degildir.', margin, currentY + 8);
 
   // Digital Seal on right
   doc.setFillColor(250, 245, 255); // purple-50
@@ -416,12 +415,12 @@ export async function generateInvoicePdfBlob(invoice: DigitalInvoice): Promise<{
   doc.setTextColor(88, 28, 135); // purple-900
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(6.5);
-  doc.text(trClean(invoice.issuer.companyName || 'AKN GLOBAL GROUP LTD'), sealX + sealBoxWidth / 2, currentY + 4, { align: 'center' });
+  doc.text(trClean(invoice.issuer.companyName || 'AKN Global Group'), sealX + sealBoxWidth / 2, currentY + 4, { align: 'center' });
 
   doc.setTextColor(126, 34, 206); // purple-700
   doc.setFont('courier', 'bold');
   doc.setFontSize(6);
-  doc.text('ELEKTRONIK MALI MUHUR VE E-IMZA', sealX + sealBoxWidth / 2, currentY + 7.5, { align: 'center' });
+  doc.text('TASLAK - GIB ONAYI YOK', sealX + sealBoxWidth / 2, currentY + 7.5, { align: 'center' });
 
   doc.setTextColor(71, 85, 105);
   doc.setFont('helvetica', 'normal');
@@ -439,11 +438,11 @@ export async function generateInvoicePdfBlob(invoice: DigitalInvoice): Promise<{
   doc.setTextColor(190, 18, 60); // rose-700
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(5.8);
-  const disclaimerText = trClean('* Bu belge sadece bilgilendirme amaclidir, farkli bir amac ile kullanilamaz, fatura yerine gecmez.');
+  const disclaimerText = trClean('* Bu belge taslak/bilgilendirme ozetidir; resmi e-Fatura/e-Arsiv belgesi yerine gecmez.');
   doc.text(disclaimerText, pageWidth / 2, currentY + 4.5, { align: 'center' });
 
   const blob = doc.output('blob');
-  const fileName = `E-Arsiv_Fatura_${invoice.invoiceNumber}_${invoice.issueDate || new Date().toISOString().slice(0, 10)}.pdf`;
+  const fileName = `Belge_Ozeti_${invoice.invoiceNumber}_${invoice.issueDate || new Date().toISOString().slice(0, 10)}.pdf`;
   const dataUrl = URL.createObjectURL(blob);
 
   return { blob, fileName, dataUrl };
@@ -491,8 +490,8 @@ export async function shareInvoiceViaWhatsAppWithPDF(
       try {
         await navigator.share({
           files: [pdfFile],
-          title: `E-Arşiv Fatura ${invoice.invoiceNumber}`,
-          text: `Sayın ${invoice.recipient.companyName || invoice.recipient.fullName}, AKN Global Group Ltd resmi e-Arşiv faturanız ektedir.`
+          title: `Belge Özeti ${invoice.invoiceNumber}`,
+          text: `Sayın ${invoice.recipient.companyName || invoice.recipient.fullName}, AKN Global Group dijital belge özetiniz ektedir. Resmi e-Fatura/e-Arşiv belgesi değildir.`
         });
         sharedViaNative = true;
       } catch (shareErr: any) {

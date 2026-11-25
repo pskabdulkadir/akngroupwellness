@@ -220,8 +220,8 @@ export const PackageDetailModal: React.FC<PackageDetailModalProps> = ({
                 <span>Yasal & Güvenlik Bilgilendirmesi</span>
               </div>
               <div className="text-[11px] text-slate-400 space-y-1 leading-relaxed">
-                <p>• <strong>Banka / Sanal POS Uyumlu:</strong> 256-bit SSL şifreleme ve BDDK lisanslı güvenli tahsilat.</p>
-                <p>• <strong>Cayma İstisnası:</strong> 6502 sayılı Kanun ve Mesafeli Sözleşmeler Yön. Md 15/1-ğ uyarınca anında ifa edilen dijital yazılımlarda iade yoktur.</p>
+                <p>• Ödeme yöntemi ve sağlayıcı durumu ödeme adımında gösterilir; bu paket açıklaması banka veya sanal POS onayı anlamına gelmez.</p>
+                <p>• Cayma ve iade hakları, yürürlükteki mevzuata ve siparişin durumuna göre değerlendirilir.</p>
                 <p>• <strong>Sorumluluk Reddi:</strong> Sistem tıbbi tanı veya tedavi aracı değildir; biyo-rezonans destek amaçlıdır.</p>
               </div>
             </div>

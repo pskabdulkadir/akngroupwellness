@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import QRCode from 'qrcode';
+import { COMPANY_IDENTITY } from '../config/companyIdentity';
 import { 
   X, 
   Printer, 
@@ -83,9 +84,8 @@ export const DigitalInvoiceModal: React.FC<DigitalInvoiceModalProps> = ({
 
   const printAreaRef = useRef<HTMLDivElement>(null);
 
-  // Generate real QR code for https://akngroupfrekans.web.app/
   useEffect(() => {
-    QRCode.toDataURL('https://akngroupfrekans.web.app/', {
+    QRCode.toDataURL(invoice.issuer.web || COMPANY_IDENTITY.website, {
       width: 140,
       margin: 1,
       color: {
@@ -95,7 +95,7 @@ export const DigitalInvoiceModal: React.FC<DigitalInvoiceModalProps> = ({
     })
     .then(url => setQrCodeDataUrl(url))
     .catch(err => console.error('QR code generation error:', err));
-  }, []);
+  }, [invoice.issuer.web]);
 
   const handleCopyEttn = () => {
     navigator.clipboard.writeText(invoice.ettn);
@@ -232,7 +232,7 @@ export const DigitalInvoiceModal: React.FC<DigitalInvoiceModalProps> = ({
             <div>
               <div className="flex items-center gap-2 flex-wrap">
                 <h3 className="font-bold text-sm sm:text-base text-slate-100">
-                  Resmi Dijital E-Arşiv Fatura
+                  Dijital Belge Özeti
                 </h3>
                 <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-mono font-bold">
                   {invoice.invoiceNumber}
@@ -244,11 +244,11 @@ export const DigitalInvoiceModal: React.FC<DigitalInvoiceModalProps> = ({
                     ? 'bg-blue-950 text-blue-300 border border-blue-500/50'
                     : 'bg-slate-800 text-slate-300'
                 }`}>
-                  {invoice.status === 'sent_whatsapp' ? 'WhatsApp Gönderildi' : invoice.status === 'paid' ? 'Ödendi' : 'Düzenlendi'}
+                  {invoice.status === 'sent_whatsapp' ? 'WhatsApp Gönderildi' : invoice.status === 'paid' ? 'Ödeme kaydı' : 'Taslak'}
                 </span>
               </div>
               <p className="text-[11px] text-slate-400">
-                GİB 509 VUK Uyumlu Elektronik Mali Mühürlü Dijital Fatura
+                Sistem içi dijital belge özeti — resmî fatura değildir
               </p>
             </div>
           </div>
@@ -481,7 +481,7 @@ export const DigitalInvoiceModal: React.FC<DigitalInvoiceModalProps> = ({
                   </div>
                   <div>
                     <h1 className="text-base sm:text-lg font-black tracking-tight text-slate-900">
-                      {invoice.issuer.companyName || 'AKN GLOBAL GROUP LTD'}
+                      {invoice.issuer.companyName || COMPANY_IDENTITY.legalName}
                     </h1>
                     <p className="text-[10px] text-slate-600 font-semibold tracking-wide">
                       {invoice.issuer.title || 'AuraBio Frekans Sistemleri ve Biyorezonans Yazılım Çözümleri'}
@@ -494,7 +494,7 @@ export const DigitalInvoiceModal: React.FC<DigitalInvoiceModalProps> = ({
               <div className="text-right space-y-1 self-stretch sm:self-auto flex flex-col items-end">
                 <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-red-700 text-white font-bold text-[11px] rounded tracking-wide uppercase shadow-sm">
                   <ShieldCheck className="w-3.5 h-3.5 text-white" />
-                  <span>e-Arşiv Fatura</span>
+                  <span>Belge Özeti</span>
                 </div>
                 <div className="text-[11px] font-mono font-bold text-slate-900 pt-1">
                   Fatura No: <span className="text-red-700">{invoice.invoiceNumber}</span>
@@ -533,8 +533,8 @@ export const DigitalInvoiceModal: React.FC<DigitalInvoiceModalProps> = ({
                   <QrCode className="w-10 h-10 text-slate-800" />
                 )}
                 <div className="text-[9px] text-slate-500 leading-tight">
-                  <div className="font-bold text-slate-800">Dijital Karekod</div>
-                  <div className="text-purple-700 font-semibold">akngroupfrekans.web.app</div>
+                  <div className="font-bold text-slate-800">Web Sitesi</div>
+                  <div className="text-purple-700 font-semibold">{invoice.issuer.web || COMPANY_IDENTITY.website}</div>
                 </div>
               </div>
             </div>
@@ -563,7 +563,7 @@ export const DigitalInvoiceModal: React.FC<DigitalInvoiceModalProps> = ({
 
                   {/* Exact Request: Adres: Dijital Adres (Karekod) and clickable link */}
                   <div className="text-slate-800 text-[11px] pt-0.5">
-                    <strong>Adres:</strong> Dijital Adres (Karekod)
+                    <strong>Adres:</strong> {invoice.issuer.address || COMPANY_IDENTITY.address}
                   </div>
 
                   {/* QR & Web Link Card */}
@@ -572,14 +572,14 @@ export const DigitalInvoiceModal: React.FC<DigitalInvoiceModalProps> = ({
                       <img src={qrCodeDataUrl} alt="Web Sitesi Karekodu" className="w-11 h-11 rounded border border-slate-100 shrink-0" />
                     )}
                     <div className="text-[10px] leading-tight space-y-0.5">
-                      <div className="font-bold text-slate-800">Resmi Web & Frekans Portalı:</div>
-                      <a 
-                        href="https://akngroupfrekans.web.app/" 
-                        target="_blank" 
-                        rel="noopener noreferrer" 
+                      <div className="font-bold text-slate-800">Web Sitesi:</div>
+                      <a
+                        href={invoice.issuer.web || COMPANY_IDENTITY.website}
+                        target="_blank"
+                        rel="noopener noreferrer"
                         className="text-purple-700 font-bold hover:underline break-all block"
                       >
-                        https://akngroupfrekans.web.app/
+                        {invoice.issuer.web || COMPANY_IDENTITY.website}
                       </a>
                       <div className="text-[9px] text-slate-500">Karekodu taratarak portala ulaşabilirsiniz</div>
                     </div>
@@ -715,20 +715,20 @@ export const DigitalInvoiceModal: React.FC<DigitalInvoiceModalProps> = ({
               # YALNIZ {invoice.grandTotalInWords || 'TÜRK LİRASIDIR'} #
             </div>
 
-            {/* Official Digital Stamp & E-Signature Footer */}
+            {/* Document status footer */}
             <div className="pt-4 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4 text-[10px] text-slate-500">
               <div className="space-y-0.5 text-center sm:text-left">
-                <div>Bu fatura 509 Sıra No'lu VUK Genel Tebliği uyarınca elektronik ortamda düzenlenmiştir.</div>
-                <div>Elektronik imzalı aslı ile aynı hukuki geçerliliğe sahiptir.</div>
+                <div>Bu ekran sistem içi belge özeti sunar.</div>
+                <div>GİB veya özel entegratör onayı bulunmadan resmi e-Fatura/e-Arşiv belgesi değildir.</div>
               </div>
 
               {/* Digital Seal / Mühür */}
               <div className="border-2 border-dashed border-purple-600/80 p-3 rounded-xl text-center space-y-0.5 bg-purple-50/50">
                 <div className="font-bold text-purple-950 text-[10px] uppercase tracking-wide">
-                  {invoice.issuer.companyName || 'AKN GLOBAL GROUP LTD'}
+                  {invoice.issuer.companyName || COMPANY_IDENTITY.legalName}
                 </div>
                 <div className="text-[9px] text-purple-800 font-mono font-bold">
-                  ELEKTRONİK MALİ MÜHÜR VE E-İMZA
+                  GİB ONAYI BULUNMUYOR
                 </div>
                 <div className="text-[8px] text-slate-700 font-medium">
                   Yetkili: Abdulkadir Kan • {invoice.issuer.phone || '05425783748'}
@@ -741,7 +741,7 @@ export const DigitalInvoiceModal: React.FC<DigitalInvoiceModalProps> = ({
 
             {/* Exact Required Disclaimer at the bottom */}
             <div className="pt-3 border-t border-slate-300 text-center text-[10px] font-bold text-rose-700 bg-rose-50/70 p-2.5 rounded-xl border border-rose-200">
-              * Bu belge sadece bilgilendirme amaçlıdır, farklı bir amaç ile kullanılamaz, fatura yerine geçmez.
+              * Bu belge bilgilendirme/taslak amaçlıdır; resmi e-Fatura veya e-Arşiv belgesi yerine geçmez.
             </div>
 
           </div>
@@ -808,7 +808,7 @@ export const DigitalInvoiceModal: React.FC<DigitalInvoiceModalProps> = ({
                 </div>
                 <div>
                   <h4 className="text-base font-bold text-slate-100">Faturayı Kalıcı Olarak Sil</h4>
-                  <p className="text-xs text-rose-300/90">Bu e-Arşiv faturası sistemden silinecektir.</p>
+                  <p className="text-xs text-rose-300/90">Bu dijital belge özeti sistemden silinecektir.</p>
                 </div>
               </div>
 

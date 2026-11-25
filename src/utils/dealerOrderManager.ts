@@ -152,6 +152,32 @@ export async function requestDealerPackagePurchase(
       console.warn('Firestore create dealer package order notice:', fsErr);
     }
 
+    try {
+      const { issueSalesInvoiceForOrder } = await import('./invoiceManager');
+      const { getLocalMembersDirectory } = await import('./authManager');
+      const member = getLocalMembersDirectory().find((m: any) => m.uid === resellerId || m.email === resellerEmail);
+      await issueSalesInvoiceForOrder({
+        orderId,
+        uid: resellerId,
+        fullName: member?.fullName || resellerName,
+        companyName: member?.dealerDetails?.companyName || resellerName,
+        taxNumber: member?.dealerDetails?.taxNumber === 'Belirtilmedi' ? '' : member?.dealerDetails?.taxNumber,
+        taxOffice: member?.dealerDetails?.taxOffice === 'Belirtilmedi' ? '' : member?.dealerDetails?.taxOffice,
+        address: member?.dealerDetails?.address,
+        email: resellerEmail,
+        phone: resellerPhone || member?.phone || '',
+        referralCode: member?.referralCode,
+        packageId: pkg.id,
+        packageName: pkg.name,
+        grossAmountUsd: pkg.price,
+        paid: true,
+        paymentReference,
+        notes: 'Paket satın alımında otomatik oluşturulan satış faturası.',
+      });
+    } catch (invoiceErr) {
+      console.debug('Auto invoice on purchase notice:', invoiceErr);
+    }
+
     window.dispatchEvent(new CustomEvent('aurabio_reseller_session_updated'));
     window.dispatchEvent(new CustomEvent('aurabio_resellers_updated'));
 

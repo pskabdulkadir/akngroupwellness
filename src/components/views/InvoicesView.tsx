@@ -45,10 +45,10 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({ invoices, onSelectIn
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-lg font-bold text-slate-900 tracking-tight">
-            e-Fatura &amp; e-Arşiv Takip Merkezi
+            Muhasebe Belge Taslakları
           </h2>
           <p className="text-xs text-slate-500">
-            GİB ve Özel Entegratör API üzerinden otomatik kesilen tüm yasal belgeler
+            Sistem içi fatura ve muhasebe belge kayıtları. GİB/entegratör onayı olmadan resmî fatura sayılmaz.
           </p>
         </div>
 
@@ -68,7 +68,7 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({ invoices, onSelectIn
               filterType === 'CORPORATE' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            e-Fatura (Kurumsal)
+            Kurumsal kayıtlar
           </button>
           <button
             onClick={() => setFilterType('INDIVIDUAL')}
@@ -76,7 +76,7 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({ invoices, onSelectIn
               filterType === 'INDIVIDUAL' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            e-Arşiv (Bireysel)
+            Bireysel kayıtlar
           </button>
           <button
             onClick={() => setFilterType('EXPORT')}

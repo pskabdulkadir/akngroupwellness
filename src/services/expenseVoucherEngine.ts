@@ -9,6 +9,7 @@
  */
 
 import type { ExpenseVoucherRecord, PendingPayoutItem } from '../types/accounting';
+import { COMPANY_IDENTITY } from '../config/companyIdentity';
 
 export interface CompanyBillingProfile {
   legalName: string;
@@ -27,19 +28,19 @@ export interface CompanyBillingProfile {
 }
 
 export const CANONICAL_COMPANY_PROFILE: CompanyBillingProfile = {
-  legalName: 'AKN GLOBAL GROUP BİLİŞİM MEDİKAL VE WELLNESS TEKNOLOJİLERİ A.Ş.',
-  tradeName: 'AKN Group Wellness',
-  vkn: '0340892341',
-  taxOffice: 'Büyük Mükellefler Vergi Dairesi',
-  address: 'Barbaros Bulvarı No: 142 Kat: 4 Beşiktaş',
-  city: 'İstanbul',
+  legalName: COMPANY_IDENTITY.legalName,
+  tradeName: COMPANY_IDENTITY.brandName,
+  vkn: COMPANY_IDENTITY.taxNumber,
+  taxOffice: COMPANY_IDENTITY.taxOffice,
+  address: COMPANY_IDENTITY.address,
+  city: '',
   country: 'Türkiye',
-  postalCode: '34349',
-  phone: '+90 (212) 840 20 00',
-  email: 'muhasebe@akngroupwellness.com',
-  web: 'www.akngroupwellness.com',
-  mersisNo: '0034089234100018',
-  ticaretSicilNo: '345892-5',
+  postalCode: '',
+  phone: COMPANY_IDENTITY.internationalPhone,
+  email: COMPANY_IDENTITY.contactEmail,
+  web: COMPANY_IDENTITY.website,
+  mersisNo: '',
+  ticaretSicilNo: '',
 };
 
 /**
@@ -104,7 +105,7 @@ export function generateOfficialGiderPusulasiXml(
   <cac:AccountingSupplierParty>
     <cac:Party>
       <cac:PartyIdentification>
-        <cbc:ID schemeID="VKN">${company.vkn}</cbc:ID>
+        <cbc:ID schemeID="${company.vkn.length === 11 ? 'TCKN' : 'VKN'}">${company.vkn}</cbc:ID>
       </cac:PartyIdentification>
       <cac:PartyName>
         <cbc:Name>${company.legalName}</cbc:Name>
@@ -213,72 +214,28 @@ export function generateBankBatchFile(
   const dateStr = new Date().toISOString().split('T')[0].replace(/-/g, '');
   const idStr = batchId || `BATCH-${dateStr}-${Math.floor(100 + Math.random() * 900)}`;
   const totalNet = items.reduce((acc, i) => acc + i.net_amount, 0);
+  const csvCell = (value: string | number) => `"${String(value).replace(/"/g, '""')}"`;
+  const rows = [
+    ['Bayi Adı Soyadı / Ünvan', 'T.C. / Vergi No', 'Ülke', 'Ödeme Türü', 'IBAN', 'SWIFT/BIC', 'Banka', 'Net Ödenecek Tutar', 'Para Birimi', 'Fatura / Gider Pusulası No', 'Ödeme Açıklaması'],
+    ...items.map((item) => [
+      item.dealer_name,
+      item.dealer_tckn,
+      item.dealer_country || '',
+      item.payout_type || '',
+      item.dealer_iban.replace(/\s+/g, ''),
+      item.swift_code || '',
+      item.bank_name,
+      item.net_amount.toFixed(2),
+      item.currency,
+      item.voucher_number,
+      `AKN Global Group bayi hakedişi ${item.voucher_number}`,
+    ]),
+  ];
+  const content = `\uFEFF${rows.map((row) => row.map((cell) => csvCell(cell)).join(';')).join('\r\n')}\r\n`;
 
-  // CSV için Türkçe karakter uyumlu UTF-8 BOM (\uFEFF)
-  let csv = '\uFEFF';
-
-  if (bank === 'GARANTI') {
-    // Garanti BBVA Kurumsal Toplu Transfer Formatı
-    csv += 'SIRA;ALICI_ADI;HESAP_IBAN;TUTAR;PARA_BIRIMI;ACIKLAMA;BELGE_NO;VERGI_KIMLIK\r\n';
-    items.forEach((item, index) => {
-      const cleanIban = item.dealer_iban.replace(/\s+/g, '');
-      const cleanName = item.dealer_name.replace(/;/g, ' ');
-      const desc = `AKN Hak Ediş ${item.voucher_number}`.slice(0, 32);
-      csv += `${index + 1};"${cleanName}";"${cleanIban}";${item.net_amount.toFixed(2)};TRY;"${desc}";"${item.voucher_number}";"${item.dealer_tckn}"\r\n`;
-    });
-    return {
-      filename: `GARANTI_TOPLU_ODEME_${idStr}.csv`,
-      content: csv,
-      mimeType: 'text/csv;charset=utf-8',
-      count: items.length,
-      totalNet,
-    };
-  }
-
-  if (bank === 'AKBANK') {
-    // Akbank Kurumsal Transfer Formatı
-    csv += 'SIRA NO;ALICI ISIM;ALICI IBAN;TUTAR;DOVIZ;ISLEM ACIKLAMASI;HAKEDIS NO\r\n';
-    items.forEach((item, index) => {
-      const cleanIban = item.dealer_iban.replace(/\s+/g, '');
-      const cleanName = item.dealer_name.replace(/;/g, ' ');
-      csv += `${index + 1};"${cleanName}";"${cleanIban}";${item.net_amount.toFixed(2)};TRY;"AKN Bayi Odemesi ${item.voucher_number}";"${item.voucher_number}"\r\n`;
-    });
-    return {
-      filename: `AKBANK_TOPLU_TRANSFER_${idStr}.csv`,
-      content: csv,
-      mimeType: 'text/csv;charset=utf-8',
-      count: items.length,
-      totalNet,
-    };
-  }
-
-  if (bank === 'ISBANK') {
-    // Türkiye İş Bankası Ticari Ödeme Formatı
-    csv += 'SIRA_NO;TCKN_VKN;ALICI_UNVAN;IBAN;ODENECEK_TUTAR;PARA_KODU;REFERANS_KODU;ACIKLAMA\r\n';
-    items.forEach((item, index) => {
-      const cleanIban = item.dealer_iban.replace(/\s+/g, '');
-      const cleanName = item.dealer_name.replace(/;/g, ' ');
-      csv += `${index + 1};"${item.dealer_tckn}";"${cleanName}";"${cleanIban}";${item.net_amount.toFixed(2)};TRY;"${item.voucher_number}";"AKN Group Hakedis Odemesi"\r\n`;
-    });
-    return {
-      filename: `ISBANK_TARIHLI_ODEME_${idStr}.csv`,
-      content: csv,
-      mimeType: 'text/csv;charset=utf-8',
-      count: items.length,
-      totalNet,
-    };
-  }
-
-  // Ziraat Bankası Standart Formatı
-  csv += 'NO;ALICI_AD_SOYAD;IBAN_NO;ODEME_TUTARI;ACIKLAMA;VERGI_NO;PUSULA_NO\r\n';
-  items.forEach((item, index) => {
-    const cleanIban = item.dealer_iban.replace(/\s+/g, '');
-    const cleanName = item.dealer_name.replace(/;/g, ' ');
-    csv += `${index + 1};"${cleanName}";"${cleanIban}";${item.net_amount.toFixed(2)};"AKN Wellness Bayi Hakedisi";"${item.dealer_tckn}";"${item.voucher_number}"\r\n`;
-  });
   return {
-    filename: `ZIRAAT_TOPLU_EFT_${idStr}.csv`,
-    content: csv,
+    filename: `${bank}_TOPLU_ODEME_${idStr}.csv`,
+    content,
     mimeType: 'text/csv;charset=utf-8',
     count: items.length,
     totalNet,
