@@ -79,6 +79,7 @@ import {
 } from '../utils/walletRegion';
 import { recordUserContractApprovals } from '../utils/paymentProcessor';
 import { formatUsd } from '../utils/currency';
+import { getMemberDisplayName, normalizeNickname } from '../utils/memberDisplay';
 import { FixedUsdRateBanner } from './common/FixedUsdRateBanner';
 import { DealerRegionalUsdPanel } from './DealerRegionalUsdPanel';
 import { DealerEthicsGuidelines } from './DealerEthicsGuidelines';
@@ -141,6 +142,7 @@ interface DealerBackOfficeViewProps {
     userId: string,
     data: {
       full_name: string;
+      nickname: string;
       phone: string;
       city: string;
       iban_holder_name: string;
@@ -159,6 +161,7 @@ interface DealerBackOfficeViewProps {
   ) => Promise<void>;
   onRegisterReferralMember?: (formData: {
     full_name: string;
+    nickname?: string;
     city: string;
     country_code?: string;
     sponsor_id: string;
@@ -343,6 +346,7 @@ export const DealerBackOfficeView: React.FC<DealerBackOfficeViewProps> = ({
     'PKG_MINI_DENEME'
   );
   const [newSubDealerName, setNewSubDealerName] = useState<string>('');
+  const [newSubDealerNickname, setNewSubDealerNickname] = useState<string>('');
   const [newSubDealerCity, setNewSubDealerCity] = useState<string>('İstanbul');
   const [newSubDealerCountryCode, setNewSubDealerCountryCode] = useState<string>('TR');
   const [newSubDealerPhone, setNewSubDealerPhone] = useState<string>('');
@@ -1473,6 +1477,8 @@ export const DealerBackOfficeView: React.FC<DealerBackOfficeViewProps> = ({
 
   // Profile & 2FA state
   const [editName, setEditName] = useState<string>(member?.full_name || '');
+  const [editNickname, setEditNickname] = useState<string>(member?.nickname || '');
+  const [profileNicknameError, setProfileNicknameError] = useState<string | null>(null);
   const [editEmail, setEditEmail] = useState<string>(member?.email || '');
   const [currentLoginPassword, setCurrentLoginPassword] = useState<string>('');
   const [newLoginPassword, setNewLoginPassword] = useState<string>('');
@@ -1491,6 +1497,8 @@ export const DealerBackOfficeView: React.FC<DealerBackOfficeViewProps> = ({
   React.useEffect(() => {
     if (member) {
       setEditName(member.full_name || '');
+      setEditNickname(member.nickname || '');
+      setProfileNicknameError(null);
       setEditEmail(member.email || '');
       setCurrentLoginPassword('');
       setNewLoginPassword('');
@@ -1748,8 +1756,14 @@ export const DealerBackOfficeView: React.FC<DealerBackOfficeViewProps> = ({
       setConfirmLoginPassword('');
     }
 
+    if (!normalizeNickname(editNickname)) {
+      setProfileNicknameError('Rumuz 3–24 karakter olmalı; harf/rakam ile başlamalı ve bitmeli, yalnızca alt çizgi veya tire içerebilir.');
+      return;
+    }
+    setProfileNicknameError(null);
     await onUpdateProfile(member.user_id, {
       full_name: editName,
+      nickname: editNickname,
       phone: editPhone,
       city: editCity,
       iban_holder_name: editIbanHolder,
@@ -1797,7 +1811,7 @@ export const DealerBackOfficeView: React.FC<DealerBackOfficeViewProps> = ({
           <div className={`text-[10px] font-mono font-bold ${isRoot ? 'text-amber-300' : 'text-emerald-800'}`}>
             {isRoot ? 'KÖK BAYİ (SİZ)' : `ALT HAT #${node.global_line_id}`}
           </div>
-          <div className="font-bold text-sm truncate mt-1">{node.full_name}</div>
+          <div className="font-bold text-sm truncate mt-1">{getMemberDisplayName(node)}</div>
           <div className={`text-[10px] font-mono truncate ${isRoot ? 'text-slate-300' : 'text-slate-500'}`}>
             Kod: {node.ref_code}
           </div>
@@ -1968,8 +1982,13 @@ export const DealerBackOfficeView: React.FC<DealerBackOfficeViewProps> = ({
   const handleAddSubDealerForActivity = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!onRegisterReferralMember || !newSubDealerName.trim()) return;
+    if (!normalizeNickname(newSubDealerNickname)) {
+      window.alert('Rumuz 3–24 karakter olmalı; harf/rakam ile başlamalı ve bitmeli, yalnızca alt çizgi veya tire içerebilir.');
+      return;
+    }
     await onRegisterReferralMember({
       full_name: newSubDealerName.trim(),
+      nickname: newSubDealerNickname,
       city: newSubDealerCity.trim() || 'Türkiye',
       country_code: newSubDealerCountryCode,
       phone: newSubDealerPhone.trim() || undefined,
@@ -1980,6 +1999,7 @@ export const DealerBackOfficeView: React.FC<DealerBackOfficeViewProps> = ({
       assigned_leg: newSubDealerLeg,
     });
     setNewSubDealerName('');
+    setNewSubDealerNickname('');
     setNewSubDealerPhone('');
     setNewSubDealerEmail('');
     setNewSubDealerPassword('');
@@ -2171,7 +2191,7 @@ export const DealerBackOfficeView: React.FC<DealerBackOfficeViewProps> = ({
                 >
                   {sortedMembers.map((m) => (
                     <option key={m.user_id} value={m.user_id}>
-                      #{m.global_line_id} — {m.full_name} ({m.ref_code} · Kariyer Seviyesi {m.career_level})
+                      #{m.global_line_id} — {getMemberDisplayName(m)} ({m.ref_code} · Kariyer Seviyesi {m.career_level})
                     </option>
                   ))}
                 </select>
@@ -2728,6 +2748,7 @@ export const DealerBackOfficeView: React.FC<DealerBackOfficeViewProps> = ({
                       redirectToDealerRegistrationPortal({
                         user_id: member.user_id,
                         full_name: member.full_name,
+                        nickname: member.nickname,
                         ref_code: member.ref_code,
                         email: member.email,
                         phone: member.phone,
@@ -4041,6 +4062,19 @@ Paket Alarak Aktifliği Yenile →
                 </div>
 
                 <div>
+                  <label className="block text-slate-300 font-semibold mb-1">Görünen Rumuz *</label>
+                  <input
+                    type="text"
+                    required
+                    minLength={3}
+                    maxLength={24}
+                    value={newSubDealerNickname}
+                    onChange={(e) => setNewSubDealerNickname(e.target.value)}
+                    placeholder="3–24 karakter"
+                    className="w-full px-3 py-2 rounded-lg bg-slate-900/90 border border-white/20 text-white"
+                  />
+                </div>
+                <div>
                   <div className="flex items-center justify-between mb-1">
                     <label className="text-slate-300 font-semibold flex items-center gap-1">
                       <Lock className="w-3.5 h-3.5 text-emerald-400" />
@@ -4319,10 +4353,10 @@ Paket Alarak Aktifliği Yenile →
                           >
                             <div>
                               <div className="text-xs font-bold text-slate-900">
-                                #{child.global_line_id} {child.full_name}
+                                #{child.global_line_id} {getMemberDisplayName(child)}
                               </div>
                               <div className="text-[11px] text-slate-500">
-                                Sponsor: {childSponsor?.full_name || member.full_name} ·{' '}
+                                Sponsor: {childSponsor ? getMemberDisplayName(childSponsor) : getMemberDisplayName(member)} ·{' '}
                                 Kariyer Seviyesi {child.career_level}
                               </div>
                             </div>
@@ -4478,7 +4512,7 @@ Paket Alarak Aktifliği Yenile →
 
               <div className="p-4 rounded-xl bg-emerald-50/70 border border-emerald-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-emerald-950">
                 <div>
-                  <strong>{member.full_name} — Monoline Tek Hat Alt Bayi Ağacı:</strong> Kendi
+                  <strong>{getMemberDisplayName(member)} — Monoline Tek Hat Alt Bayi Ağacı:</strong> Kendi
                   kaydettiğiniz bayilerin doğrudan sponsoru sizsiniz. Kendinizden sonra kendi
                   sponsorluk hattınıza eklenen <strong>{downlineSubDealers.length} alt bayi</strong>{' '}
                   aşağıda tek hat ağaç yapısında sıralanmaktadır. Üst sponsorların diğer bayileri
@@ -4492,6 +4526,7 @@ Paket Alarak Aktifliği Yenile →
                       redirectToDealerRegistrationPortal({
                         user_id: member.user_id,
                         full_name: member.full_name,
+                        nickname: member.nickname,
                         ref_code: member.ref_code,
                         email: member.email,
                         phone: member.phone,
@@ -4591,13 +4626,13 @@ Paket Alarak Aktifliği Yenile →
                                 </span>
                               ) : (
                                 <span className="text-slate-600">
-                                  ↳ Alt Bayinizin Kaydı (Sponsor: {nodeSponsor?.full_name || '-'})
+                                  ↳ Alt Bayinizin Kaydı (Sponsor: {nodeSponsor ? getMemberDisplayName(nodeSponsor) : '-'})
                                 </span>
                               )}
                             </div>
 
                             <div>
-                              <div className="font-bold text-sm truncate">{node.full_name}</div>
+                              <div className="font-bold text-sm truncate">{getMemberDisplayName(node)}</div>
                               <div
                                 className={`text-xs truncate ${
                                   isRoot ? 'text-slate-300' : 'text-slate-500'
@@ -4621,7 +4656,7 @@ Paket Alarak Aktifliği Yenile →
                             <div className="flex justify-between">
                               <span>Sponsoru:</span>
                               <span className="font-semibold truncate max-w-[130px]">
-                                {isRoot ? 'Siz (Kök)' : nodeSponsor?.full_name || member.full_name}
+                                {isRoot ? 'Siz (Kök)' : nodeSponsor ? getMemberDisplayName(nodeSponsor) : getMemberDisplayName(member)}
                               </span>
                             </div>
                             <div className="flex justify-between">
@@ -4689,14 +4724,14 @@ Paket Alarak Aktifliği Yenile →
                                 <span className="font-mono font-bold text-slate-900">
                                   (Global #{u.global_line_id})
                                 </span>
-                                <span className="font-bold text-slate-900">{u.full_name}</span>
+                                <span className="font-bold text-slate-900">{getMemberDisplayName(u)}</span>
                               </div>
                               <div className="text-[11px] text-slate-500">
                                 Direkt Sponsoru:{' '}
                                 <strong className="text-slate-800">
                                   {isDirect
-                                    ? `${member.full_name} (Siz — %20 Sponsor Primi)`
-                                    : uSponsor?.full_name || '-'}
+                                    ? `${getMemberDisplayName(member)} (Siz — %20 Sponsor Primi)`
+                                    : uSponsor ? getMemberDisplayName(uSponsor) : '-'}
                                 </strong>{' '}
                                 · Kodu: <span className="font-mono">{u.ref_code}</span> · Kredi:{' '}
                                 <span className="font-mono font-semibold">
@@ -4757,6 +4792,20 @@ Paket Alarak Aktifliği Yenile →
                     onChange={(e) => setEditName(e.target.value)}
                     className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-lg"
                   />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-700 mb-1">Görünen Rumuz</label>
+                  <input
+                    type="text"
+                    required
+                    minLength={3}
+                    maxLength={24}
+                    value={editNickname}
+                    onChange={(e) => { setEditNickname(e.target.value); setProfileNicknameError(null); }}
+                    aria-invalid={Boolean(profileNicknameError)}
+                    className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-lg"
+                  />
+                  {profileNicknameError && <p role="alert" className="mt-1 text-xs text-rose-600">{profileNicknameError}</p>}
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-slate-700 mb-1">

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ChevronLeft, ChevronRight, Loader2, Search, X } from 'lucide-react';
 import { getAdminToken } from '../utils/adminSession';
+import { updateResellerNickname } from '../utils/resellerManager';
 
 type DealerRecord = {
   user_id: string;
@@ -39,6 +40,7 @@ type DealerEditForm = Pick<DealerRecord, 'full_name' | 'email' | 'phone' | 'city
   sponsor_id: string;
   monoline_position: string;
   company_name: string;
+  nickname: string;
   tax_number: string;
   tax_office: string;
   business_field: string;
@@ -142,6 +144,7 @@ export const AdminDealerManagementTab: React.FC = () => {
       setForm({
         full_name: dealer.full_name || '',
         email: dealer.email || '',
+        nickname: String(profile.nickname || ''),
         phone: dealer.phone || '',
         city: dealer.city || '',
         role: dealer.role || 'member',
@@ -181,6 +184,7 @@ export const AdminDealerManagementTab: React.FC = () => {
         },
         body: JSON.stringify({
           full_name: form.full_name,
+          nickname: form.nickname,
           email: form.email,
           phone: form.phone,
           city: form.city,
@@ -202,6 +206,7 @@ export const AdminDealerManagementTab: React.FC = () => {
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.message || 'Bayi bilgileri kaydedilemedi.');
       const updated = data.dealer as DealerRecord;
+      await updateResellerNickname(updated.user_id, form.nickname);
       setSelected(updated);
       setDealers((current) => current.map((dealer) => dealer.user_id === updated.user_id ? updated : dealer));
       if (data.state) window.dispatchEvent(new CustomEvent('aurabio_monoline_state_updated', { detail: data.state }));
@@ -267,7 +272,7 @@ export const AdminDealerManagementTab: React.FC = () => {
       <div className="flex flex-col gap-2 sm:flex-row">
         <label className="relative min-w-0 flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
-          <input value={search} onChange={(event) => { setSearch(event.target.value); setPage(1); }} placeholder="Ad, e-posta, telefon, kullanıcı veya referans kodu" className="w-full rounded-xl border border-slate-700 bg-slate-900 py-2.5 pl-9 pr-3 text-sm outline-none focus:border-cyan-500" />
+          <input value={search} onChange={(event) => { setSearch(event.target.value); setPage(1); }} placeholder="Ad, rumuz, e-posta, telefon, kullanıcı veya referans kodu" className="w-full rounded-xl border border-slate-700 bg-slate-900 py-2.5 pl-9 pr-3 text-sm outline-none focus:border-cyan-500" />
         </label>
         <select value={status} onChange={(event) => { setStatus(event.target.value); setPage(1); }} className="rounded-xl border border-slate-700 bg-slate-900 px-3 py-2.5 text-sm outline-none focus:border-cyan-500">
           <option value="all">Tüm durumlar</option>
@@ -287,7 +292,7 @@ export const AdminDealerManagementTab: React.FC = () => {
           <tbody>
             {loading ? <tr><td colSpan={5} className="p-8 text-center text-slate-400"><Loader2 className="mx-auto h-5 w-5 animate-spin" /></td></tr> : dealers.length === 0 ? <tr><td colSpan={5} className="p-8 text-center text-slate-500">Kayıt bulunamadı.</td></tr> : dealers.map((dealer) => (
               <tr key={dealer.user_id} onClick={() => void openDealer(dealer.user_id)} className="cursor-pointer border-t border-slate-800 hover:bg-slate-900/80">
-                <td className="p-3"><div className="font-semibold">{dealer.full_name}</div><div className="mt-1 font-mono text-[10px] text-slate-500">{dealer.user_id}</div></td>
+                <td className="p-3"><div className="font-semibold">{dealer.full_name}</div>{dealer.profile?.nickname && <div className="mt-0.5 text-cyan-300">@{dealer.profile.nickname}</div>}<div className="mt-1 font-mono text-[10px] text-slate-500">{dealer.user_id}</div></td>
                 <td className="p-3"><div>{dealer.email}</div><div className="mt-1 text-slate-500">{dealer.phone || '—'}</div></td>
                 <td className="p-3"><div className="capitalize">{dealer.role}</div><div className={dealer.is_locked ? 'mt-1 text-rose-300' : dealer.is_active ? 'mt-1 text-emerald-300' : 'mt-1 text-amber-300'}>{dealer.is_locked ? 'Kilitli' : dealer.is_active ? 'Aktif' : 'Pasif'}</div></td>
                 <td className="p-3"><div>{dealer.sponsor_name || dealer.sponsor_id || '—'}</div><div className="mt-1 text-slate-500">Monoline #{dealer.monoline_position || '—'} · {dealer.assigned_leg || 'AUTO'}</div></td>
@@ -318,6 +323,7 @@ export const AdminDealerManagementTab: React.FC = () => {
               <form onSubmit={saveDealer} className="space-y-4">
                 <div className="grid gap-3 sm:grid-cols-2">
                   <label className="text-xs text-slate-400">Ad Soyad<input required minLength={2} maxLength={150} value={form.full_name} onChange={(event) => setForm({ ...form, full_name: event.target.value })} className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white" /></label>
+                  <label className="text-xs text-slate-400">Görünen rumuz<input required minLength={3} maxLength={24} value={form.nickname} onChange={(event) => setForm({ ...form, nickname: event.target.value })} placeholder="3–24 karakter" className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white" /></label>
                   <label className="text-xs text-slate-400">Giriş e-postası<input required type="email" maxLength={254} value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white" /></label>
                   <label className="text-xs text-slate-400">Telefon<input maxLength={50} value={form.phone} onChange={(event) => setForm({ ...form, phone: event.target.value })} className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white" /></label>
                   <label className="text-xs text-slate-400">Şehir<input maxLength={80} value={form.city} onChange={(event) => setForm({ ...form, city: event.target.value })} className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white" /></label>

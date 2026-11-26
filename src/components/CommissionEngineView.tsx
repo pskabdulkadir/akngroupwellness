@@ -25,6 +25,7 @@ import {
   WithdrawalRequestRecord,
   evaluateMemberOrganizationMetrics,
 } from '../types/monoline';
+import { getMemberDisplayName } from '../utils/memberDisplay';
 
 interface CommissionEngineViewProps {
   members: MonolineMember[];
@@ -1516,7 +1517,7 @@ export const CommissionEngineView: React.FC<CommissionEngineViewProps> = ({
                           <td className="py-2.5 px-3">
                             <span className="font-bold text-slate-900">#{m.global_line_id}</span>{' '}
                             <span className="font-sans font-medium text-slate-800">
-                              {m.full_name}
+                              {getMemberDisplayName(m)}
                             </span>{' '}
                             <span className="text-slate-400">({m.user_id})</span>
                           </td>
@@ -1615,7 +1616,7 @@ export const CommissionEngineView: React.FC<CommissionEngineViewProps> = ({
                           <td className="py-2.5 px-3">
                             <span className="font-bold text-slate-900">#{m.global_line_id}</span>{' '}
                             <span className="font-sans font-medium text-slate-800">
-                              {m.full_name}
+                              {getMemberDisplayName(m)}
                             </span>
                           </td>
                           <td className="py-2.5 px-3 text-slate-800">

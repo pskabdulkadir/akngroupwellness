@@ -1,6 +1,6 @@
 export const COMPANY_IDENTITY = {
   brandName: 'AKN Global Group',
-  legalName: 'AKN Global Group — Abdulkadir Kan (Şahıs Şirketi)',
+  legalName: 'AKN Global Group — Abdulkadir Kan',
   authorizedPerson: 'Abdulkadir Kan',
   taxNumber: '72469002796',
   taxIdentityType: 'TCKN',

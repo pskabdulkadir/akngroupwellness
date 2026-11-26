@@ -1085,6 +1085,7 @@ export async function registerMonolineMemberToFrekans(
       uid: member.user_id,
       email: member.email,
       fullName: member.full_name,
+      nickname: member.nickname,
       phone: member.phone,
       isAllowed: true,
       isApproved: true,
@@ -1128,6 +1129,7 @@ export async function registerMonolineMemberToFrekans(
     const newReseller: Reseller = {
       uid: member.user_id,
       resellerName: member.full_name,
+      nickname: member.nickname,
       businessName: member.full_name,
       fullName: member.full_name,
       email: member.email,
@@ -1188,6 +1190,7 @@ export async function registerMonolineMemberToFrekans(
 export function redirectToDealerRegistrationPortal(sponsor?: {
   user_id: string;
   full_name: string;
+  nickname?: string;
   ref_code: string;
   email?: string;
   phone?: string;
@@ -1211,6 +1214,7 @@ export function redirectToDealerRegistrationPortal(sponsor?: {
         const entry: Reseller = {
           uid: sponsor.user_id,
           resellerName: sponsor.full_name,
+          nickname: sponsor.nickname,
           businessName: sponsor.full_name,
           fullName: sponsor.full_name,
           email: sponsor.email || '',

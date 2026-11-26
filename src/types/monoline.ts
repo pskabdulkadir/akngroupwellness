@@ -1110,6 +1110,7 @@ export interface MonolineMember {
   global_line_id: number; // SQL: users.monoline_position (BigSerial, Unique, Indexed)
   ref_code: string; // SQL: users.ref_code (String, Unique)
   full_name: string;
+  nickname?: string;
   email: string;
   phone: string;
   city: string;

@@ -49,6 +49,9 @@ CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 ALTER TABLE users ADD COLUMN IF NOT EXISTS password_salt TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS member_data JSONB NOT NULL DEFAULT '{}'::jsonb;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_users_nickname_key_unique
+  ON users ((member_data->>'nickname_key'))
+  WHERE COALESCE(member_data->>'nickname_key', '') <> '';
 
 CREATE TABLE IF NOT EXISTS application_state (
     state_key VARCHAR(64) PRIMARY KEY,

@@ -117,6 +117,9 @@ export async function initPostgresDatabase(options: { applySchema?: boolean } = 
         event_data JSONB NOT NULL DEFAULT '{}'::jsonb
       );
       CREATE INDEX IF NOT EXISTS idx_accounting_events_created_at ON accounting_events(created_at DESC);
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_users_nickname_key_unique
+        ON users ((member_data->>'nickname_key'))
+        WHERE COALESCE(member_data->>'nickname_key', '') <> '';
       CREATE TABLE IF NOT EXISTS user_contract_approvals (
         id BIGSERIAL PRIMARY KEY,
         consent_nonce VARCHAR(128) NOT NULL,

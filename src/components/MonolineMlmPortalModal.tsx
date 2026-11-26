@@ -331,6 +331,7 @@ export const MonolineMlmPortalModal: React.FC<MonolineMlmPortalModalProps> = ({
 
   const handleRegisterMember = async (formData: {
     full_name: string;
+    nickname?: string;
     city: string;
     country_code?: string;
     sponsor_id: string;
@@ -507,6 +508,7 @@ export const MonolineMlmPortalModal: React.FC<MonolineMlmPortalModalProps> = ({
     userId: string,
     profileData: {
       full_name: string;
+      nickname: string;
       phone: string;
       city: string;
       iban_holder_name: string;
@@ -525,6 +527,8 @@ export const MonolineMlmPortalModal: React.FC<MonolineMlmPortalModalProps> = ({
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Profil güncellenemedi.');
+      const { updateResellerNickname } = await import('../utils/resellerManager');
+      await updateResellerNickname(userId, profileData.nickname);
       setState(data.state);
       showNotice('success', data.message);
     } catch (err: any) {

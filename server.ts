@@ -30,6 +30,7 @@ import type {
 } from './src/types/accounting';
 import { createPaymentProvider, PaymentProviderError } from './server/paymentProviders.js';
 import { COMPANY_IDENTITY } from './src/config/companyIdentity.js';
+import { nicknameKey, normalizeNickname } from './src/utils/memberDisplay.js';
 import {
   DEFAULT_ETHICS_GUIDELINES_CONTENT,
   normalizeEthicsGuidelinesContent,
@@ -476,7 +477,11 @@ function persistApplicationState(transactionClient?: import('pg').PoolClient) {
       right_leg_volume: member.right_leg_volume || 0,
       password_salt: credentials?.salt || null,
       password_hash: credentials?.hash || null,
-      member_data: { ...member, password: undefined },
+      member_data: {
+        ...member,
+        nickname_key: member.nickname ? nicknameKey(member.nickname) : undefined,
+        password: undefined,
+      },
       created_at: member.joined_at,
       updated_at: new Date().toISOString(),
     };
@@ -6036,7 +6041,7 @@ async function startServer(options: { listen?: boolean } = {}) {
     try {
       const countResult = await pgQuery(
         `SELECT COUNT(*)::int AS total FROM users u
-         WHERE ($1 = '' OR concat_ws(' ', u.user_id, u.full_name, u.email, u.phone, u.referral_code) ILIKE $2)
+         WHERE ($1 = '' OR concat_ws(' ', u.user_id, u.full_name, u.member_data->>'nickname', u.email, u.phone, u.referral_code) ILIKE $2)
            AND ($3 = 'all' OR ($3 = 'active' AND u.is_active = TRUE AND u.is_locked = FALSE)
              OR ($3 = 'inactive' AND u.is_active = FALSE) OR ($3 = 'locked' AND u.is_locked = TRUE))`,
         [searchPattern, searchPattern, status]
@@ -6060,7 +6065,7 @@ async function startServer(options: { listen?: boolean } = {}) {
          FROM users u
          LEFT JOIN users sponsor ON sponsor.user_id = u.sponsor_id
          LEFT JOIN wallets w ON w.user_id = u.user_id
-         WHERE ($1 = '' OR concat_ws(' ', u.user_id, u.full_name, u.email, u.phone, u.referral_code) ILIKE $2)
+         WHERE ($1 = '' OR concat_ws(' ', u.user_id, u.full_name, u.member_data->>'nickname', u.email, u.phone, u.referral_code) ILIKE $2)
            AND ($3 = 'all' OR ($3 = 'active' AND u.is_active = TRUE AND u.is_locked = FALSE)
              OR ($3 = 'inactive' AND u.is_active = FALSE) OR ($3 = 'locked' AND u.is_locked = TRUE))
          ORDER BY u.monoline_position NULLS LAST, u.created_at DESC
@@ -6186,7 +6191,7 @@ async function startServer(options: { listen?: boolean } = {}) {
 
   app.put('/api/v1/admin/dealers/:id', requireAdminJwt, async (req, res) => {
     const allowedFields = new Set([
-      'full_name', 'email', 'new_password', 'phone', 'city', 'role', 'is_active', 'is_locked', 'activity_expires_at',
+      'full_name', 'nickname', 'email', 'new_password', 'phone', 'city', 'role', 'is_active', 'is_locked', 'activity_expires_at',
       'sponsor_id', 'assigned_leg', 'monoline_position', 'company_name', 'tax_number', 'tax_office', 'business_field', 'address',
     ]);
     const input = req.body && typeof req.body === 'object' && !Array.isArray(req.body) ? req.body : {};
@@ -6210,6 +6215,19 @@ async function startServer(options: { listen?: boolean } = {}) {
         return;
       }
       updates[field] = field === 'email' ? value.toLowerCase() : value || null;
+    }
+    let nicknameUpdate: string | undefined;
+    if (input.nickname !== undefined) {
+      if (typeof input.nickname !== 'string') {
+        res.status(400).json({ status: 'error', message: 'nickname metin olmalıdır.' });
+        return;
+      }
+      const rawNickname = input.nickname.trim();
+      if (rawNickname && !normalizeNickname(rawNickname)) {
+        res.status(400).json({ status: 'error', code: 'INVALID_NICKNAME', message: 'Rumuz 3–24 karakter olmalı; harf/rakam ile başlamalı ve bitmeli, yalnızca alt çizgi veya tire içerebilir.' });
+        return;
+      }
+      nicknameUpdate = rawNickname ? normalizeNickname(rawNickname)! : '';
     }
     const profileFields = {
       company_name: 'companyName',
@@ -6291,6 +6309,10 @@ async function startServer(options: { listen?: boolean } = {}) {
           const duplicateEmail = await client.query('SELECT user_id FROM users WHERE LOWER(email) = LOWER($1) AND user_id <> $2 LIMIT 1', [updates.email, req.params.id]);
           if (duplicateEmail.rowCount) throw Object.assign(new Error('Bu e-posta başka bir hesapta kullanılıyor.'), { statusCode: 409 });
         }
+        if (nicknameUpdate) {
+          const duplicateNickname = await client.query("SELECT user_id FROM users WHERE member_data->>'nickname_key' = $1 AND user_id <> $2 LIMIT 1", [nicknameKey(nicknameUpdate), req.params.id]);
+          if (duplicateNickname.rowCount) throw Object.assign(new Error('Bu rumuz başka bir hesapta kullanılıyor.'), { statusCode: 409 });
+        }
         if (nextActive && (!nextExpiry || new Date(nextExpiry).getTime() <= Date.now())) {
           throw Object.assign(new Error('Aktif hesap için bitiş tarihi gelecekte olmalıdır.'), { statusCode: 400 });
         }
@@ -6331,6 +6353,10 @@ async function startServer(options: { listen?: boolean } = {}) {
         }
         const memberProfilePatch = {
           ...(updates.full_name !== undefined ? { fullName: updates.full_name } : {}),
+          ...(nicknameUpdate !== undefined ? {
+            nickname: nicknameUpdate || null,
+            nickname_key: nicknameUpdate ? nicknameKey(nicknameUpdate) : null,
+          } : {}),
           ...(updates.email !== undefined ? { email: updates.email } : {}),
           ...(updates.phone !== undefined ? { phone: updates.phone } : {}),
           ...(updates.city !== undefined ? { city: updates.city } : {}),
@@ -8212,6 +8238,7 @@ async function startServer(options: { listen?: boolean } = {}) {
       const {
         user_id,
         full_name,
+        nickname,
         email,
         phone,
         ref_code,
@@ -8235,6 +8262,11 @@ async function startServer(options: { listen?: boolean } = {}) {
           status: 'error',
           message: 'Bayi / Üye adı soyadı zorunludur.',
         });
+        return;
+      }
+      const normalizedNickname = nickname === undefined ? null : normalizeNickname(nickname);
+      if (nickname !== undefined && !normalizedNickname) {
+        res.status(400).json({ status: 'error', code: 'INVALID_NICKNAME', message: 'Rumuz 3–24 karakter olmalı; harf/rakam ile başlamalı ve bitmeli, yalnızca alt çizgi veya tire içerebilir.' });
         return;
       }
       const normalizedPassword = typeof password === 'string' ? password : '';
@@ -8304,6 +8336,13 @@ async function startServer(options: { listen?: boolean } = {}) {
           message: 'Bu kullanıcı kimliği zaten kayıtlı.',
         });
         return;
+      }
+      if (normalizedNickname) {
+        const duplicateNickname = await pgQuery("SELECT user_id FROM users WHERE member_data->>'nickname_key' = $1 LIMIT 1", [nicknameKey(normalizedNickname)]);
+        if (duplicateNickname?.rowCount) {
+          res.status(409).json({ status: 'error', code: 'DUPLICATE_NICKNAME', message: 'Bu rumuz başka bir hesapta kullanılıyor.' });
+          return;
+        }
       }
 
       const cleanSponsorInput = sponsor_id ? String(sponsor_id).trim() : '';
@@ -8392,6 +8431,7 @@ async function startServer(options: { listen?: boolean } = {}) {
         global_line_id: nextLineId,
         ref_code: customRef || `AURA-BAYI-${Math.floor(1000 + Math.random() * 9000)}`,
         full_name: String(full_name).trim(),
+        nickname: normalizedNickname || undefined,
         email:
           email && String(email).trim()
             ? String(email).trim()
@@ -8597,6 +8637,12 @@ async function startServer(options: { listen?: boolean } = {}) {
           res.locals.applicationStatePersisted = true;
         } catch (dbErr: any) {
           applyPersistentState(rollbackState);
+          if (dbErr?.code === '23505' && dbErr?.constraint === 'idx_users_nickname_key_unique') {
+            const error: any = new Error('Bu rumuz başka bir hesapta kullanılıyor.');
+            error.statusCode = 409;
+            error.code = 'DUPLICATE_NICKNAME';
+            throw error;
+          }
           logDatabaseError('member-registration-write', dbErr);
           const error: any = new Error('Bayi kaydı PostgreSQL’e yazılamadı; işlem tamamlanmadı.');
           error.statusCode = 503;
@@ -8835,7 +8881,7 @@ async function startServer(options: { listen?: boolean } = {}) {
     res.json({ bank_details: member.bank_details });
   });
 
-  app.put('/api/v1/members/:userId/profile', requireAdminOrOwnMember, (req, res) => {
+  app.put('/api/v1/members/:userId/profile', requireAdminOrOwnMember, async (req, res) => {
     const member = members.find((m) => m.user_id === req.params.userId);
     if (!member) {
       res.status(404).json({ status: 'error', message: 'Üye bulunamadı.' });
@@ -8844,6 +8890,7 @@ async function startServer(options: { listen?: boolean } = {}) {
 
     const {
       full_name,
+      nickname,
       phone,
       city,
       iban_holder_name,
@@ -8854,6 +8901,24 @@ async function startServer(options: { listen?: boolean } = {}) {
     if (full_name) {
       member.full_name = String(full_name).trim();
       member.bank_details.iban_holder_name = member.full_name;
+    }
+    if (nickname !== undefined) {
+      const rawNickname = typeof nickname === 'string' ? nickname.trim() : '';
+      const normalizedNickname = rawNickname ? normalizeNickname(rawNickname) : null;
+      if (rawNickname && !normalizedNickname) {
+        res.status(400).json({ status: 'error', code: 'INVALID_NICKNAME', message: 'Rumuz 3–24 karakter olmalı; harf/rakam ile başlamalı ve bitmeli, yalnızca alt çizgi veya tire içerebilir.' });
+        return;
+      }
+      if (normalizedNickname) {
+        const duplicateNickname = await pgQuery("SELECT user_id FROM users WHERE member_data->>'nickname_key' = $1 AND user_id <> $2 LIMIT 1", [nicknameKey(normalizedNickname), member.user_id]);
+        if (duplicateNickname?.rowCount) {
+          res.status(409).json({ status: 'error', code: 'DUPLICATE_NICKNAME', message: 'Bu rumuz başka bir hesapta kullanılıyor.' });
+          return;
+        }
+        member.nickname = normalizedNickname;
+      } else {
+        delete member.nickname;
+      }
     }
     if (phone) member.phone = String(phone).trim();
     if (city) member.city = String(city).trim();
@@ -8971,7 +9036,7 @@ async function startServer(options: { listen?: boolean } = {}) {
     });
   });
 
-  app.put('/api/v1/admin/members/:userId', requireAdminJwt, (req, res) => {
+  app.put('/api/v1/admin/members/:userId', requireAdminJwt, async (req, res) => {
     const member = members.find((m) => m.user_id === req.params.userId);
     if (!member) {
       res.status(404).json({ status: 'error', message: 'Üye bulunamadı.' });
@@ -8986,6 +9051,7 @@ async function startServer(options: { listen?: boolean } = {}) {
       swap_direction,
       target_line_id,
       full_name,
+      nickname,
       city,
       ref_code,
       assigned_leg,
@@ -8994,6 +9060,24 @@ async function startServer(options: { listen?: boolean } = {}) {
       personal_volume,
       group_volume,
     } = req.body;
+
+    let normalizedNickname: string | undefined;
+    if (nickname !== undefined) {
+      const rawNickname = typeof nickname === 'string' ? nickname.trim() : '';
+      const parsedNickname = rawNickname ? normalizeNickname(rawNickname) : null;
+      if (rawNickname && !parsedNickname) {
+        res.status(400).json({ status: 'error', code: 'INVALID_NICKNAME', message: 'Rumuz 3–24 karakter olmalı; harf/rakam ile başlamalı ve bitmeli, yalnızca alt çizgi veya tire içerebilir.' });
+        return;
+      }
+      if (parsedNickname) {
+        const duplicateNickname = await pgQuery("SELECT user_id FROM users WHERE member_data->>'nickname_key' = $1 AND user_id <> $2 LIMIT 1", [nicknameKey(parsedNickname), member.user_id]);
+        if (duplicateNickname?.rowCount) {
+          res.status(409).json({ status: 'error', code: 'DUPLICATE_NICKNAME', message: 'Bu rumuz başka bir hesapta kullanılıyor.' });
+          return;
+        }
+        normalizedNickname = parsedNickname;
+      }
+    }
 
     const prevExp = member.activity_expires_at;
     if (typeof is_active === 'boolean') {
@@ -9010,6 +9094,10 @@ async function startServer(options: { listen?: boolean } = {}) {
     }
     if (typeof is_locked === 'boolean') member.is_locked = is_locked;
     if (full_name && String(full_name).trim()) member.full_name = String(full_name).trim();
+    if (nickname !== undefined) {
+      if (normalizedNickname) member.nickname = normalizedNickname;
+      else delete member.nickname;
+    }
     if (city && String(city).trim()) member.city = String(city).trim();
     if (ref_code && String(ref_code).trim()) {
       member.ref_code = String(ref_code).trim().toUpperCase();

@@ -18,6 +18,7 @@ import { UserMember, MemberOrder } from './authManager';
 import { DEFAULT_DEALER_PACKAGES, type DealerPackage } from '../config/dealerPackages';
 import { COMPANY_IDENTITY } from '../config/companyIdentity';
 import { isUnknownCommitResponse, verifyRecordedRequest } from './persistenceVerification';
+import { nicknameKey, normalizeNickname } from './memberDisplay';
 
 export interface BankInfo {
   bankName: string;
@@ -42,6 +43,7 @@ export const ACTIVATION_RENEWAL_PACKAGE = {
 export interface Reseller {
   uid: string;
   resellerName: string;
+  nickname?: string;
   businessName?: string;
   fullName?: string;
   email: string;
@@ -2185,6 +2187,7 @@ export async function recordNewUserReferral(
 export async function registerNewReseller(data: {
   customUid?: string;
   resellerName: string;
+  nickname?: string;
   email: string;
   phone: string;
   customReferralCode?: string;
@@ -2201,7 +2204,11 @@ export async function registerNewReseller(data: {
     const cleanName = data.resellerName.trim();
     const cleanEmail = data.email.trim().toLowerCase();
     const cleanPhone = data.phone.trim();
+    const cleanNickname = data.nickname === undefined ? undefined : normalizeNickname(data.nickname) ?? undefined;
 
+    if (data.nickname !== undefined && !cleanNickname) {
+      return { success: false, message: 'Rumuz 3–24 karakter olmalı; harf/rakam ile başlamalı ve bitmeli, yalnızca alt çizgi veya tire içerebilir.' };
+    }
     if (!cleanName || !cleanEmail || !cleanPhone) {
       return { success: false, message: 'Lütfen Bayi Adı, E-posta ve Telefon alanlarını eksiksiz doldurunuz.' };
     }
@@ -2211,6 +2218,9 @@ export async function registerNewReseller(data: {
     // Check duplicate email
     if (all.some(r => r.email && r.email.toLowerCase() === cleanEmail)) {
       return { success: false, message: 'Bu e-posta adresi ile zaten kayıtlı bir bayi bulunmaktadır.' };
+    }
+    if (cleanNickname && all.some((reseller) => reseller.nickname && nicknameKey(reseller.nickname) === nicknameKey(cleanNickname))) {
+      return { success: false, message: 'Bu rumuz başka bir bayide kullanılıyor.' };
     }
 
     // Resolve sponsor / referredByCode
@@ -2250,6 +2260,7 @@ export async function registerNewReseller(data: {
     const newReseller: Reseller = {
       uid,
       resellerName: cleanName,
+      nickname: cleanNickname,
       email: cleanEmail,
       phone: cleanPhone,
       referralCode: finalCode,
@@ -2286,6 +2297,7 @@ export async function registerNewReseller(data: {
       const newMemberDoc: UserMember = {
         uid,
         fullName: cleanName,
+        nickname: cleanNickname,
         email: cleanEmail,
         phone: cleanPhone,
         role: 'dealer',
@@ -2898,6 +2910,22 @@ export function setActiveResellerSession(reseller: Reseller | null): void {
     }, 0);
   } catch (err) {
     console.debug('setActiveResellerSession notice:', err);
+  }
+}
+
+export async function updateResellerNickname(uid: string, nickname: string): Promise<void> {
+  const resellers = getLocalResellers();
+  const index = resellers.findIndex((reseller) => reseller.uid === uid);
+  if (index < 0) return;
+
+  const updated = { ...resellers[index], nickname, updatedAt: new Date().toISOString() };
+  resellers[index] = updated;
+  saveLocalResellers(resellers);
+  if (getActiveResellerSession()?.uid === uid) setActiveResellerSession(updated);
+  try {
+    await setDoc(doc(db, 'resellers', uid), { nickname, updatedAt: updated.updatedAt }, { merge: true });
+  } catch (error) {
+    console.warn('Reseller nickname sync notice:', error);
   }
 }
 

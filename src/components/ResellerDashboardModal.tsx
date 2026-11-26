@@ -121,6 +121,7 @@ import { SharedDocumentsPanel } from './SharedDocumentsPanel';
 import { ScanResult } from '../types';
 import { syncUserScansFromFirestore, deleteScanResult, deleteScanRecordsByIds } from '../utils/storage';
 import { formatUsd } from '../utils/currency';
+import { getMemberDisplayName, normalizeNickname } from '../utils/memberDisplay';
 
 interface ResellerDashboardModalProps {
   isOpen: boolean;
@@ -168,6 +169,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
   const [liveResellers, setLiveResellers] = useState<Reseller[]>([]);
   const [showAddSubDealerForm, setShowAddSubDealerForm] = useState<boolean>(false);
   const [subDealerName, setSubDealerName] = useState<string>('');
+  const [subDealerNickname, setSubDealerNickname] = useState<string>('');
   const [subDealerEmail, setSubDealerEmail] = useState<string>('');
   const [subDealerPhone, setSubDealerPhone] = useState<string>('');
   const [subDealerCity, setSubDealerCity] = useState<string>('İstanbul');
@@ -243,6 +245,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
 
   // Application / New Reseller Form
   const [regName, setRegName] = useState<string>('');
+  const [regNickname, setRegNickname] = useState<string>('');
   const [regEmail, setRegEmail] = useState<string>('');
   const [regPhone, setRegPhone] = useState<string>('');
   const [regCustomCode, setRegCustomCode] = useState<string>('');
@@ -665,6 +668,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
       return {
         uid: m.uid,
         resellerName: m.fullName || live?.resellerName || 'Davet Edilen Üye',
+        nickname: m.nickname || live?.nickname,
         fullName: m.fullName,
         email: m.email || live?.email || '',
         phone: m.phone || live?.phone || '',
@@ -731,11 +735,16 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
 
   const handleNewResellerSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!normalizeNickname(regNickname)) {
+      setApplyMsg({ type: 'error', text: 'Rumuz 3–24 karakter olmalı; harf/rakam ile başlamalı ve bitmeli, yalnızca alt çizgi veya tire içerebilir.' });
+      return;
+    }
     setIsApplying(true);
     setApplyMsg(null);
 
     try {
       const res = await registerNewReseller({
+        nickname: regNickname,
         resellerName: regName,
         email: regEmail,
         phone: regPhone,
@@ -920,7 +929,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
               </div>
               <p className="text-xs text-slate-400 mt-0.5">
                 {activeReseller 
-                  ? `Aktif Bayi: ${activeReseller.resellerName} • Kod: ${activeReseller.referralCode}`
+                  ? `Aktif Bayi: ${getMemberDisplayName(activeReseller)} • Kod: ${activeReseller.referralCode}`
                   : 'Yetkili bayi ve danışmanlık gelir takip yönetim merkezi'}
               </p>
             </div>
@@ -1051,6 +1060,19 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                     value={regName}
                     onChange={(e) => setRegName(e.target.value)}
                     placeholder="Örn: BioRezonans Frekans Merkezi"
+                    className="w-full px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-700 focus:border-emerald-500 text-xs text-slate-100 outline-none"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[11px] font-semibold text-slate-300">Görünen Rumuz:</label>
+                  <input
+                    type="text"
+                    required
+                    minLength={3}
+                    maxLength={24}
+                    value={regNickname}
+                    onChange={(e) => setRegNickname(e.target.value)}
+                    placeholder="3–24 karakter"
                     className="w-full px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-700 focus:border-emerald-500 text-xs text-slate-100 outline-none"
                   />
                 </div>
@@ -1763,11 +1785,16 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                   <form
                     onSubmit={async (e) => {
                       e.preventDefault();
+                      if (!normalizeNickname(subDealerNickname)) {
+                        setSubDealerFeedback({ type: 'error', text: 'Rumuz 3–24 karakter olmalı; harf/rakam ile başlamalı ve bitmeli, yalnızca alt çizgi veya tire içerebilir.' });
+                        return;
+                      }
                       if (!subDealerName.trim() || !subDealerEmail.trim() || !subDealerPhone.trim()) return;
                       setIsAddingSubDealer(true);
                       setSubDealerFeedback(null);
                       try {
                         const res = await registerNewReseller({
+                          nickname: subDealerNickname,
                           resellerName: subDealerName.trim(),
                           email: subDealerEmail.trim(),
                           phone: subDealerPhone.trim(),
@@ -1785,6 +1812,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                             body: JSON.stringify({
                               user_id: res.reseller?.uid,
                               full_name: subDealerName.trim(),
+                              nickname: subDealerNickname,
                               city: subDealerCity.trim() || 'İstanbul',
                               email: subDealerEmail.trim(),
                               phone: subDealerPhone.trim(),
@@ -1803,6 +1831,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                             text: `${subDealerName.trim()} sizin doğrudan sponsorluğunuzda (${activeReseller.referralCode}) alt bayi olarak kaydedildi ve Monoline tek hat ağacınıza eklendi!`,
                           });
                           setSubDealerName('');
+                          setSubDealerNickname('');
                           setSubDealerEmail('');
                           setSubDealerPhone('');
                           setShowAddSubDealerForm(false);
@@ -1826,7 +1855,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                         </h4>
                         <p className="text-[11px] text-slate-400">
                           Yeni kaydedilen bayinin Direkt Sponsoru otomatik olarak siz (
-                          <strong className="text-white">{activeReseller.resellerName}</strong> —{' '}
+                          <strong className="text-white">{getMemberDisplayName(activeReseller)}</strong> —{' '}
                           <span className="font-mono text-emerald-300">
                             {activeReseller.referralCode}
                           </span>
@@ -1855,6 +1884,10 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                           placeholder="Örn: Ege Frekans Merkezi"
                           className="w-full px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white outline-none focus:border-emerald-500"
                         />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-300 mb-1">Görünen rumuz *</label>
+                        <input type="text" required minLength={3} maxLength={24} value={subDealerNickname} onChange={(e) => setSubDealerNickname(e.target.value)} placeholder="3–24 karakter" className="w-full px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white outline-none focus:border-emerald-500" />
                       </div>
                       <div>
                         <label className="block text-[11px] font-semibold text-slate-300 mb-1">
@@ -1889,7 +1922,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                         <div className="w-full px-3 py-2.5 rounded-xl bg-emerald-950/70 border border-emerald-500/40 text-xs font-bold text-emerald-300 flex items-center gap-1.5 truncate">
                           <Lock className="w-3.5 h-3.5 shrink-0" />
                           <span className="truncate min-w-0">
-                            {activeReseller.resellerName} ({activeReseller.referralCode})
+                            {getMemberDisplayName(activeReseller)} ({activeReseller.referralCode})
                           </span>
                         </div>
                       </div>
@@ -2066,7 +2099,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                             </span>
                           </div>
                           <div className="text-sm font-extrabold truncate pt-1">
-                            {activeReseller.resellerName}
+                            {getMemberDisplayName(activeReseller)}
                           </div>
                           <div className="text-[11px] font-mono text-teal-300">
                             Kod: {activeReseller.referralCode}
@@ -2100,7 +2133,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                                   </span>
                                 </div>
                                 <div className="text-sm font-bold truncate pt-1">
-                                  {sub.resellerName || sub.fullName || 'Alt Bayi'}
+                                  {getMemberDisplayName(sub)}
                                 </div>
                                 <div className="text-[10px] font-mono text-slate-400">
                                   Kod: {sub.referralCode}
@@ -2448,7 +2481,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                       Dijital İş Sunum Raporu &amp; Tanıtım Kataloğu (v6.0 Enterprise)
                     </h3>
                     <p className="text-xs text-slate-300 max-w-3xl leading-relaxed">
-                      Danışanlarınıza, kliniklere, terapistlere ve potansiyel alt bayilerinize gönderebileceğiniz; <strong>Canlı Optik Spektrometre &amp; 3D Biyo-Aura</strong>, <strong>10s Vokal Akustik F0 Spektrometre</strong>, <strong>Web BLE Akıllı Saat Nabız/HRV Köprüsü</strong>, <strong>302+ Kadim Şifa &amp; 50+ Hastalık Ansiklopedisi</strong>, <strong>15 Resmi Kredi Havuzu Paketi</strong>, <strong>BDDK/TCMB 3D Secure Sanal POS</strong> ve <strong>Monoline 7 Nefis MLM</strong> (Direkt Sponsor %20 + Tek Hat %25 + Kariyer Havuzu %50 + Liderlik Eşleşme %20) gelir simülatörünü içeren en kapsamlı sunum ve katalog merkezi. Paylaştığınız linkten kaydolan herkes doğrudan <strong className="text-emerald-300">{activeReseller.resellerName}</strong> bayinize ve küresel tek hatta bağlanır.
+                      Danışanlarınıza, kliniklere, terapistlere ve potansiyel alt bayilerinize gönderebileceğiniz; <strong>Canlı Optik Spektrometre &amp; 3D Biyo-Aura</strong>, <strong>10s Vokal Akustik F0 Spektrometre</strong>, <strong>Web BLE Akıllı Saat Nabız/HRV Köprüsü</strong>, <strong>302+ Kadim Şifa &amp; 50+ Hastalık Ansiklopedisi</strong>, <strong>15 Resmi Kredi Havuzu Paketi</strong>, <strong>BDDK/TCMB 3D Secure Sanal POS</strong> ve <strong>Monoline 7 Nefis MLM</strong> (Direkt Sponsor %20 + Tek Hat %25 + Kariyer Havuzu %50 + Liderlik Eşleşme %20) gelir simülatörünü içeren en kapsamlı sunum ve katalog merkezi. Paylaştığınız linkten kaydolan herkes doğrudan <strong className="text-emerald-300">{getMemberDisplayName(activeReseller)}</strong> bayinize ve küresel tek hatta bağlanır.
                     </p>
                   </div>
 
@@ -3414,7 +3447,7 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
 
                         <a
                           href={generateWhatsAppUrlForMessage(
-                            `🪪 *AuraBio Frekans Bayi Dijital Kartvizitim*\n\nMerhaba! Biyo-Rezonans ve Frekans Yetkili Bayi dijital kartvizitimi ve karekodumu aşağıdaki bağlantıdan görüntüleyebilirsiniz:\n🔗 ${generateBusinessCardLink(activeReseller.referralCode)}\n\n🏢 ${activeReseller.resellerName}`
+                            `🪪 *AuraBio Frekans Bayi Dijital Kartvizitim*\n\nMerhaba! Biyo-Rezonans ve Frekans Yetkili Bayi dijital kartvizitimi ve karekodumu aşağıdaki bağlantıdan görüntüleyebilirsiniz:\n🔗 ${generateBusinessCardLink(activeReseller.referralCode)}\n\n🏢 ${getMemberDisplayName(activeReseller)}`
                           )}
                           target="_blank"
                           rel="noopener noreferrer"
@@ -3830,11 +3863,11 @@ export const ResellerDashboardModal: React.FC<ResellerDashboardModalProps> = ({
                         type="text"
                         required
                         readOnly
-                        value={activeReseller.resellerName}
+                        value={activeReseller.fullName || activeReseller.bankInfo?.accountHolder || activeReseller.resellerName}
                         className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-emerald-500/40 text-xs text-emerald-300 font-bold outline-none cursor-not-allowed"
                       />
                       <p className="text-[10px] text-emerald-400/90">
-                        ✓ Banka denetimi ve yasal uyum gereği yalnızca sistemde kayıtlı kendi adınıza ({activeReseller.resellerName}) ait resmi TR IBAN hesabına çekim yapılabilir.
+                        ✓ Banka denetimi ve yasal uyum gereği yalnızca sistemde kayıtlı kendi adınıza ({activeReseller.fullName || activeReseller.bankInfo?.accountHolder || activeReseller.resellerName}) ait resmi TR IBAN hesabına çekim yapılabilir.
                       </p>
                     </div>
 

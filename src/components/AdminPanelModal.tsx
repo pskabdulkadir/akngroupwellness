@@ -54,6 +54,7 @@ import {
 } from 'lucide-react';
 import { db, wipeAllLocalApplicationData, doc, setDoc } from '../lib/db';
 import { DataBackupRestoreModal } from './DataBackupRestoreModal';
+import { getMemberDisplayName, normalizeNickname } from '../utils/memberDisplay';
 import { UnilevelOrganizationTreePanel } from './UnilevelOrganizationTreePanel';
 import { loginAdminWithMessage, getAdminToken } from '../utils/adminSession';
 import {
@@ -334,6 +335,7 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
 
   // Manual Dealer Addition Form State
   const [manFullName, setManFullName] = useState<string>('');
+  const [manNickname, setManNickname] = useState<string>('');
   const [manEmail, setManEmail] = useState<string>('');
   const [manPassword, setManPassword] = useState<string>('');
   const [manPhone, setManPhone] = useState<string>('');
@@ -393,6 +395,7 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
   // Member Sponsorship & Branch / Leg Balance Edit State
   const [memberToEditSponsorship, setMemberToEditSponsorship] = useState<UserMember | null>(null);
   const [editMemberFullName, setEditMemberFullName] = useState<string>('');
+  const [editMemberNickname, setEditMemberNickname] = useState<string>('');
   const [editMemberEmail, setEditMemberEmail] = useState<string>('');
   const [editMemberPhone, setEditMemberPhone] = useState<string>('');
   const [editMemberRole, setEditMemberRole] = useState<'customer' | 'member' | 'dealer' | 'admin'>('member');
@@ -906,6 +909,7 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
   // Manual Dealer Addition Handler
   const handleOpenManualDealerModal = () => {
     setManFullName('');
+    setManNickname('');
     setManEmail('');
     setManPassword('');
     setManPhone('');
@@ -925,7 +929,11 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
   const handleSubmitManualDealer = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!manFullName.trim() || !manEmail.trim() || !manPassword.trim() || !manCompanyName.trim() || !manPhone.trim()) {
-      alert('Lütfen Ad Soyad, E-posta, Şifre, Telefon ve Firma Adı alanlarını doldurunuz.');
+      alert('Lütfen Ad Soyad, Rumuz, E-posta, Şifre, Telefon ve Firma Adı alanlarını doldurunuz.');
+      return;
+    }
+    if (!normalizeNickname(manNickname)) {
+      alert('Rumuz 3–24 karakter olmalı; harf/rakam ile başlamalı ve bitmeli, yalnızca alt çizgi veya tire içerebilir.');
       return;
     }
 
@@ -938,6 +946,7 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
     try {
       const res = await adminCreateDealerDirectly({
         fullName: manFullName.trim(),
+        nickname: manNickname,
         email: manEmail.trim(),
         password: manPassword.trim(),
         phone: manPhone.trim(),
@@ -1428,6 +1437,7 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
   const handleOpenEditMemberSponsorship = (m: UserMember) => {
     setMemberToEditSponsorship(m);
     setEditMemberFullName(m.fullName || '');
+    setEditMemberNickname(m.nickname || '');
     setEditMemberEmail(m.email || '');
     setEditMemberPhone(m.phone || '');
     setEditMemberRole(m.role === 'accounting' ? 'member' : m.role || 'member');
@@ -1442,12 +1452,17 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
   const handleSaveMemberSponsorship = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!memberToEditSponsorship) return;
+    if (!normalizeNickname(editMemberNickname)) {
+      alert('Rumuz 3–24 karakter olmalı; harf/rakam ile başlamalı ve bitmeli, yalnızca alt çizgi veya tire içerebilir.');
+      return;
+    }
     setIsSavingMemberEdit(true);
     try {
       const targetUid = memberToEditSponsorship.uid;
       const updatedUser: UserMember = {
         ...memberToEditSponsorship,
         fullName: editMemberFullName.trim(),
+        nickname: editMemberNickname.trim(),
         email: editMemberEmail.trim().toLowerCase(),
         phone: editMemberPhone.trim(),
         role: memberToEditSponsorship.role === 'accounting' ? 'accounting' : editMemberRole,
@@ -1462,14 +1477,32 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
         } as any),
       };
 
-      // 1. Update in local storage
-      saveToLocalMembersDirectory(updatedUser);
+      const response = await fetch(`/api/v1/admin/members/${targetUid}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${getAdminToken()}`,
+        },
+        body: JSON.stringify({
+          full_name: updatedUser.fullName,
+          nickname: updatedUser.nickname,
+          sponsor_id: editMemberSponsorCode.trim().toUpperCase(),
+          assigned_leg: editMemberAssignedLeg,
+          left_leg_volume: Number(editMemberLeftLegVol) || 0,
+          right_leg_volume: Number(editMemberRightLegVol) || 0,
+          manual_career_override: Number(editMemberCareerLevel) || 1,
+          is_active: editMemberIsAllowed,
+        }),
+      });
+      const responseData = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(responseData.message || 'Üye sunucuda güncellenemedi.');
 
-      // 2. Update in Firestore
+      saveToLocalMembersDirectory(updatedUser);
       try {
         const docRef = doc(db, 'users', targetUid);
         await setDoc(docRef, {
           fullName: updatedUser.fullName,
+          nickname: updatedUser.nickname,
           email: updatedUser.email,
           phone: updatedUser.phone,
           role: updatedUser.role,
@@ -1486,24 +1519,7 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
         console.warn('Firestore member update notice:', fsErr);
       }
 
-      // 3. Sync to Monoline server
-      try {
-        await fetch(`/api/v1/admin/members/${targetUid}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            full_name: updatedUser.fullName,
-            sponsor_id: editMemberSponsorCode.trim().toUpperCase(),
-            assigned_leg: editMemberAssignedLeg,
-            left_leg_volume: Number(editMemberLeftLegVol) || 0,
-            right_leg_volume: Number(editMemberRightLegVol) || 0,
-            manual_career_override: Number(editMemberCareerLevel) || 1,
-            is_active: editMemberIsAllowed,
-          }),
-        });
-      } catch (srvErr) {
-        console.debug('Server member update notice:', srvErr);
-      }
+      // Sync local and secondary records only after the authoritative server accepts the update.
 
       // 4. Update state and dispatch events
       setMembers(prev => prev.map(m => m.uid === targetUid ? updatedUser : m));
@@ -1765,6 +1781,7 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
     const access = checkMemberAccess(m);
     const matchesSearch = 
       (m.fullName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (m.nickname || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
       (m.email || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
       (m.phone || '').includes(searchQuery) ||
       (m.uid || '').toLowerCase().includes(searchQuery.toLowerCase());
@@ -2318,7 +2335,7 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
                       type="text"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder="İsim, E-posta veya Telefon Ara..."
+                      placeholder="İsim, rumuz, e-posta veya telefon ara..."
                       className="w-full pl-9 pr-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-slate-100 placeholder:text-slate-500 focus:border-emerald-500"
                     />
                   </div>
@@ -2398,6 +2415,7 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
                                 <span className="font-bold text-sm text-slate-100">
                                   {member.fullName}
                                 </span>
+                                {member.nickname && <span className="text-xs text-cyan-300">@{member.nickname}</span>}
                                 <span className="font-mono text-[10px] text-slate-400 bg-slate-900 px-2 py-0.5 rounded border border-slate-800">
                                   {member.uid}
                                 </span>
@@ -5477,6 +5495,10 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
                   </div>
 
                   <div>
+                    <label className="block text-slate-300 font-semibold mb-1">Görünen Rumuz *</label>
+                    <input type="text" required minLength={3} maxLength={24} value={editMemberNickname} onChange={(e) => setEditMemberNickname(e.target.value)} className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-slate-100 outline-none focus:border-indigo-500" />
+                  </div>
+                  <div>
                     <label className="block text-slate-300 font-semibold mb-1">E-Posta *</label>
                     <input
                       type="email"
@@ -5529,7 +5551,7 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
                         <option value="">Kök Sponsor (Sponsorsuz Doğrudan Sistem)</option>
                         {resellers.map((r) => (
                           <option key={r.uid} value={r.referralCode}>
-                            {r.resellerName} ({r.referralCode}) — %{r.commissionRate || 20} Prim
+                            {getMemberDisplayName(r)} ({r.referralCode}) — %{r.commissionRate || 20} Prim
                           </option>
                         ))}
                       </select>
@@ -6557,6 +6579,20 @@ const [scanActionMsg, setScanActionMsg] = useState<string | null>(null);
                         value={manFullName}
                         onChange={(e) => setManFullName(e.target.value)}
                         placeholder="Örn: Dr. Ahmet Yılmaz"
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-slate-100 text-xs outline-none focus:border-amber-500"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-slate-300">Görünen Rumuz *</label>
+                      <input
+                        type="text"
+                        required
+                        minLength={3}
+                        maxLength={24}
+                        value={manNickname}
+                        onChange={(e) => setManNickname(e.target.value)}
+                        placeholder="3–24 karakter"
                         className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-slate-100 text-xs outline-none focus:border-amber-500"
                       />
                     </div>

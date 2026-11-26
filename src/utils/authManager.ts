@@ -16,6 +16,7 @@ import { getPackagePriceForRegion, resolveMemberRegion } from './walletRegion';
 import { loginAdmin, loginAdminWithMessage, loginAccountingWithMessage, clearAccountingToken, clearAdminToken } from './adminSession';
 import { DEFAULT_DEALER_PACKAGES } from '../config/dealerPackages';
 import { COMPANY_IDENTITY } from '../config/companyIdentity';
+import { normalizeNickname } from './memberDisplay';
 
 // ADMIN CREDENTIALS & CONSTANTS
 export const ADMIN_EMAILS: string[] = ['psikologabdulkadirkan@gmail.com'];
@@ -522,6 +523,7 @@ export interface UserMember {
   uid: string;
   email: string;
   fullName: string;
+  nickname?: string;
   phone: string;
   passwordHash?: string;
   isAllowed: boolean; // Set by admin (or true during active demo)
@@ -1018,12 +1020,14 @@ export async function registerMember(
   resellerId?: string,
   referredByCode?: string,
   dealerApplicationData?: DealerDetails,
-  countryCode: string = 'TR'
+  countryCode: string = 'TR',
+  nickname?: string
 ): Promise<{ success: boolean; message: string; user?: UserMember; whatsappDealerUrl?: string; pendingPayment?: boolean }> {
   try {
     const cleanEmail = email.trim().toLowerCase();
     const cleanFullName = fullName.trim();
     const cleanPhone = phone.trim();
+    const cleanNickname = normalizeNickname(nickname);
     const cleanCountryCode = (countryCode || 'TR').trim().toUpperCase();
 
     if (!cleanEmail || !cleanFullName || !cleanPhone || !password) {
@@ -1074,6 +1078,9 @@ export async function registerMember(
     if (localDirectory.some(m => m.email && m.email.toLowerCase() === cleanEmail)) {
       return { success: false, message: 'Bu e-posta adresi ile zaten kayıtlı bir üye bulunmaktadır.' };
     }
+    if (!cleanNickname) {
+      return { success: false, message: 'Rumuz 3–24 karakter olmalı; harf/rakam ile başlamalı ve bitmeli, yalnızca alt çizgi veya tire içerebilir.' };
+    }
 
     // Check if demo was previously used by this phone or email
     const wasDemoUsed = await checkIfDemoAlreadyUsed(cleanPhone, cleanEmail, cleanFullName);
@@ -1117,6 +1124,7 @@ export async function registerMember(
       uid,
       email: cleanEmail,
       fullName: cleanFullName,
+      nickname: cleanNickname,
       phone: cleanPhone,
       passwordHash: hashPassword(password),
       isAllowed: !isPendingDealerRegistration,
@@ -1147,6 +1155,7 @@ export async function registerMember(
         uid,
         email: cleanEmail,
         fullName: cleanFullName,
+        nickname: cleanNickname,
         phone: cleanPhone,
         whatsapp: completeDealerDetails.whatsapp,
         resellerName: companyName,
@@ -1279,7 +1288,8 @@ export async function registerMember(
       body: JSON.stringify({
         request_id: `REG-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
         user_id: uid,
-        full_name: companyName || cleanFullName,
+        full_name: cleanFullName,
+        nickname: cleanNickname,
         city: completeDealerDetails.address || completeDealerDetails.taxOffice || 'İstanbul',
         email: cleanEmail,
         phone: cleanPhone,
@@ -1485,6 +1495,7 @@ export async function adminApproveDealer(
     try {
       const { registerNewReseller } = await import('./resellerManager');
       await registerNewReseller({
+        nickname: user.nickname,
         resellerName: user.dealerDetails?.companyName || user.fullName,
         email: user.email,
         phone: user.dealerDetails?.whatsapp || user.phone,
@@ -1517,6 +1528,7 @@ export async function adminApproveDealer(
  */
 export async function adminCreateDealerDirectly(data: {
   fullName: string;
+  nickname: string;
   email: string;
   password: string;
   phone: string;
@@ -1537,6 +1549,7 @@ export async function adminCreateDealerDirectly(data: {
     const cleanEmail = data.email.trim().toLowerCase();
     const cleanCountryCode = (data.countryCode || 'TR').trim().toUpperCase();
     const cleanFullName = data.fullName.trim();
+    const cleanNickname = normalizeNickname(data.nickname);
     const cleanPhone = data.phone.trim();
     const cleanCompany = data.companyName.trim();
     const cleanPassword = data.password.trim();
@@ -1546,7 +1559,10 @@ export async function adminCreateDealerDirectly(data: {
       return { success: false, message: 'Ödemesiz yönetici hibesi için en az 10 karakterlik gerekçe girilmelidir.' };
     }
     if (!cleanEmail || !cleanFullName || !cleanPhone || !cleanCompany || !cleanPassword) {
-      return { success: false, message: 'Lütfen Ad Soyad, E-posta, Şifre, Telefon ve Firma Adı alanlarını doldurunuz.' };
+      return { success: false, message: 'Lütfen Ad Soyad, Rumuz, E-posta, Şifre, Telefon ve Firma Adı alanlarını doldurunuz.' };
+    }
+    if (!cleanNickname) {
+      return { success: false, message: 'Rumuz 3–24 karakter olmalı; harf/rakam ile başlamalı ve bitmeli, yalnızca alt çizgi veya tire içerebilir.' };
     }
 
     if (cleanPassword.length < 12 || ['123456', '123456789', 'password123', 'qwerty123'].includes(cleanPassword.toLowerCase())) {
@@ -1571,6 +1587,7 @@ export async function adminCreateDealerDirectly(data: {
       uid,
       email: cleanEmail,
       fullName: cleanFullName,
+      nickname: cleanNickname,
       phone: cleanPhone,
       passwordHash: hashPassword(cleanPassword),
       isAllowed: false,
@@ -1645,6 +1662,7 @@ export async function adminCreateDealerDirectly(data: {
       const { registerNewReseller } = await import('./resellerManager');
       await registerNewReseller({
         customUid: uid,
+        nickname: cleanNickname,
         resellerName: cleanCompany || cleanFullName,
         email: cleanEmail,
         phone: cleanPhone,
@@ -1676,6 +1694,7 @@ export async function adminCreateDealerDirectly(data: {
           body: JSON.stringify({
             user_id: uid,
             full_name: cleanFullName,
+            nickname: cleanNickname,
             email: cleanEmail,
             phone: cleanPhone,
             country_code: cleanCountryCode,

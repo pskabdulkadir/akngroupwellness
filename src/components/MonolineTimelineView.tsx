@@ -23,6 +23,7 @@ import {
   redirectToDealerRegistrationPortal,
 } from '../utils/monolineSyncBridge';
 import { formatUsd } from '../utils/currency';
+import { getMemberDisplayName } from '../utils/memberDisplay';
 import { getCountryFlag, getMonolineOnlyWallet, getRegionTierLabel, resolveMemberRegion } from '../utils/walletRegion';
 
 const MemberRegionBadge: React.FC<{ countryCode?: string; isSelected?: boolean }> = ({
@@ -251,6 +252,7 @@ export const MonolineTimelineView: React.FC<MonolineTimelineViewProps> = ({
     if (!searchQuery.trim()) return true;
     const q = searchQuery.toLowerCase();
     return (
+      getMemberDisplayName(m).toLocaleLowerCase().includes(q) ||
       m.full_name.toLowerCase().includes(q) ||
       m.user_id.toLowerCase().includes(q) ||
       m.city.toLowerCase().includes(q) ||
@@ -321,7 +323,7 @@ export const MonolineTimelineView: React.FC<MonolineTimelineViewProps> = ({
                 <span>{(selectedMember.session_credits ?? 0).toLocaleString('tr-TR')} SEANS KREDİSİ</span>
               </div>
               <h2 className="text-2xl font-bold tracking-tight text-slate-900">
-                {selectedMember.full_name} — Bayi Monoline Tek Hat Ağaç Yapısı
+                {getMemberDisplayName(selectedMember)} — Bayi Monoline Tek Hat Ağaç Yapısı
               </h2>
               <p className="text-sm text-slate-600 max-w-3xl">
                 Her bayi kendi kaydettiği bayinin doğrudan sponsorudur. Bu ekranda yalnızca
@@ -347,7 +349,7 @@ export const MonolineTimelineView: React.FC<MonolineTimelineViewProps> = ({
                   >
                     {sortedMembers.map((m) => (
                       <option key={m.user_id} value={m.user_id}>
-                        #{m.global_line_id} — {m.full_name} (Kariyer Seviyesi {m.career_level})
+                        #{m.global_line_id} — {getMemberDisplayName(m)} (Kariyer Seviyesi {m.career_level})
                       </option>
                     ))}
                   </select>
@@ -432,7 +434,7 @@ export const MonolineTimelineView: React.FC<MonolineTimelineViewProps> = ({
               <span>İzole Sponsorluk &amp; Tek Hat Ağaç Yapısı</span>
             </div>
             <h3 className="text-lg font-bold text-slate-900">
-              {selectedMember?.full_name} — Monoline Tek Hat Alt Bayi Ağacı ({dealerDownlineTree.length} Nokta)
+              {selectedMember ? getMemberDisplayName(selectedMember) : ''} — Monoline Tek Hat Alt Bayi Ağacı ({dealerDownlineTree.length} Nokta)
             </h3>
             <p className="text-xs text-slate-500 mt-0.5">
               Sadece kendiniz ve kendi kaydettiğiniz bayilerden oluşan alt ekibiniz tek hat (Monoline)
@@ -601,7 +603,7 @@ export const MonolineTimelineView: React.FC<MonolineTimelineViewProps> = ({
                             <span className="font-mono font-bold text-emerald-800">
                               #{m.global_line_id}
                             </span>{' '}
-                            <span className="font-semibold text-slate-900">{m.full_name}</span>{' '}
+                            <span className="font-semibold text-slate-900">{getMemberDisplayName(m)}</span>{' '}
                             <span className="text-[10px] text-slate-500">(Seviye {m.career_level})</span>
                           </div>
                           <div className="flex items-center gap-2 shrink-0 font-mono text-[11px]">
@@ -705,7 +707,7 @@ export const MonolineTimelineView: React.FC<MonolineTimelineViewProps> = ({
                             <span className="font-mono font-bold text-indigo-800">
                               #{m.global_line_id}
                             </span>{' '}
-                            <span className="font-semibold text-slate-900">{m.full_name}</span>{' '}
+                            <span className="font-semibold text-slate-900">{getMemberDisplayName(m)}</span>{' '}
                             <span className="text-[10px] text-slate-500">(Seviye {m.career_level})</span>
                           </div>
                           <div className="flex items-center gap-2 shrink-0 font-mono text-[11px]">
@@ -842,7 +844,7 @@ export const MonolineTimelineView: React.FC<MonolineTimelineViewProps> = ({
             <div className="flex flex-wrap items-center justify-between gap-4 py-3 px-4 bg-slate-50 rounded-xl border border-slate-200/80 text-xs text-slate-600">
               <div className="flex flex-wrap items-center gap-4">
                 <span className="font-semibold text-slate-900">
-                  Ağaç Kök Bayisi: #{selectedMember.global_line_id} {selectedMember.full_name}
+                  Ağaç Kök Bayisi: #{selectedMember.global_line_id} {getMemberDisplayName(selectedMember)}
                 </span>
                 <span aria-hidden="true">·</span>
                 <span>
@@ -942,7 +944,7 @@ export const MonolineTimelineView: React.FC<MonolineTimelineViewProps> = ({
                           )}
                           {!isSelected && !isDirectChildOfSelected && (
                             <span className="text-slate-600 font-mono tabular-nums">
-                              ↳ Alt Bayinizin Kaydı (Sponsor: {sponsorObj?.full_name || '-'})
+                              ↳ Alt Bayinizin Kaydı (Sponsor: {sponsorObj ? getMemberDisplayName(sponsorObj) : '-'})
                             </span>
                           )}
                         </div>
@@ -953,7 +955,7 @@ export const MonolineTimelineView: React.FC<MonolineTimelineViewProps> = ({
                               isSelected ? 'text-white' : 'text-slate-900'
                             }`}
                           >
-                            {member.full_name}
+                            {getMemberDisplayName(member)}
                           </div>
                           <div
                             className={`text-xs mt-0.5 truncate ${
@@ -983,7 +985,7 @@ export const MonolineTimelineView: React.FC<MonolineTimelineViewProps> = ({
                             {isSelected
                               ? 'Ana Merkez / Üst Hat (Gizli)'
                               : sponsorObj
-                              ? sponsorObj.full_name
+                              ? getMemberDisplayName(sponsorObj)
                               : '-'}
                           </span>
                         </div>
@@ -1130,11 +1132,11 @@ export const MonolineTimelineView: React.FC<MonolineTimelineViewProps> = ({
                     className={`flex-1 min-w-0 my-2 px-4 py-3 rounded-xl border transition-all flex items-center justify-between gap-3 ${cardTone}`}
                   >
                     <div className="min-w-0">
-                      <div className="text-sm font-bold truncate">{member.full_name}</div>
+                      <div className="text-sm font-bold truncate">{getMemberDisplayName(member)}</div>
                       <div className={`text-[11px] mt-0.5 truncate ${subTone}`}>
                         {isSelected
                           ? 'Kök bayi (siz)'
-                          : `Sponsor: ${sponsorObj?.full_name || '-'}`}
+                          : `Sponsor: ${sponsorObj ? getMemberDisplayName(sponsorObj) : '-'}`}
                         {' · '}
                         {member.career_level > 0 ? `Seviye ${member.career_level}` : 'Aday'}
                       </div>

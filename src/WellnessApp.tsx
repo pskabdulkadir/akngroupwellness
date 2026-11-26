@@ -160,6 +160,7 @@ export default function WellnessApp({
   const [dealerRegistrationSponsor, setDealerRegistrationSponsor] = useState<{
     uid: string;
     resellerName: string;
+    nickname?: string;
     referralCode: string;
     email?: string;
     phone?: string;
@@ -719,6 +720,7 @@ export default function WellnessApp({
       const detail = (event as CustomEvent<{
         user_id: string;
         full_name: string;
+        nickname?: string;
         ref_code: string;
         email?: string;
         phone?: string;
@@ -728,6 +730,7 @@ export default function WellnessApp({
           ? {
               uid: detail.user_id,
               resellerName: detail.full_name,
+              nickname: detail.nickname,
               referralCode: detail.ref_code,
               email: detail.email,
               phone: detail.phone,

@@ -38,6 +38,7 @@ import {
 import { DealerDetails } from '../types';
 import { getPackagePriceForRegion, MEMBER_COUNTRY_OPTIONS, resolveMemberRegion } from '../utils/walletRegion';
 import { formatUsd } from '../utils/currency';
+import { normalizeNickname, getMemberDisplayName } from '../utils/memberDisplay';
 import type { DealerPackage } from '../config/dealerPackages';
 import {
   Reseller,
@@ -67,6 +68,7 @@ interface AuthModalProps {
   lockedSponsor?: {
     uid: string;
     resellerName: string;
+    nickname?: string;
     referralCode: string;
     email?: string;
     phone?: string;
@@ -80,6 +82,7 @@ function createLockedReseller(sponsor: LockedSponsor): Reseller {
   return {
     uid: sponsor.uid,
     resellerName: sponsor.resellerName,
+    nickname: sponsor.nickname,
     email: sponsor.email || '',
     phone: sponsor.phone || '',
     referralCode: sponsor.referralCode.trim().toUpperCase(),
@@ -129,6 +132,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
   // Register fields
   const [regFullName, setRegFullName] = useState<string>('');
+  const [regNickname, setRegNickname] = useState<string>('');
   const [regEmail, setRegEmail] = useState<string>('');
   const [regPhone, setRegPhone] = useState<string>('');
   const [regPassword, setRegPassword] = useState<string>('');
@@ -344,6 +348,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       setErrorMsg('Lütfen kayıt olmak için geçerli bir Bayi Referans Kodu giriniz.');
       return;
     }
+    if (!normalizeNickname(regNickname)) {
+      setErrorMsg('Rumuz 3–24 karakter olmalı; harf/rakam ile başlamalı ve bitmeli, yalnızca alt çizgi veya tire içerebilir.');
+      return;
+    }
 
     if (isDealerRequested && !dealerCompanyName.trim()) {
       setErrorMsg('Lütfen Bayilik Başvurusu için Firma Adı / Ticari Unvan bilgisini giriniz.');
@@ -378,7 +386,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         targetResellerId,
         targetReferralCode,
         dealerData,
-        regCountryCode
+        regCountryCode,
+        regNickname
       );
 
       if (res.success && res.user) {
@@ -695,6 +704,21 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 />
               </div>
 
+              <div className="space-y-1">
+                <label className="text-[10px] font-semibold text-slate-300">Görünen Rumuz *</label>
+                <input
+                  type="text"
+                  required
+                  minLength={3}
+                  maxLength={24}
+                  value={regNickname}
+                  onChange={(e) => setRegNickname(e.target.value)}
+                  placeholder="Örn: Aylin_Bio"
+                  className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 focus:border-amber-500 text-xs text-slate-100 placeholder:text-slate-600 outline-none"
+                />
+                <p className="text-[9px] text-slate-500">3–24 karakter; harf ve rakam kullanın, araya _ veya - ekleyebilirsiniz.</p>
+              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <div className="space-y-1">
                   <label className="text-[10px] font-semibold text-slate-300">
@@ -882,7 +906,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     <div className="space-y-0.5">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-extrabold text-amber-200 text-xs sm:text-sm">
-                          {validatedReseller.resellerName}
+                          {getMemberDisplayName(validatedReseller)}
                         </span>
                         <span className="text-[9px] text-amber-300 bg-amber-900/90 px-2 py-0.5 rounded-full border border-amber-500/50 font-bold flex items-center gap-1">
                           <Lock className="w-2.5 h-2.5" />
@@ -920,7 +944,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       {validatedReseller ? (
                         <div className="text-[10px] text-emerald-400 flex items-center gap-1 font-semibold">
                           <CheckCircle2 className="w-3 h-3" />
-                          <span>Onaylandı: <strong>{validatedReseller.resellerName}</strong> ({validatedReseller.referralCode})</span>
+                          <span>Onaylandı: <strong>{getMemberDisplayName(validatedReseller)}</strong> ({validatedReseller.referralCode})</span>
                         </div>
                       ) : customReferralCode.length > 3 ? (
                         <div className="text-[10px] text-amber-400 flex items-center gap-1">

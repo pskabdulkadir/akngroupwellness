@@ -33,6 +33,7 @@ import {
   DollarSign
 } from 'lucide-react';
 import { MonolineMember, SystemStateResponse } from '../types/monoline';
+import { getMemberDisplayName } from '../utils/memberDisplay';
 import { getActiveResellerSession } from '../utils/resellerManager';
 import { getActiveMemberSession } from '../utils/authManager';
 import { getAdminToken } from '../utils/adminSession';
@@ -443,7 +444,7 @@ export const UnilevelOrganizationTreePanel: React.FC<UnilevelOrganizationTreePan
       if (searchTerm) {
         const term = searchTerm.toLowerCase();
         const match =
-          m.full_name.toLowerCase().includes(term) ||
+          getMemberDisplayName(m).toLocaleLowerCase().includes(term) || m.full_name.toLowerCase().includes(term) ||
           m.user_id.toLowerCase().includes(term) ||
           (m.ref_code && m.ref_code.toLowerCase().includes(term)) ||
           (m.city && m.city.toLowerCase().includes(term));
@@ -505,7 +506,7 @@ export const UnilevelOrganizationTreePanel: React.FC<UnilevelOrganizationTreePan
     // Filters check
     const matchesSearch =
       !searchTerm ||
-      m.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      getMemberDisplayName(m).toLocaleLowerCase().includes(searchTerm.toLowerCase()) || m.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       m.user_id.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCareer = filterCareer === 'ALL' || m.career_level === filterCareer;
     const matchesStatus =
@@ -552,7 +553,7 @@ export const UnilevelOrganizationTreePanel: React.FC<UnilevelOrganizationTreePan
           {/* Member Info */}
           <div className="flex-1 min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="font-bold text-sm tracking-tight truncate">{m.full_name}</span>
+              <span className="font-bold text-sm tracking-tight truncate">{getMemberDisplayName(m)}</span>
               <span className={`text-[10px] font-mono px-2 py-0.5 rounded-md ${isRoot ? 'bg-slate-800 text-slate-300' : 'bg-slate-100 text-slate-600'}`}>
                 {m.user_id}
               </span>
@@ -606,7 +607,7 @@ export const UnilevelOrganizationTreePanel: React.FC<UnilevelOrganizationTreePan
               </span>
               {m.sponsor_id && (
                 <span className="text-[11px] text-slate-400">
-                  Sponsor: <span className="font-semibold text-slate-600">{memberMap.get(m.sponsor_id)?.full_name || m.sponsor_id}</span>
+                  Sponsor: <span className="font-semibold text-slate-600">{getMemberDisplayName(memberMap.get(m.sponsor_id)) || m.sponsor_id}</span>
                 </span>
               )}
               {m.city && (
@@ -709,7 +710,7 @@ export const UnilevelOrganizationTreePanel: React.FC<UnilevelOrganizationTreePan
     const isActive = m.is_active !== false;
     const careerCfg = CAREER_TIER_CONFIG[m.career_level || 1] || CAREER_TIER_CONFIG[1];
     const term = searchTerm.toLowerCase();
-    const matchesSearch = !searchTerm || m.full_name.toLowerCase().includes(term) || m.user_id.toLowerCase().includes(term);
+    const matchesSearch = !searchTerm || getMemberDisplayName(m).toLocaleLowerCase().includes(term) || m.full_name.toLowerCase().includes(term) || m.user_id.toLowerCase().includes(term);
     const matchesCareer = filterCareer === 'ALL' || m.career_level === filterCareer;
     const matchesStatus =
       filterStatus === 'ALL' || (filterStatus === 'ACTIVE' && isActive) || (filterStatus === 'PASSIVE' && !isActive);
@@ -726,7 +727,7 @@ export const UnilevelOrganizationTreePanel: React.FC<UnilevelOrganizationTreePan
               : 'bg-slate-100 border-slate-300 text-slate-500'
           } ${isMatch ? '' : 'opacity-40'}`}
         >
-          <div className="font-bold text-sm truncate">{m.full_name}</div>
+          <div className="font-bold text-sm truncate">{getMemberDisplayName(m)}</div>
           <div className={`text-[10px] font-mono ${isRoot ? 'text-slate-300' : 'text-slate-400'}`}>{m.user_id}</div>
 
           <div className="flex flex-wrap items-center justify-center gap-1.5 mt-2">
@@ -1074,7 +1075,7 @@ export const UnilevelOrganizationTreePanel: React.FC<UnilevelOrganizationTreePan
                 Hiyerarşik Unilevel Ağaç Görünümü
               </h3>
               <p className="text-xs text-slate-500">
-                Kök Bayi: <strong className="text-slate-800">{memberMap.get(rootUserId)?.full_name || rootUserId}</strong> ({rootUserId})
+                Kök Bayi: <strong className="text-slate-800">{getMemberDisplayName(memberMap.get(rootUserId)) || rootUserId}</strong> ({rootUserId})
               </p>
               {mode === 'dealer' && <p className="mt-1 text-[11px] text-emerald-700">Mobil görünümde ağı dar tutmak için alt ekipler kapalı başlar; görmek istediğiniz dalı açın.</p>}
             </div>
@@ -1112,7 +1113,7 @@ export const UnilevelOrganizationTreePanel: React.FC<UnilevelOrganizationTreePan
                 >
                   {members.map((m) => (
                     <option key={m.user_id} value={m.user_id}>
-                      {m.full_name} ({m.user_id}) - {m.career_title}
+                      {getMemberDisplayName(m)} ({m.user_id}) - {m.career_title}
                     </option>
                   ))}
                 </select>
@@ -1175,7 +1176,7 @@ export const UnilevelOrganizationTreePanel: React.FC<UnilevelOrganizationTreePan
                           </span>
                         </td>
                         <td className="py-3 px-3 font-sans">
-                          <div className="font-bold text-slate-900">{m.full_name}</div>
+                          <div className="font-bold text-slate-900">{getMemberDisplayName(m)}</div>
                           <div className="text-[11px] font-mono text-slate-400">
                             {m.user_id} · {m.city || 'Türkiye'}
                           </div>
@@ -1187,7 +1188,7 @@ export const UnilevelOrganizationTreePanel: React.FC<UnilevelOrganizationTreePan
                           </span>
                         </td>
                         <td className="py-3 px-3 font-sans text-slate-700">
-                          {sp ? sp.full_name : m.sponsor_id || '-'}
+                          {sp ? getMemberDisplayName(sp) : m.sponsor_id || '-'}
                         </td>
                         <td className="py-3 px-3 text-right font-bold text-slate-900">
                           ${(m.personal_volume || 0).toLocaleString('tr-TR')}
@@ -1283,7 +1284,7 @@ export const UnilevelOrganizationTreePanel: React.FC<UnilevelOrganizationTreePan
                         <div className="text-[10px] text-slate-400">{m.ref_code || '-'}</div>
                       </td>
                       <td className="py-3 px-3 font-sans">
-                        <div className="font-bold text-slate-900">{m.full_name}</div>
+                        <div className="font-bold text-slate-900">{getMemberDisplayName(m)}</div>
                         <div className="text-[11px] text-slate-400 font-mono">{m.email}</div>
                       </td>
                       <td className="py-3 px-3 font-sans">
@@ -1295,7 +1296,7 @@ export const UnilevelOrganizationTreePanel: React.FC<UnilevelOrganizationTreePan
                       <td className="py-3 px-3 font-sans text-slate-700">
                         {sp ? (
                           <div>
-                            <span className="font-semibold text-slate-900">{sp.full_name}</span>
+                            <span className="font-semibold text-slate-900">{getMemberDisplayName(sp)}</span>
                             <span className="block text-[10px] font-mono text-slate-400">{sp.user_id}</span>
                           </div>
                         ) : (
@@ -1525,7 +1526,7 @@ export const UnilevelOrganizationTreePanel: React.FC<UnilevelOrganizationTreePan
                     .filter((m) => m.user_id !== editingMember.user_id)
                     .map((m) => (
                       <option key={m.user_id} value={m.user_id}>
-                        {m.full_name} ({m.user_id}) - {m.career_title}
+                        {getMemberDisplayName(m)} ({m.user_id}) - {m.career_title}
                       </option>
                     ))}
                 </select>
