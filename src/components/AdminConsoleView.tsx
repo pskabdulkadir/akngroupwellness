@@ -73,6 +73,7 @@ import {
   evaluateMemberOrganizationMetrics,
 } from '../types/monoline';
 import { getAdminToken } from '../utils/adminSession';
+import { normalizeNickname } from '../utils/memberDisplay';
 import {
   getMemberRegionalPendingUsd,
   getMemberRegionalUsdBalance,
@@ -162,6 +163,7 @@ interface AdminConsoleViewProps {
   onRestoreData?: (data: any) => Promise<boolean>;
   onRegisterMember?: (formData: {
     full_name: string;
+    nickname?: string;
     email?: string;
     phone?: string;
     ref_code?: string;
@@ -534,6 +536,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
 
   // New Dealer Creation Form State
   const [newDealerName, setNewDealerName] = useState('');
+  const [newDealerNickname, setNewDealerNickname] = useState('');
   const [newDealerEmail, setNewDealerEmail] = useState('');
   const [newDealerPhone, setNewDealerPhone] = useState('');
   const [newDealerCity, setNewDealerCity] = useState('İstanbul');
@@ -1167,8 +1170,13 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
   const handleAddDealerSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!onRegisterMember || !newDealerName.trim()) return;
+    if (!normalizeNickname(newDealerNickname)) {
+      window.alert('Rumuz 3–24 karakter olmalı; harf/rakam ile başlamalı ve bitmeli, yalnızca alt çizgi veya tire içerebilir.');
+      return;
+    }
     await onRegisterMember({
       full_name: newDealerName.trim(),
+      nickname: newDealerNickname.trim(),
       email: newDealerEmail.trim() || undefined,
       phone: newDealerPhone.trim() || undefined,
       ref_code: newDealerRefCode.trim().toUpperCase() || undefined,
@@ -1182,6 +1190,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
       assigned_leg: newDealerLeg,
     });
     setNewDealerName('');
+    setNewDealerNickname('');
     setNewDealerEmail('');
     setNewDealerPhone('');
     setNewDealerRefCode('');
@@ -4727,6 +4736,26 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                 </div>
 
                 <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Görünen Rumuz *</label>
+                  <input
+                    type="text"
+                    required
+                    minLength={3}
+                    maxLength={24}
+                    value={newDealerNickname}
+                    onChange={(e) => setNewDealerNickname(e.target.value)}
+                    placeholder="Örn: Selin_Kaya"
+                    aria-invalid={Boolean(newDealerNickname && !normalizeNickname(newDealerNickname))}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-slate-900"
+                  />
+                  <p className={`mt-1 text-[10px] ${newDealerNickname && !normalizeNickname(newDealerNickname) ? 'text-rose-600' : 'text-slate-500'}`}>
+                    {newDealerNickname && !normalizeNickname(newDealerNickname)
+                      ? '3–24 karakter kullanın; harf/rakam ile başlayıp bitirin, ortada yalnızca _ veya - kullanın.'
+                      : '3–24 karakter; ağ ve sponsorluk görünümlerinde kullanılır.'}
+                  </p>
+                </div>
+
+                <div>
                   <label className="block font-semibold text-slate-700 mb-1">Şehir / Bölge</label>
                   <input
                     type="text"
@@ -4899,7 +4928,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                 <div className="flex flex-col justify-end">
                   <button
                     type="submit"
-                    disabled={isSubmitting || !newDealerName.trim()}
+                    disabled={isSubmitting || !newDealerName.trim() || !normalizeNickname(newDealerNickname)}
                     className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-xs flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
                   >
                     <Plus className="w-4 h-4" />
